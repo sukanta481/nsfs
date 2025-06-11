@@ -21,23 +21,7 @@ define('USE_PCONNECT', false);
 
 define('SITE_URL', 'https://northsuperfastservice.com/');
 /* DATABASE INFORMATION*/
-//if($_SERVER['HTTP_HOST'] == 'localhost'):
-/***************FOR LOCAL****************/
-define('DB_SERVER','127.0.0.1');
-define('DB_SERVER_USERNAME','u286257250_north');
-define('DB_SERVER_PASSWORD','North@2024');
-define('DB_DATABASE','u286257250_north');
-
-
-/***************FOR LOCAL****************/
-/*else:*/
-/***************FOR SERVER****************/
-/*define('DB_SERVER','localhost');
-define('DB_SERVER_USERNAME','nextscre_kaos');
-define('DB_SERVER_PASSWORD','3Gmfxe79(X6D');
-define('DB_DATABASE','nextscre_kaosforu');*/
-/***************FOR SERVER****************/
-/*endif;*/
+require_once __DIR__ . '/../../config.php';
 
 
 define('STORE_DB_TRANSACTIONS','false');
