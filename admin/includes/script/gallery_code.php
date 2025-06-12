@@ -2,7 +2,7 @@
 
 $message		= '';
 
-$type= $_GET['type'];
+$type = $_GET['type'] ?? '';
 
 ini_set("gallery_max_size", "10M");
 

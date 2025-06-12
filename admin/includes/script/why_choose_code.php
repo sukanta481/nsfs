@@ -1,6 +1,6 @@
 <?php
-$message		= '';
-$type= $_GET['type'];
+$message = '';
+$type = $_GET['type'] ?? '';
 ini_set("post_max_size", "10M");
 ini_set("upload_max_filesize", "128M");
 ini_set("max_input_time", "300");
@@ -80,8 +80,8 @@ $why_choosemsg.= showMessage("Why Choose has been updated successfully",'success
 }
 }
 
-$action  = $_REQUEST['actnwhychoose'];
-$feature_id = $_REQUEST['feature_id'];
+$action  = $_REQUEST['actnwhychoose'] ?? '';
+$feature_id = $_REQUEST['feature_id'] ?? '';
 if($action == 'dellwhychoose' && !empty($feature_id)){
 $DelclientSql = 'DELETE FROM  tbl_why_choose WHERE feature_id  = "'.$feature_id.'"';
 $DelclientQuery = g_db_query($DelclientSql);

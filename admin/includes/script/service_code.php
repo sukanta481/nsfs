@@ -1,6 +1,6 @@
 <?php
 $message		= '';
-$type= $_GET['type'];
+$type = $_GET['type'] ?? '';
 ini_set("service_max_size", "10M");
 ini_set("upload_max_filesize", "128M");
 ini_set("max_input_time", "300");

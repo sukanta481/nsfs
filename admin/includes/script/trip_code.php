@@ -1,11 +1,12 @@
 <?php
-$message		= '';
-$type= $_GET['type'];
+$message = '';
+$type = $_GET['type'] ?? '';  // FIXED LINE!
 ini_set("post_max_size", "10M");
 ini_set("upload_max_filesize", "128M");
 ini_set("max_input_time", "300");
 ini_set("max_execution_time", "300");
 ini_set("memory_limit", -1 );
+
 
 // ini_set('display_errors', 1);
 // ini_set('display_startup_errors', 1);

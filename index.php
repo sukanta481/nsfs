@@ -14,10 +14,12 @@ $get_page_row=mysqli_fetch_array($get_page_rs);
 <a href="<?= $get_page_row['banner_link'];?>" class="cnctBtn"><i><img src="<?= SITE_URL;?>assets/images/vwSer.svg" alt="vwSer" /></i>View Our Services</a>
 					<div class="trkBx">
 						<h6>Track Your Shipment Here</h6>
-						<form id="trakform" onsubmit="function_submit_tracking_no();">
+						<form id="trakform" action="deliveryHistory.php" method="get">
 							<input type="text" name="doc_no" placeholder="Enter your Tracking ID(Doc No.)" required="required"/>
 							<input type="submit" value="Track" />
 						</form>
+
+
 						
 
 					</div>
@@ -27,27 +29,7 @@ $get_page_row=mysqli_fetch_array($get_page_rs);
 				<img src="<?= SITE_URL;?>admin/post_img/<?= $get_page_row['page_image'];?>" alt="hmBn" />
 			</div> 
 		</div>
-	</div>
-<script>
-	function function_submit_tracking_no()
-	{
-		 event.preventDefault();
-		 var form=$("#trakform");
-		$.ajax({
-		type: "POST",
-		url: "deliveryHistory.php",
-		dataType: 'html',
-		data:form.serialize(),
-		success: function(html){
-		$("#showres").html(html);
-		$('#myModal').modal('show');
-		},error: function(){
-		},complete: function(){
-		}
-		});
-		 
-	}
-</script>	
+	</div>	
 	<div class="banSosCon">
 		<div class="cntner">
 			<div class="banSosBx">

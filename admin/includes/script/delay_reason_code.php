@@ -1,6 +1,6 @@
 <?php
-$message		= '';
-$type= $_GET['type'];
+$message = '';
+$type = $_GET['type'] ?? '';
 ini_set("post_max_size", "10M");
 ini_set("upload_max_filesize", "128M");
 ini_set("max_input_time", "300");
@@ -108,8 +108,8 @@ else{
 	}
 }
 
-$action  = $_REQUEST['actndelay_reason'];
-$delay_reason_id = $_REQUEST['delay_reason_id'];
+$action = $_REQUEST['actndelay_reason'] ?? '';
+$delay_reason_id = $_REQUEST['delay_reason_id'] ?? '';
 if($action == 'delldelay_reason' && !empty($delay_reason_id)){
 $Deldelay_reasonSql = 'DELETE FROM tbl_delay_reason WHERE delay_reason_id  = "'.$delay_reason_id.'"';
 $Deldelay_reasonQuery = g_db_query($Deldelay_reasonSql);

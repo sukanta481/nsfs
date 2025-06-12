@@ -1,48 +1,45 @@
 <?php
 
-	function random_number($min = null, $max = null) {
+function random_number($min = null, $max = null) {
     static $seeded;
 
     if (!$seeded) {
-      mt_srand((double)microtime()*1000000);
-      $seeded = true;
+        mt_srand((double)microtime()*1000000);
+        $seeded = true;
     }
 
     if (isset($min) && isset($max)) {
-      if ($min >= $max) {
-        return $min;
-      } else {
-        return mt_rand($min, $max);
-      }
+        if ($min >= $max) {
+            return $min;
+        } else {
+            return mt_rand($min, $max);
+        }
     } else {
-      return mt_rand();
+        return mt_rand();
     }
-  }
+}
 
- 
-
-
- function tep_get_file_permissions($mode) {
-// determine type
-    if ( ($mode & 0xC000) == 0xC000) { // unix domain socket
-      $type = 's';
-    } elseif ( ($mode & 0x4000) == 0x4000) { // directory
-      $type = 'd';
-    } elseif ( ($mode & 0xA000) == 0xA000) { // symbolic link
-      $type = 'l';
-    } elseif ( ($mode & 0x8000) == 0x8000) { // regular file
-      $type = '-';
-    } elseif ( ($mode & 0x6000) == 0x6000) { //bBlock special file
-      $type = 'b';
-    } elseif ( ($mode & 0x2000) == 0x2000) { // character special file
-      $type = 'c';
-    } elseif ( ($mode & 0x1000) == 0x1000) { // named pipe
-      $type = 'p';
+function tep_get_file_permissions($mode) {
+    // determine type
+    if (($mode & 0xC000) == 0xC000) { // unix domain socket
+        $type = 's';
+    } elseif (($mode & 0x4000) == 0x4000) { // directory
+        $type = 'd';
+    } elseif (($mode & 0xA000) == 0xA000) { // symbolic link
+        $type = 'l';
+    } elseif (($mode & 0x8000) == 0x8000) { // regular file
+        $type = '-';
+    } elseif (($mode & 0x6000) == 0x6000) { //bBlock special file
+        $type = 'b';
+    } elseif (($mode & 0x2000) == 0x2000) { // character special file
+        $type = 'c';
+    } elseif (($mode & 0x1000) == 0x1000) { // named pipe
+        $type = 'p';
     } else { // unknown
-      $type = '?';
+        $type = '?';
     }
 
-// determine permissions
+    // determine permissions
     $owner['read']    = ($mode & 00400) ? 'r' : '-';
     $owner['write']   = ($mode & 00200) ? 'w' : '-';
     $owner['execute'] = ($mode & 00100) ? 'x' : '-';
@@ -53,307 +50,241 @@
     $world['write']   = ($mode & 00002) ? 'w' : '-';
     $world['execute'] = ($mode & 00001) ? 'x' : '-';
 
-// adjust for SUID, SGID and sticky bit
+    // adjust for SUID, SGID and sticky bit
     if ($mode & 0x800 ) $owner['execute'] = ($owner['execute'] == 'x') ? 's' : 'S';
     if ($mode & 0x400 ) $group['execute'] = ($group['execute'] == 'x') ? 's' : 'S';
     if ($mode & 0x200 ) $world['execute'] = ($world['execute'] == 'x') ? 't' : 'T';
 
     return $type .
-           $owner['read'] . $owner['write'] . $owner['execute'] .
-           $group['read'] . $group['write'] . $group['execute'] .
-           $world['read'] . $world['write'] . $world['execute'];
-  }
+        $owner['read'] . $owner['write'] . $owner['execute'] .
+        $group['read'] . $group['write'] . $group['execute'] .
+        $world['read'] . $world['write'] . $world['execute'];
+}
 
-  function get_browser_detect($component) {
-    global $HTTP_USER_AGENT;
+function get_browser_detect($component) {
+    return isset($_SERVER['HTTP_USER_AGENT']) ? stripos($_SERVER['HTTP_USER_AGENT'], $component) !== false : false;
+}
 
-    return stristr($HTTP_USER_AGENT, $component);
-  }
-
-
-
-
-
-  function break_string($string, $len, $break_char = '_') {
+function break_string($string, $len, $break_char = '_') {
     $l = 0;
     $output = '';
-    for ($i=0, $n=strlen($string); $i<$n; $i++) {
-      $char = substr($string, $i, 1);
-      if ($char != ' ') {
-        $l++;
-      } else {
-        $l = 0;
-      }
-      if ($l > $len) {
-        $l = 1;
-        $output .= $break_char;
-      }
-      $output .= $char;
+    for ($i = 0, $n = strlen($string); $i < $n; $i++) {
+        $char = substr($string, $i, 1);
+        if ($char != ' ') {
+            $l++;
+        } else {
+            $l = 0;
+        }
+        if ($l > $len) {
+            $l = 1;
+            $output .= $break_char;
+        }
+        $output .= $char;
     }
 
     return $output;
-  }
+}
 
-
-
-
-  function parse_input_field_data($data, $parse) {
+function parse_input_field_data($data, $parse) {
     return strtr(trim($data), $parse);
-  }
+}
 
-
-  function output_string($string, $translate = false, $protected = false) {
+function output_string($string, $translate = false, $protected = false) {
     if ($protected == true) {
-      return htmlspecialchars($string);
+        return htmlspecialchars($string, ENT_QUOTES | ENT_HTML5);
     } else {
-      if ($translate == false) {
-        return parse_input_field_data($string, array('"' => '&quot;'));
-      } else {
-        return parse_input_field_data($string, $translate);
-      }
+        if ($translate == false) {
+            return parse_input_field_data($string, array('"' => '&quot;'));
+        } else {
+            return parse_input_field_data($string, $translate);
+        }
     }
-  }
+}
 
-
-
-  function output_string_protected($string) {
+function output_string_protected($string) {
     return output_string($string, false, true);
-  }
+}
 
-
-  function sanitize_string($string) {
-    $string = ereg_replace(' +', ' ', $string);
-
+function sanitize_string($string) {
+    $string = preg_replace('/ +/', ' ', $string); // replaces multiple spaces with one space
     return preg_replace("/[<>]/", '_', $string);
-  }
+}
 
-
-
- 
-
-
-
-
- 
-
-
-
-  
-
-
-  function validate_email($email) {
+function validate_email($email) {
+    global $domain_name;
     $valid_address = true;
-	global $domain_name;
-    $mail_pat = '^(.+)@(.+)$';
+    $mail_pat = '/^(.+)@(.+)$/';
     $valid_chars = "[^] \(\)<>@,;:\.\\\"\[]";
     $atom = "$valid_chars+";
-    $quoted_user='(\"[^\"]*\")';
+    $quoted_user = '("[^"]*")';
     $word = "($atom|$quoted_user)";
-    $user_pat = "^$word(\.$word)*$";
-    $ip_domain_pat='^\[([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\]$';
-    $domain_pat = "^$atom(\.$atom)*$";
+    $user_pat = "/^$word(\.$word)*$/";
+    $ip_domain_pat = '/^\[([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\]$/';
+    $domain_pat = "/^$atom(\.$atom)*$/";
 
-    if (eregi($mail_pat, $email, $components)) {
-      $user = $components[1];
-      $domain = $components[2];
-      // validate user
-      if (eregi($user_pat, $user)) {
-        // validate domain
-        if (eregi($ip_domain_pat, $domain, $ip_components)) {
-          // this is an IP address
-      	  for ($i=1;$i<=4;$i++) {
-      	    if ($ip_components[$i] > 255) {
-      	      $valid_address = false;
-      	      break;
-      	    }
-          }
-        }
-        else {
-          // Domain is a name, not an IP
-          if (eregi($domain_pat, $domain)) {
-            /* domain name seems valid, but now make sure that it ends in a valid TLD or ccTLD
-               and that there's a hostname preceding the domain or country. */
-            $domain_components = explode(".", $domain);
-            // Make sure there's a host name preceding the domain.
-            if (sizeof($domain_components) < 2) {
-              $valid_address = false;
-            } else {
-              $top_level_domain = strtolower($domain_components[sizeof($domain_components)-1]);
-              // Allow all 2-letter TLDs (ccTLDs)
-              if (eregi('^[a-z][a-z]$', $top_level_domain) != 1) {
-                $tld_pattern = '';
-                // Get authorized TLDs from text file
-                $tlds = file('admin/includes/functions/tld.txt');
-                while (list(,$line) = each($tlds)) {
-                  // Get rid of comments
-                  $words = explode('#', $line);
-                  $tld = trim($words[0]);
-                  // TLDs should be 3 letters or more
-                  if (eregi('^[a-z]{3,}$', $tld) == 1) {
-                    $tld_pattern .= '^' . $tld . '$|';
-                  }
+    if (preg_match($mail_pat, $email, $components)) {
+        $user = $components[1];
+        $domain = $components[2];
+        // validate user
+        if (preg_match($user_pat, $user)) {
+            // validate domain
+            if (preg_match($ip_domain_pat, $domain, $ip_components)) {
+                // this is an IP address
+                for ($i = 1; $i <= 4; $i++) {
+                    if ($ip_components[$i] > 255) {
+                        $valid_address = false;
+                        break;
+                    }
                 }
-                // Remove last '|'
-                $tld_pattern = substr($tld_pattern, 0, -1);
-                if (eregi("$tld_pattern", $top_level_domain) == 0) {
+            } else {
+                // Domain is a name, not an IP
+                if (preg_match($domain_pat, $domain)) {
+                    $domain_components = explode(".", $domain);
+                    if (sizeof($domain_components) < 2) {
+                        $valid_address = false;
+                    } else {
+                        $top_level_domain = strtolower($domain_components[sizeof($domain_components) - 1]);
+                        // Allow all 2-letter TLDs (ccTLDs)
+                        if (!preg_match('/^[a-z][a-z]$/', $top_level_domain)) {
+                            $tld_pattern = '';
+                            // Get authorized TLDs from text file
+                            $tlds = file('admin/includes/functions/tld.txt');
+                            foreach ($tlds as $line) {
+                                $words = explode('#', $line);
+                                $tld = trim($words[0]);
+                                if (preg_match('/^[a-z]{3,}$/', $tld)) {
+                                    $tld_pattern .= '^' . $tld . '$|';
+                                }
+                            }
+                            $tld_pattern = substr($tld_pattern, 0, -1);
+                            if (!preg_match("/$tld_pattern/", $top_level_domain)) {
+                                $valid_address = false;
+                            }
+                        }
+                    }
+                } else {
                     $valid_address = false;
                 }
-              }
             }
-          }
-          else {
-      	    $valid_address = false;
-      	  }
-      	}
-      }
-      else {
+        } else {
+            $valid_address = false;
+        }
+    } else {
         $valid_address = false;
-      }
-    }
-    else {
-      $valid_address = false;
     }
     if ($valid_address) {
-      if (!checkdnsrr($domain, "MX") && !checkdnsrr($domain, "A")) {
-        $valid_address = false;
-      }
-	  $domain_name=$domain;
+        if (!checkdnsrr($domain, "MX") && !checkdnsrr($domain, "A")) {
+            $valid_address = false;
+        }
+        $domain_name = $domain;
     }
-	  
+
     return $valid_address;
-  }
+}
 
-
-
-  function validate_password($plain, $encrypted) {
+function validate_password($plain, $encrypted) {
     if (not_null($plain) && not_null($encrypted)) {
-// split apart the hash / salt
-      $stack = explode(':', $encrypted);
-
-      if (sizeof($stack) != 2) return false;
-
-      if (md5($stack[1] . $plain) == $stack[0]) {
-        return true;
-      }
+        $stack = explode(':', $encrypted);
+        if (sizeof($stack) != 2) return false;
+        if (md5($stack[1] . $plain) == $stack[0]) {
+            return true;
+        }
     }
-
     return false;
-  }
+}
 
-
-
-  function encrypt_password($plain) {
+function encrypt_password($plain) {
     $password = '';
-
-    for ($i=0; $i<10; $i++) {
-      $password .= random_number();
+    for ($i = 0; $i < 10; $i++) {
+        $password .= random_number();
     }
-
     $salt = substr(md5($password), 0, 2);
-
     $password = md5($salt . $plain) . ':' . $salt;
-
     return $password;
-  }
-
+}
 
 function get_ip_address() {
-    global $_SERVER;
-
     if (isset($_SERVER)) {
-      if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-      } elseif (isset($_SERVER['HTTP_CLIENT_IP'])) {
-        $ip = $_SERVER['HTTP_CLIENT_IP'];
-      } else {
-        $ip = $_SERVER['REMOTE_ADDR'];
-      }
+        if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        } elseif (isset($_SERVER['HTTP_CLIENT_IP'])) {
+            $ip = $_SERVER['HTTP_CLIENT_IP'];
+        } else {
+            $ip = $_SERVER['REMOTE_ADDR'];
+        }
     } else {
-      if (getenv('HTTP_X_FORWARDED_FOR')) {
-        $ip = getenv('HTTP_X_FORWARDED_FOR');
-      } elseif (getenv('HTTP_CLIENT_IP')) {
-        $ip = getenv('HTTP_CLIENT_IP');
-      } else {
-        $ip = getenv('REMOTE_ADDR');
-      }
+        if (getenv('HTTP_X_FORWARDED_FOR')) {
+            $ip = getenv('HTTP_X_FORWARDED_FOR');
+        } elseif (getenv('HTTP_CLIENT_IP')) {
+            $ip = getenv('HTTP_CLIENT_IP');
+        } else {
+            $ip = getenv('REMOTE_ADDR');
+        }
     }
-
     return $ip;
-  }
+}
 
-  function string_to_int($string) {
+function string_to_int($string) {
     return (int)$string;
-  }
+}
 
-  function array_to_string($array, $exclude = '', $equals = '=', $separator = '&') {
+function array_to_string($array, $exclude = '', $equals = '=', $separator = '&') {
     if (!is_array($exclude)) $exclude = array();
-
     $get_string = '';
     if (sizeof($array) > 0) {
-      while (list($key, $value) = each($array)) {
-        if ( (!in_array($key, $exclude)) && ($key != 'x') && ($key != 'y') ) {
-          $get_string .= $key . $equals . $value . $separator;
+        foreach ($array as $key => $value) {
+            if ((!in_array($key, $exclude)) && ($key != 'x') && ($key != 'y')) {
+                $get_string .= $key . $equals . $value . $separator;
+            }
         }
-      }
-      $remove_chars = strlen($separator);
-      $get_string = substr($get_string, 0, -$remove_chars);
+        $remove_chars = strlen($separator);
+        $get_string = substr($get_string, 0, -$remove_chars);
     }
-
     return $get_string;
-  }
+}
 
 function create_random_value($length, $type = 'mixed') {
-    if ( ($type != 'mixed') && ($type != 'chars') && ($type != 'digits')) return false;
-
+    if (($type != 'mixed') && ($type != 'chars') && ($type != 'digits')) return false;
     $rand_value = '';
     while (strlen($rand_value) < $length) {
-      if ($type == 'digits') {
-        $char = random_number(0,9);
-      } else {
-        $char = chr(random_number(0,255));
-      }
-      if ($type == 'mixed') {
-        if (eregi('^[a-z0-9]$', $char)) $rand_value .= $char; 
-      } elseif ($type == 'chars') {
-        if (eregi('^[a-z]$', $char)) $rand_value .= $char;
-      } elseif ($type == 'digits') {
-        if (ereg('^[0-9]$', $char)) $rand_value .= $char;
-      }
+        if ($type == 'digits') {
+            $char = random_number(0,9);
+        } else {
+            $char = chr(random_number(0,255));
+        }
+        if ($type == 'mixed') {
+            if (preg_match('/^[a-z0-9]$/i', $char)) $rand_value .= $char;
+        } elseif ($type == 'chars') {
+            if (preg_match('/^[a-z]$/i', $char)) $rand_value .= $char;
+        } elseif ($type == 'digits') {
+            if (preg_match('/^[0-9]$/', $char)) $rand_value .= $char;
+        }
     }
-	return $rand_value;
+    return $rand_value;
 }
 
 function word_count($string, $needle) {
-    $temp_array = split($needle, $string);
-
+    $temp_array = explode($needle, $string);
     return sizeof($temp_array);
-  }
+}
 
-  function count_modules($modules = '') {
+function count_modules($modules = '') {
     $count = 0;
-
     if (empty($modules)) return $count;
-
-    $modules_array = split(';', $modules);
-
-    for ($i=0, $n=sizeof($modules_array); $i<$n; $i++) {
-      $class = substr($modules_array[$i], 0, strrpos($modules_array[$i], '.'));
-
-      if (is_object($GLOBALS[$class])) {
-        if ($GLOBALS[$class]->enabled) {
-          $count++;
+    $modules_array = explode(';', $modules);
+    for ($i = 0, $n = sizeof($modules_array); $i < $n; $i++) {
+        $class = substr($modules_array[$i], 0, strrpos($modules_array[$i], '.'));
+        if (is_object($GLOBALS[$class])) {
+            if ($GLOBALS[$class]->enabled) {
+                $count++;
+            }
         }
-      }
     }
-
     return $count;
-  }
+}
 
-  
-
-  function function_checkdate($date_to_check, $format_string, &$date_array) {
+function function_checkdate($date_to_check, $format_string, &$date_array) {
     $separator_idx = -1;
-
     $separators = array('-', ' ', '/', '.');
     $month_abbr = array('jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec');
     $no_of_days = array(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31);
@@ -361,237 +292,197 @@ function word_count($string, $needle) {
     $format_string = strtolower($format_string);
 
     if (strlen($date_to_check) != strlen($format_string)) {
-      return false;
+        return false;
     }
 
     $size = sizeof($separators);
     for ($i=0; $i<$size; $i++) {
-      $pos_separator = strpos($date_to_check, $separators[$i]);
-      if ($pos_separator != false) {
-        $date_separator_idx = $i;
-        break;
-      }
+        $pos_separator = strpos($date_to_check, $separators[$i]);
+        if ($pos_separator !== false) {
+            $date_separator_idx = $i;
+            break;
+        }
     }
 
     for ($i=0; $i<$size; $i++) {
-      $pos_separator = strpos($format_string, $separators[$i]);
-      if ($pos_separator != false) {
-        $format_separator_idx = $i;
-        break;
-      }
+        $pos_separator = strpos($format_string, $separators[$i]);
+        if ($pos_separator !== false) {
+            $format_separator_idx = $i;
+            break;
+        }
     }
 
     if ($date_separator_idx != $format_separator_idx) {
-      return false;
+        return false;
     }
 
     if ($date_separator_idx != -1) {
-      $format_string_array = explode( $separators[$date_separator_idx], $format_string );
-      if (sizeof($format_string_array) != 3) {
-        return false;
-      }
-
-      $date_to_check_array = explode( $separators[$date_separator_idx], $date_to_check );
-      if (sizeof($date_to_check_array) != 3) {
-        return false;
-      }
-
-      $size = sizeof($format_string_array);
-      for ($i=0; $i<$size; $i++) {
-        if ($format_string_array[$i] == 'mm' || $format_string_array[$i] == 'mmm') $month = $date_to_check_array[$i];
-        if ($format_string_array[$i] == 'dd') $day = $date_to_check_array[$i];
-        if ( ($format_string_array[$i] == 'yyyy') || ($format_string_array[$i] == 'aaaa') ) $year = $date_to_check_array[$i];
-      }
-    } else {
-      if (strlen($format_string) == 8 || strlen($format_string) == 9) {
-        $pos_month = strpos($format_string, 'mmm');
-        if ($pos_month != false) {
-          $month = substr( $date_to_check, $pos_month, 3 );
-          $size = sizeof($month_abbr);
-          for ($i=0; $i<$size; $i++) {
-            if ($month == $month_abbr[$i]) {
-              $month = $i;
-              break;
-            }
-          }
-        } else {
-          $month = substr($date_to_check, strpos($format_string, 'mm'), 2);
+        $format_string_array = explode($separators[$date_separator_idx], $format_string);
+        if (sizeof($format_string_array) != 3) {
+            return false;
         }
-      } else {
-        return false;
-      }
 
-      $day = substr($date_to_check, strpos($format_string, 'dd'), 2);
-      $year = substr($date_to_check, strpos($format_string, 'yyyy'), 4);
+        $date_to_check_array = explode($separators[$date_separator_idx], $date_to_check);
+        if (sizeof($date_to_check_array) != 3) {
+            return false;
+        }
+
+        $size = sizeof($format_string_array);
+        for ($i=0; $i<$size; $i++) {
+            if ($format_string_array[$i] == 'mm' || $format_string_array[$i] == 'mmm') $month = $date_to_check_array[$i];
+            if ($format_string_array[$i] == 'dd') $day = $date_to_check_array[$i];
+            if (($format_string_array[$i] == 'yyyy') || ($format_string_array[$i] == 'aaaa')) $year = $date_to_check_array[$i];
+        }
+    } else {
+        if (strlen($format_string) == 8 || strlen($format_string) == 9) {
+            $pos_month = strpos($format_string, 'mmm');
+            if ($pos_month !== false) {
+                $month = substr($date_to_check, $pos_month, 3);
+                $size = sizeof($month_abbr);
+                for ($i=0; $i<$size; $i++) {
+                    if ($month == $month_abbr[$i]) {
+                        $month = $i;
+                        break;
+                    }
+                }
+            } else {
+                $month = substr($date_to_check, strpos($format_string, 'mm'), 2);
+            }
+        } else {
+            return false;
+        }
+
+        $day = substr($date_to_check, strpos($format_string, 'dd'), 2);
+        $year = substr($date_to_check, strpos($format_string, 'yyyy'), 4);
     }
 
     if (strlen($year) != 4) {
-      return false;
+        return false;
     }
 
     if (!settype($year, 'integer') || !settype($month, 'integer') || !settype($day, 'integer')) {
-      return false;
+        return false;
     }
 
     if ($month > 12 || $month < 1) {
-      return false;
+        return false;
     }
 
     if ($day < 1) {
-      return false;
+        return false;
     }
 
     if (is_leap_year($year)) {
-      $no_of_days[1] = 29;
+        $no_of_days[1] = 29;
     }
 
     if ($day > $no_of_days[$month - 1]) {
-      return false;
+        return false;
     }
 
     $date_array = array($year, $month, $day);
 
     return true;
-  }
+}
 
-////
-// Check if year is a leap year
-  function is_leap_year($year) {
+function is_leap_year($year) {
     if ($year % 100 == 0) {
-      if ($year % 400 == 0) return true;
+        if ($year % 400 == 0) return true;
     } else {
-      if (($year % 4) == 0) return true;
+        if (($year % 4) == 0) return true;
     }
-
     return false;
-  }
+}
 
-function parse_search_string($search_str = '', &$objects) {
-  
+// ----------- DEPRECATED FIX: Modern parameter order: &$objects, $search_str = ''
+function parse_search_string(&$objects, $search_str = '') {
     $search_str = trim(strtolower($search_str));
-
-// Break up $search_str on whitespace; quoted string will be reconstructed later
-    $pieces = split('[[:space:]]+', $search_str);
+    // Break up $search_str on whitespace; quoted string will be reconstructed later
+    $pieces = preg_split('/\s+/', $search_str);
     $objects = array();
     $tmpstring = '';
     $flag = '';
 
-    for ($k=0; $k<count($pieces); $k++) {
-      while (substr($pieces[$k], 0, 1) == '(') {
-        $objects[] = '(';
-        if (strlen($pieces[$k]) > 1) {
-          $pieces[$k] = substr($pieces[$k], 1);
-        } else {
-          $pieces[$k] = '';
-        }
-      }
-
-      $post_objects = array();
-
-      while (substr($pieces[$k], -1) == ')')  {
-        $post_objects[] = ')';
-        if (strlen($pieces[$k]) > 1) {
-          $pieces[$k] = substr($pieces[$k], 0, -1);
-        } else {
-          $pieces[$k] = '';
-        }
-      }
-
-// Check individual words
-
-      if ( (substr($pieces[$k], -1) != '"') && (substr($pieces[$k], 0, 1) != '"') ) {
-        $objects[] = trim($pieces[$k]);
-
-        for ($j=0; $j<count($post_objects); $j++) {
-          $objects[] = $post_objects[$j];
-        }
-      } else {
-/* This means that the $piece is either the beginning or the end of a string.
-   So, we'll slurp up the $pieces and stick them together until we get to the
-   end of the string or run out of pieces.
-*/
-
-// Add this word to the $tmpstring, starting the $tmpstring
-        $tmpstring = trim(ereg_replace('"', ' ', $pieces[$k]));
-
-// Check for one possible exception to the rule. That there is a single quoted word.
-        if (substr($pieces[$k], -1 ) == '"') {
-// Turn the flag off for future iterations
-          $flag = 'off';
-
-          $objects[] = trim($pieces[$k]);
-
-          for ($j=0; $j<count($post_objects); $j++) {
-            $objects[] = $post_objects[$j];
-          }
-
-          unset($tmpstring);
-
-// Stop looking for the end of the string and move onto the next word.
-          continue;
+    for ($k = 0; $k < count($pieces); $k++) {
+        while (substr($pieces[$k], 0, 1) == '(') {
+            $objects[] = '(';
+            if (strlen($pieces[$k]) > 1) {
+                $pieces[$k] = substr($pieces[$k], 1);
+            } else {
+                $pieces[$k] = '';
+            }
         }
 
-// Otherwise, turn on the flag to indicate no quotes have been found attached to this word in the string.
-        $flag = 'on';
+        $post_objects = array();
 
-// Move on to the next word
-        $k++;
-
-// Keep reading until the end of the string as long as the $flag is on
-
-        while ( ($flag == 'on') && ($k < count($pieces)) ) {
-          while (substr($pieces[$k], -1) == ')') {
+        while (substr($pieces[$k], -1) == ')') {
             $post_objects[] = ')';
             if (strlen($pieces[$k]) > 1) {
-              $pieces[$k] = substr($pieces[$k], 0, -1);
+                $pieces[$k] = substr($pieces[$k], 0, -1);
             } else {
-              $pieces[$k] = '';
+                $pieces[$k] = '';
             }
-          }
-
-// If the word doesn't end in double quotes, append it to the $tmpstring.
-          if (substr($pieces[$k], -1) != '"') {
-// Tack this word onto the current string entity
-            $tmpstring .= ' ' . $pieces[$k];
-
-// Move on to the next word
-            $k++;
-            continue;
-          } else {
-/* If the $piece ends in double quotes, strip the double quotes, tack the
-   $piece onto the tail of the string, push the $tmpstring onto the $haves,
-   kill the $tmpstring, turn the $flag "off", and return.
-*/
-            $tmpstring .= ' ' . trim(ereg_replace('"', ' ', $pieces[$k]));
-
-// Push the $tmpstring onto the array of stuff to search for
-            $objects[] = trim($tmpstring);
-
-            for ($j=0; $j<count($post_objects); $j++) {
-              $objects[] = $post_objects[$j];
-            }
-
-            unset($tmpstring);
-
-// Turn off the flag to exit the loop
-            $flag = 'off';
-          }
         }
-      }
+
+        // Check individual words
+        if ((substr($pieces[$k], -1) != '"') && (substr($pieces[$k], 0, 1) != '"')) {
+            $objects[] = trim($pieces[$k]);
+            for ($j = 0; $j < count($post_objects); $j++) {
+                $objects[] = $post_objects[$j];
+            }
+        } else {
+            $tmpstring = trim(str_replace('"', ' ', $pieces[$k]));
+            if (substr($pieces[$k], -1) == '"') {
+                $flag = 'off';
+                $objects[] = trim($pieces[$k]);
+                for ($j = 0; $j < count($post_objects); $j++) {
+                    $objects[] = $post_objects[$j];
+                }
+                unset($tmpstring);
+                continue;
+            }
+            $flag = 'on';
+            $k++;
+            while (($flag == 'on') && ($k < count($pieces))) {
+                while (substr($pieces[$k], -1) == ')') {
+                    $post_objects[] = ')';
+                    if (strlen($pieces[$k]) > 1) {
+                        $pieces[$k] = substr($pieces[$k], 0, -1);
+                    } else {
+                        $pieces[$k] = '';
+                    }
+                }
+                if (substr($pieces[$k], -1) != '"') {
+                    $tmpstring .= ' ' . $pieces[$k];
+                    $k++;
+                    continue;
+                } else {
+                    $tmpstring .= ' ' . trim(str_replace('"', ' ', $pieces[$k]));
+                    $objects[] = trim($tmpstring);
+                    for ($j = 0; $j < count($post_objects); $j++) {
+                        $objects[] = $post_objects[$j];
+                    }
+                    unset($tmpstring);
+                    $flag = 'off';
+                }
+            }
+        }
     }
 
-// add default logical operators if needed
+    // add default logical operators if needed
     $temp = array();
-    for($i=0; $i<(count($objects)-1); $i++) {
-      $temp[] = $objects[$i];
-      if ( ($objects[$i] != 'and') &&
-           ($objects[$i] != 'or') &&
-           ($objects[$i] != '(') &&
-           ($objects[$i+1] != 'and') &&
-           ($objects[$i+1] != 'or') &&
-           ($objects[$i+1] != ')') ) {
-        $temp[] = ADVANCED_SEARCH_DEFAULT_OPERATOR;
-      }
+    for ($i = 0; $i < (count($objects) - 1); $i++) {
+        $temp[] = $objects[$i];
+        if (
+            ($objects[$i] != 'and') &&
+            ($objects[$i] != 'or') &&
+            ($objects[$i] != '(') &&
+            ($objects[$i + 1] != 'and') &&
+            ($objects[$i + 1] != 'or') &&
+            ($objects[$i + 1] != ')')
+        ) {
+            $temp[] = ADVANCED_SEARCH_DEFAULT_OPERATOR;
+        }
     }
     $temp[] = $objects[$i];
     $objects = $temp;
@@ -599,22 +490,22 @@ function parse_search_string($search_str = '', &$objects) {
     $keyword_count = 0;
     $operator_count = 0;
     $balance = 0;
-    for($i=0; $i<count($objects); $i++) {
-      if ($objects[$i] == '(') $balance --;
-      if ($objects[$i] == ')') $balance ++;
-      if ( ($objects[$i] == 'and') || ($objects[$i] == 'or') ) {
-        $operator_count ++;
-      } elseif ( ($objects[$i]) && ($objects[$i] != '(') && ($objects[$i] != ')') ) {
-        $keyword_count ++;
-      }
+    for ($i = 0; $i < count($objects); $i++) {
+        if ($objects[$i] == '(') $balance--;
+        if ($objects[$i] == ')') $balance++;
+        if (($objects[$i] == 'and') || ($objects[$i] == 'or')) {
+            $operator_count++;
+        } elseif (($objects[$i]) && ($objects[$i] != '(') && ($objects[$i] != ')')) {
+            $keyword_count++;
+        }
     }
 
-    if ( ($operator_count < $keyword_count) && ($balance == 0) ) {
-      return true;
+    if (($operator_count < $keyword_count) && ($balance == 0)) {
+        return true;
     } else {
-      return false;
+        return false;
     }
-  }
+}
 
   function date_short($raw_date) {
     if ( ($raw_date == '0000-00-00 00:00:00') || empty($raw_date) ) return false;

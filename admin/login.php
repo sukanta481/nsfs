@@ -1,4 +1,8 @@
-<?php require 'top_header.php'; ?>
+<?php 
+$message = $message ?? '';
+require 'top_header.php'; 
+require_once 'includes/script/login_code.php';
+?>
 <?php
 			 if(isset($_REQUEST['forgot'])) {
 			 	$length = 8;
@@ -92,7 +96,9 @@
 			            	
               <!-- <a class="btn btn-default submit" onclick="document.forms.form1.submit()">Log in</a> -->
               <button class="btn btn-default" type="submit">Log in</button>
-              
+              	<div>
+    				<a href="forgot_password.php">Forgot Password?</a>
+				</div>
             </div>
             <div class="clearfix"></div>
             <div class="separator">
