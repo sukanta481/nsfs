@@ -20,8 +20,13 @@ if ($doc_no) {
 }
 if ($get_shipping_details_row) {
     $sid = $get_shipping_details_row['shipping_details_id'];
+    // Show ALL statuses for this shipment, oldest first
     $status_sql = "SELECT * FROM tbl_trip_status WHERE ship_id='$sid' ORDER BY updateddate ASC";
     $status_rs = mysqli_query($conn, $status_sql);
+    $history = [];
+    while ($row = mysqli_fetch_assoc($status_rs)) $history[] = $row;
+
+    // Define timeline steps
     $timeline = [
         ['label' => 'Shipment Created',   'db_status' => 'Created',      'desc' => '', 'time' => null],
         ['label' => 'Picked Up',          'db_status' => 'Picked Up',    'desc' => $get_shipping_details_row['client_address'], 'time' => null],
@@ -29,8 +34,6 @@ if ($get_shipping_details_row) {
         ['label' => 'Out for Delivery',   'db_status' => 'Out for Delivery', 'desc' => '', 'time' => null],
         ['label' => 'Delivered',          'db_status' => 'Delivered',    'desc' => '', 'time' => null],
     ];
-    $history = [];
-    while ($row = mysqli_fetch_assoc($status_rs)) $history[] = $row;
     foreach ($timeline as $k => $step) {
         foreach ($history as $h) {
             if (strcasecmp($h['status'], $step['db_status']) == 0) {
@@ -62,7 +65,7 @@ if ($get_shipping_details_row) {
 if (!$is_ajax) { ?>
 <section style="background: #f5f8fd; min-height:80vh; padding:42px 0;">
   <div class="container">
-    <div class="row justify-content-center">
+    <div class="row justify-content-center flex-wrap-reverse">
       <!-- Search Bar -->
       <div class="col-lg-11 mb-4">
         <form class="track-searchbar" id="trackingSearchForm" autocomplete="off" style="margin-bottom:36px;">
@@ -73,16 +76,15 @@ if (!$is_ajax) { ?>
       <div class="col-lg-12" id="trackingResultBox">
 <?php } // End if !ajax ?>
 
-        <div class="row justify-content-center">
-          <!-- Timeline/Left Panel -->
-          <div class="col-lg-7 col-md-8 mb-4">
+        <div class="row justify-content-center flex-wrap-reverse">
+          <!-- Timeline/Left Panel (now first on mobile) -->
+          <div class="col-12 col-md-8 col-lg-7 mb-4">
             <div class="track-box">
               <div style="display:flex; align-items:flex-start; justify-content:space-between;">
                 <div>
                     <h2 class="track-title mb-0">Arriving By</h2>
                     <div style="margin-top:22px;" class="track-date"><?= $pickup_date ?></div>
                 </div>
-                <img src="<?= SITE_URL ?>assets/images/delhivery_logo.png" alt="Delhivery" style="height:36px;margin-top:6px;">
               </div>
               <div class="track-timeline">
                 <?php foreach ($timeline as $i => $step):
@@ -119,20 +121,44 @@ if (!$is_ajax) { ?>
             </div>
           </div>
           <!-- Shipment Details/Right Panel -->
-          <div class="col-lg-5 col-md-7">
+          <div class="col-12 col-md-7 col-lg-5 mb-4">
             <div class="shipment-card">
-              <div class="shipment-title"><i class="fa fa-archive"></i> Shipment Details</div>
-              <table class="table table-borderless mb-0">
-                <tr><td>Shipment ID</td><td><?= $get_shipping_details_row['doc'] ?? '-' ?></td></tr>
-                <tr><td>Order Number</td><td>-</td></tr>
-                <tr><td>Order Date</td><td><?= $pickup_date ?></td></tr>
-                <tr><td>Order Items</td><td><?= htmlspecialchars($client_name) ?></td></tr>
-                <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
-                <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
-                <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
-                <tr><td>Mode of Payment</td><td>-</td></tr>
-                <tr><td>Order Value</td><td>-</td></tr>
-              </table>
+              <!-- Header with arrow: small screens only -->
+              <div class="shipment-header d-flex d-md-none" id="shipmentToggle" style="cursor:pointer;align-items:center;justify-content:space-between;">
+                <span class="shipment-title" style="margin:0;"><i class="fa fa-archive"></i> Shipment Details</span>
+                <span id="shipmentArrow" style="font-size:1.5rem;transition:transform 0.25s;">&#9654;</span>
+              </div>
+              <!-- Collapsible details: small screens only -->
+              <div id="shipmentDetails" class="shipment-details d-md-none" style="display:none;">
+                <table class="table table-borderless mb-0">
+                  <tr><td>Shipment ID</td><td><?= $get_shipping_details_row['doc'] ?? '-' ?></td></tr>
+                  <tr><td>Order Number</td><td>-</td></tr>
+                  <tr><td>Order Date</td><td><?= $pickup_date ?></td></tr>
+                  <tr><td>Order Items</td><td><?= htmlspecialchars($client_name) ?></td></tr>
+                  <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
+                  <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
+                  <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
+                  <tr><td>Mode of Payment</td><td>-</td></tr>
+                  <tr><td>Order Value</td><td>-</td></tr>
+                </table>
+              </div>
+              <!-- Always visible details: big screens only -->
+              <div class="shipment-title d-none d-md-flex" style="margin-bottom:16px;">
+                <i class="fa fa-archive"></i> Shipment Details
+              </div>
+              <div class="shipment-details d-none d-md-block">
+                <table class="table table-borderless mb-0">
+                  <tr><td>Shipment ID</td><td><?= $get_shipping_details_row['doc'] ?? '-' ?></td></tr>
+                  <tr><td>Order Number</td><td>-</td></tr>
+                  <tr><td>Order Date</td><td><?= $pickup_date ?></td></tr>
+                  <tr><td>Order Items</td><td><?= htmlspecialchars($client_name) ?></td></tr>
+                  <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
+                  <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
+                  <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
+                  <tr><td>Mode of Payment</td><td>-</td></tr>
+                  <tr><td>Order Value</td><td>-</td></tr>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -302,6 +328,18 @@ body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background:#f5f8fd;}
     box-shadow: 0 2px 12px #bbb2ff22;
     padding: 18px 16px 22px 16px;
 }
+/* Hide collapse arrow & toggle on big screens, show on small */
+.shipment-header { display: flex; }
+@media (min-width: 768px) {
+  .shipment-header, #shipmentArrow, #shipmentDetails { display: none !important; }
+  .shipment-title.d-md-flex { display: flex !important; }
+  .shipment-details.d-md-block { display: block !important; }
+}
+@media (max-width: 767.98px) {
+  .shipment-header { display: flex !important; }
+  .shipment-title.d-md-flex, .shipment-details.d-md-block { display: none !important; }
+  .shipment-details.d-md-none { display: none; }
+}
 .shipment-title {
     font-weight: 700;
     color: #232351;
@@ -356,9 +394,13 @@ body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background:#f5f8fd;}
 .modal-step-desc { font-size: .98rem; color: #8a91ab; }
 .modal-step-time { font-size: .95rem; color: #7c7d8a; }
 @media (max-width: 900px) {
-    .track-box, .shipment-card { min-width: unset; }
+    .track-box, .shipment-card { min-width: unset; width: 100%; }
     .track-title { font-size: 1.4rem;}
     .track-date { font-size: 1rem;}
+    .row.justify-content-center.flex-wrap-reverse {
+        flex-direction: column-reverse !important;
+    }
+    .shipment-card { margin-bottom: 18px; }
 }
 .track-searchbar {
     display: flex;
@@ -460,5 +502,18 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#allUpdatesModal').modal('show');
         }
     });
+
+    // Shipment Details Collapse/Expand for small screens
+    var shipmentToggle = document.getElementById('shipmentToggle');
+    var shipmentDetails = document.getElementById('shipmentDetails');
+    var shipmentArrow = document.getElementById('shipmentArrow');
+    // By default, collapsed
+    if (shipmentToggle && shipmentDetails && shipmentArrow) {
+      shipmentToggle.addEventListener('click', function() {
+        var isOpen = shipmentDetails.style.display === 'block';
+        shipmentDetails.style.display = isOpen ? 'none' : 'block';
+        shipmentArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+      });
+    }
 });
 </script>

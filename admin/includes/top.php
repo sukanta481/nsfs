@@ -1,8 +1,4 @@
 <?php
-// === DEBUG OUTPUT: Show session data on every admin page for debugging ===
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
-
 // 1. Set custom session name (do this BEFORE session_start)
 session_name('pro');
 
@@ -11,13 +7,7 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// --- DEBUG: Remove in production ---
-// echo "<pre style='color:red;'>SESSION DEBUG [top.php]\n";
-// echo "Session Name: " . session_name() . "\n";
-// echo "Session ID: " . session_id() . "\n";
-// print_r($_SESSION);
-// echo "</pre>";
-
+// include config and function files
 include 'define.php';
 
 $PHP_SELF = isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : $_SERVER['SCRIPT_NAME'];

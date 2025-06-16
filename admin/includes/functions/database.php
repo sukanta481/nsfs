@@ -1,16 +1,26 @@
 <?php
 // --- Configuration Section ---
-if (!defined('DB_SERVER')) define('DB_SERVER', 'localhost');
-if (!defined('DB_USER'))   define('DB_USER', 'root');
-if (!defined('DB_PASS'))   define('DB_PASS', '');
-if (!defined('DB_NAME'))   define('DB_NAME', 'nsfs');
+
+// Load environment variables
+$env_path = __DIR__ . '/../../../.env'; // Adjust this if needed!
+if (file_exists($env_path)) {
+    $env = parse_ini_file($env_path);
+    if (!defined('DB_SERVER')) define('DB_SERVER', $env['DB_HOST']);
+    if (!defined('DB_USER'))   define('DB_USER', $env['DB_USER']);
+    if (!defined('DB_PASS'))   define('DB_PASS', $env['DB_PASS']);
+    if (!defined('DB_NAME'))   define('DB_NAME', $env['DB_NAME']);
+} else {
+    // fallback (optional, only for local development)
+    if (!defined('DB_SERVER')) define('DB_SERVER', 'localhost');
+    if (!defined('DB_USER'))   define('DB_USER', 'root');
+    if (!defined('DB_PASS'))   define('DB_PASS', '');
+    if (!defined('DB_NAME'))   define('DB_NAME', 'nsfs');
+}
 
 // Optional: define('TABLE_PREFIX', 'tbl_');
 
 // --- Global DB Connection ---
 $GLOBALS['db_connection'] = null;
-
-// --- Functions ---
 
 function g_db_connect() {
     if (!isset($GLOBALS['db_connection']) || !$GLOBALS['db_connection']) {

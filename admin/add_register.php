@@ -28,6 +28,12 @@
 		});
 	}
 </script>
+<?php
+if (!isset($rc) || !is_array($rc)) {
+    $rc = ['rented_car' => null]; // default
+}
+?>
+
 <div class="x_panel">
                 <div class="x_title">
                   <h2>Add New Register </h2>
@@ -43,8 +49,8 @@
                       <div class="col-md-6 col-sm-6 col-xs-12">
                      
                       
-                      <input type="radio" name="rented_car" value="1" <?php if($rc['rented_car']==1){ echo "checked";}?> onclick="change_rented_car(this.value);">Yes
-                       <input type="radio" name="rented_car" value="0" <?php if($rc['rented_car']==0){ echo "checked";}?> onclick="change_rented_car(this.value);">No
+                      <input type="radio" name="rented_car" value="1" <?php if(isset($rc['rented_car']) && $rc['rented_car']==1){ echo "checked";}?> onclick="change_rented_car(this.value);">Yes
+                      <input type="radio" name="rented_car" value="0" <?php if(isset($rc['rented_car']) && $rc['rented_car']==0){ echo "checked";}?> onclick="change_rented_car(this.value);">No
                      
                        
  
