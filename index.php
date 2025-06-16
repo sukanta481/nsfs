@@ -1,4 +1,9 @@
-<?php include("include/header.php"); ?>
+<?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+include("include/header.php"); ?>
 <?php
 $get_page_sql="select * from  tbl_pagecontent where id='1'";
 $get_page_rs=mysqli_query($conn,$get_page_sql);
