@@ -29,7 +29,7 @@ include 'functions/thumb_function.php';
 $public_pages = [
     'login.php',
     'signup.php',
-    'forget_password.php',
+    'forgot_password.php',
     'reset_password.php'
 ];
 $current_page = basename($PHP_SELF);

@@ -149,14 +149,14 @@ if (!$is_ajax) { ?>
               <div class="shipment-details d-none d-md-block">
                 <table class="table table-borderless mb-0">
                   <tr><td>Shipment ID</td><td><?= $get_shipping_details_row['doc'] ?? '-' ?></td></tr>
-                  <tr><td>Order Number</td><td>-</td></tr>
+                  <!-- <tr><td>Order Number</td><td>-</td></tr> -->
                   <tr><td>Order Date</td><td><?= $pickup_date ?></td></tr>
-                  <tr><td>Order Items</td><td><?= htmlspecialchars($client_name) ?></td></tr>
+                  <tr><td>Client Name</td><td><?= htmlspecialchars($client_name) ?></td></tr>
                   <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
                   <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
                   <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
                   <tr><td>Mode of Payment</td><td>-</td></tr>
-                  <tr><td>Order Value</td><td>-</td></tr>
+                  <!-- <tr><td>Order Value</td><td>-</td></tr> -->
                 </table>
               </div>
             </div>

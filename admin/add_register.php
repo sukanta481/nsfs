@@ -342,6 +342,13 @@ if (!isset($rc) || !is_array($rc)) {
  
                       </div>
                     </div>
+                    <div class="item form-group">
+                      <label class="control-label col-md-3 col-sm-3 col-xs-12">Consignee Email:</label>
+                      <div class="col-md-6 col-sm-6 col-xs-12">
+                        <input type="email" name="client_email[]" class="form-control col-md-7 col-xs-12" required>
+                      </div>
+                    </div>
+
                     
                     <div class="item form-group">
                       <label class="control-label col-md-3 col-sm-3 col-xs-12" >Consignee  Address: 

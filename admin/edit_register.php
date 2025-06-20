@@ -366,6 +366,14 @@ $rc1 =mysqli_fetch_array($q1);
  
                       </div>
                     </div>
+
+                    <div class="item form-group">
+                      <label class="control-label col-md-3 col-sm-3 col-xs-12" >Consignee Email: </label>
+                      <div class="col-md-6 col-sm-6 col-xs-12">
+                        <input type="email" name="client_email_edit[]" id="client_email_edit" required="required" value="<?= $get_shipping_row['client_email'];?>" class="form-control col-md-7 col-xs-12">
+                      </div>
+                    </div>
+
                     
                     <div class="item form-group">
                       <label class="control-label col-md-3 col-sm-3 col-xs-12" >Consignee  Address: 
