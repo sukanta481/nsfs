@@ -1,12 +1,16 @@
 <?php
-// Load database configuration from environment variables
-
-foreach (['DB_SERVER', 'DB_SERVER_USERNAME', 'DB_SERVER_PASSWORD', 'DB_DATABASE'] as $var) {
-    $value = getenv($var);
-    if ($value === false) {
-        $value = '';
-    }
-    if (!defined($var)) {
-        define($var, $value);
+// Load environment variables from .env file
+$envPath = __DIR__ . '/.env'; // Adjust the path if needed
+if (file_exists($envPath)) {
+    $env = parse_ini_file($envPath);
+    if ($env !== false) {
+        foreach ($env as $key => $value) {
+            if (!defined($key)) {
+                define($key, $value);
+            }
+        }
     }
 }
+
+// Now you can use DB_HOST, DB_USER, DB_PASS, DB_NAME, etc. as constants everywhere.
+?>

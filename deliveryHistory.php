@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['doc_no'])) {
 }
 $get_shipping_details_row = false;
 if ($doc_no) {
-    $get_shipping_details_sql = "SELECT * FROM tbl_shipping_details WHERE doc='" . $doc_no . "'";
+    $get_shipping_details_sql = "SELECT * FROM tbl_shipping_details WHERE doc_no='" . $doc_no . "'";
     $get_shipping_details_rs = mysqli_query($conn, $get_shipping_details_sql);
     $get_shipping_details_row = mysqli_fetch_assoc($get_shipping_details_rs);
 }

@@ -11,10 +11,10 @@ if (isset($_POST['edit_trip'])) {
     $reason_of_delay = $_POST['reason_of_delay'] ?? '';
 
     // 1. Fetch details BEFORE update
-    $sql_prev = mysqli_query($conn, "SELECT status, doc, company_email, client_email, client_name, company_id, proof_of_delivery FROM tbl_shipping_details WHERE shipping_details_id = '$shipping_details_id'");
+    $sql_prev = mysqli_query($conn, "SELECT status, doc_no, company_email, client_email, client_name, company_id, proof_of_delivery FROM tbl_shipping_details WHERE shipping_details_id = '$shipping_details_id'");
     $prev_row = mysqli_fetch_assoc($sql_prev);
 
-    $doc = $prev_row['doc'];
+    $doc = $prev_row['doc_no'];
     $client_email = $prev_row['client_email'];
     $client_name = $prev_row['client_name'];
     $company_email = $prev_row['company_email'];
@@ -111,7 +111,7 @@ $current_status = $get_shipping_row['status'];
             <div class="item form-group">
                 <label class="control-label col-md-3 col-sm-3 col-xs-12">Doc:</label>
                 <div class="col-md-6 col-sm-6 col-xs-12">
-                    <?= $get_shipping_row['doc']; ?>
+                    <?= $get_shipping_row['doc_no']; ?>
                 </div>
             </div>
 
