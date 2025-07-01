@@ -46,24 +46,26 @@ function get_driver_phone_no(v) {
     $.ajax({
         type: "POST",
         url: "ajax_get_driver_phone_no.php",
-        dataType: 'html',
+        dataType: 'text',
         data: "q=" + v,
-        success: function (html) {
-            $("#driver_number_sec").html(html);
+        success: function (phone) {
+            $("#driver_number").val(phone.trim());
         }
     });
 }
+
 function get_helper_phone_no(v) {
     $.ajax({
         type: "POST",
         url: "ajax_get_helper_phone_no.php",
-        dataType: 'html',
+        dataType: 'text',
         data: "q=" + v,
-        success: function (html) {
-            $("#helper_number_sec").html(html);
+        success: function (phone) {
+            $("#helper_number").val(phone.trim());
         }
     });
 }
+
 </script>
 
 <div class="x_panel">
