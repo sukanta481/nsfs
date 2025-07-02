@@ -1,4 +1,11 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// ... rest of your code
+?>
+
+<?php
 include_once(__DIR__ . '/includes/notifications/send_email.php');
 // (Add SMS/WhatsApp includes here if needed)
 
