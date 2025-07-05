@@ -34,14 +34,6 @@ function change_rented_car(val) {
         $("#rented_car_sec").hide();
     }
 }
-function change_doc_type(val) {
-    if (val == "NON-DRS") {
-        $("#branch_office_div").show();
-    } else {
-        $("#branch_office_div").hide();
-        $("#branch_office").val('');
-    }
-}
 function get_driver_phone_no(v) {
     $.ajax({
         type: "POST",
@@ -53,7 +45,6 @@ function get_driver_phone_no(v) {
         }
     });
 }
-
 function get_helper_phone_no(v) {
     $.ajax({
         type: "POST",
@@ -65,7 +56,6 @@ function get_helper_phone_no(v) {
         }
     });
 }
-
 </script>
 
 <div class="x_panel">
@@ -189,27 +179,8 @@ function get_helper_phone_no(v) {
           <input type="text" name="doc_no" class="form-control" required>
         </div>
       </div>
-      <div class="item form-group">
-        <label class="control-label col-md-3 col-sm-3 col-xs-12">Doc Type <span class="required">*</span></label>
-        <div class="col-md-6 col-sm-6 col-xs-12">
-          <select class="form-control" name="doc_type" id="doc_type" required onchange="change_doc_type(this.value)">
-            <option value="">Select Type</option>
-            <option value="DRS">DRS</option>
-            <option value="NON-DRS">NON-DRS</option>
-          </select>
-        </div>
-      </div>
-      <div class="item form-group" id="branch_office_div" style="display:none;">
-        <label class="control-label col-md-3 col-sm-3 col-xs-12">Branch Office</label>
-        <div class="col-md-6 col-sm-6 col-xs-12">
-          <select class="form-control" name="branch_office" id="branch_office">
-            <option value="">Select Branch</option>
-            <option value="slg">Siliguri</option>
-            <option value="bdn">Burdwan</option>
-            <option value="drj">Darjeeling</option>
-          </select>
-        </div>
-      </div>
+      <!-- Doc Type field REMOVED here -->
+      <!-- Branch Office field REMOVED here -->
       <div class="item form-group">
         <label class="control-label col-md-3 col-sm-3 col-xs-12">Consignor Company <span class="required">*</span></label>
         <div class="col-md-6 col-sm-6 col-xs-12">

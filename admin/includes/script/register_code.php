@@ -27,8 +27,6 @@ if (isset($_POST['save_register'])) {
 
     // DOC INFO
     $doc_no          = $_POST['doc_no'] ?? '';
-    $doc_type        = $_POST['doc_type'] ?? '';
-    $branch_office   = $_POST['branch_office'] ?? '';
     $box             = $_POST['box'] ?? 0;
     $weight          = $_POST['weight'] ?? 0;
     $pay_to          = $_POST['pay_to'] ?? '0';
@@ -94,8 +92,6 @@ if (isset($_POST['save_register'])) {
     // ---------- SAVE THE DATA ----------
     $add_shipping_details_sql = "INSERT INTO tbl_shipping_details SET
         doc_no          = '" . mysqli_real_escape_string($conn, $doc_no) . "',
-        doc_type        = '" . mysqli_real_escape_string($conn, $doc_type) . "',
-        branch_office   = '" . mysqli_real_escape_string($conn, $branch_office) . "',
         company_id      = '" . mysqli_real_escape_string($conn, $company_id) . "',
         company_email   = '" . mysqli_real_escape_string($conn, $company_email) . "',
         client_name     = '" . mysqli_real_escape_string($conn, $client_name) . "',
