@@ -65,11 +65,16 @@
                     <li><a href="company.php?type=add_company&lp=ac&<?php echo session_name().'='.session_id();?>">Add Consignor Company</a></li>
                     <!-- <li><a href="client.php?type=list_client&lp=ac&<?php echo session_name().'='.session_id();?>">All Consignee Company</a></li>
                     <li><a href="client.php?type=add_client&lp=ac&<?php echo session_name().'='.session_id();?>">Add Consignee Company</a></li> -->
-                    	<li><a href="delay_reason.php?type=list_delay_reason&lp=ac&<?php echo session_name().'='.session_id();?>">All Delay Reason</a></li>
+                    <li><a href="offices.php"><i class="fa fa-building"></i> Offices</a></li>
+
+
+                    <li><a href="delay_reason.php?type=list_delay_reason&lp=ac&<?php echo session_name().'='.session_id();?>">All Delay Reason</a></li>
             <li><a href="delay_reason.php?type=add_delay_reason&lp=ac&<?php echo session_name().'='.session_id();?>">Add Delay Reason</a></li>
             <li><a href="register.php?type=list_register&lp=ac&<?php echo session_name().'='.session_id();?>">All Register</a></li>
                     <li><a href="register.php?type=add_register&lp=ac&<?php echo session_name().'='.session_id();?>">Add Register</a></li>
                     	<li><a href="trip.php?type=list_trip&lp=ac&<?php echo session_name().'='.session_id();?>">All Tip</a></li>
+                                  	<li><a href="manifest.php?type=list_company&lp=ac&<?php echo session_name().'='.session_id();?>">Manifest</a></li>
+
             
           </ul>
           

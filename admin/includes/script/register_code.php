@@ -27,6 +27,8 @@ if (isset($_POST['save_register'])) {
 
     // DOC INFO
     $doc_no          = $_POST['doc_no'] ?? '';
+    $doc_type        = $_POST['doc_type'] ?? '';
+    $branch_office   = $_POST['branch_office'] ?? '';
     $box             = $_POST['box'] ?? 0;
     $weight          = $_POST['weight'] ?? 0;
     $pay_to          = $_POST['pay_to'] ?? '0';
@@ -47,8 +49,8 @@ if (isset($_POST['save_register'])) {
     $client_email    = $_POST['client_email'] ?? '';
     $client_address  = $_POST['client_address'] ?? '';
 
-    // Status (always set to Processing on new register)
-    $status = 'Processing';
+    // Set status as "Picked Up"
+    $status = 'Picked Up';
 
     // Tracking link
     $tracking_link = "https://northsuperfastservice.com/deliveryHistory.php?doc_no=" . urlencode($doc_no);
@@ -73,7 +75,7 @@ if (isset($_POST['save_register'])) {
         $final_driver_number = $driver_number;
         $final_helper_id = $helper_id;
 
-        // ----------- FIX: Fetch helper name/number by ID ------------
+        // ----------- Fetch helper name/number by ID ------------
         if ($helper_id) {
             $get_helper = mysqli_query($conn, "SELECT helper_name, helper_number FROM tbl_helper WHERE helper_id='" . mysqli_real_escape_string($conn, $helper_id) . "' LIMIT 1");
             if ($row = mysqli_fetch_assoc($get_helper)) {
@@ -81,7 +83,7 @@ if (isset($_POST['save_register'])) {
                 $final_helper_number = $row['helper_number'];
             } else {
                 $final_helper_name = '';
-                $final_helper_number = $helper_number; // fallback to whatever is in the posted field
+                $final_helper_number = $helper_number;
             }
         } else {
             $final_helper_name = '';
@@ -92,6 +94,8 @@ if (isset($_POST['save_register'])) {
     // ---------- SAVE THE DATA ----------
     $add_shipping_details_sql = "INSERT INTO tbl_shipping_details SET
         doc_no          = '" . mysqli_real_escape_string($conn, $doc_no) . "',
+        doc_type        = '" . mysqli_real_escape_string($conn, $doc_type) . "',
+        branch_office   = '" . mysqli_real_escape_string($conn, $branch_office) . "',
         company_id      = '" . mysqli_real_escape_string($conn, $company_id) . "',
         company_email   = '" . mysqli_real_escape_string($conn, $company_email) . "',
         client_name     = '" . mysqli_real_escape_string($conn, $client_name) . "',
@@ -115,13 +119,22 @@ if (isset($_POST['save_register'])) {
         car_oil_amount  = '" . mysqli_real_escape_string($conn, $car_oil_amount) . "',
         car_in_time     = '" . mysqli_real_escape_string($conn, $car_in_time) . "',
         car_out_time    = '" . mysqli_real_escape_string($conn, $car_out_time) . "',
-        pickup_dates    = NOW()
+        pickup_dates     = NOW()
     ";
 
     mysqli_query($conn, $add_shipping_details_sql) or die(mysqli_error($conn));
+    $ship_id = mysqli_insert_id($conn);
 
-    // Redirect on success
-    header("Location: ../../register.php?type=list_register&lp=cu&msg=success");
+    // --- INSERT FIRST STATUS ENTRY ("Picked Up") ---
+    $status_note = "Parcel picked up from $client_name and received at North Super Fast Service Main Office, Kolkata. Docket number generated.";
+    $location = "Kolkata";
+    $updateddate = date('Y-m-d H:i:s');
+    mysqli_query($conn, "INSERT INTO tbl_trip_status (ship_id, status, note, location, updateddate)
+        VALUES ('$ship_id', 'Picked Up', '".mysqli_real_escape_string($conn, $status_note)."', '".mysqli_real_escape_string($conn, $location)."', '$updateddate')");
+
+   // Redirect back to add_register.php with success message
+    header("Location: ../../add_register.php?msg=success");
     exit;
+
 }
 ?>

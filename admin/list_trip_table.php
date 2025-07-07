@@ -9,14 +9,21 @@ $typedata = $_REQUEST['typedata'] ?? '';
 $consignor = trim($_REQUEST['consignor'] ?? '');
 $consignee = trim($_REQUEST['consignee'] ?? '');
 
+// Pending POD support (either direct filter, or status from card)
+$is_pending_pod = (strtolower($status) === 'pendingpod') || (isset($_GET['pending_pod_mode']) && $_GET['pending_pod_mode'] == 1);
+
 $where = [];
 if (!empty($fromdate) && !empty($todate)) {
-    $where[] = "(pickup_dates BETWEEN '".mysqli_real_escape_string($conn, $fromdate)."' AND '".mysqli_real_escape_string($conn, $todate)."')";
+    $where[] = "(sd.pickup_dates BETWEEN '".mysqli_real_escape_string($conn, $fromdate)."' AND '".mysqli_real_escape_string($conn, $todate)."')";
 }
 if (!empty($doc_type)) {
     $where[] = "sd.doc_type='".mysqli_real_escape_string($conn, $doc_type)."'";
 }
-if (!empty($status)) {
+// Pending POD logic
+if ($is_pending_pod) {
+    $where[] = "sd.status='Delivered'";
+    $where[] = "(sd.proof_of_delivery IS NULL OR sd.proof_of_delivery='')";
+} else if (!empty($status)) {
     $where[] = "sd.status='".mysqli_real_escape_string($conn, $status)."'";
 }
 if (!empty($type) && !empty($typedata)) {
@@ -51,7 +58,7 @@ $rowCount = 1;
             <tr>
                 <th>Sl</th>
                 <th>Pickup Date</th>
-                <th>Doc No</th>
+                <th>Docket No</th>
                 <th>DRS Type</th>
                 <th>Consignor Company</th>
                 <th>Consignee Name</th>

@@ -1,17 +1,25 @@
 <?php
 include('conn.php');
+// Receive the pending_pod_mode from trip.php context
+$pending_pod_mode = isset($pending_pod_mode) ? $pending_pod_mode : false;
 ?>
 
 <div class="x_panel">
     <div class="x_title">
-        <h2>List Docs</h2>
+        <h2>
+          <?php echo $pending_pod_mode ? 'Pending POD Docs' : 'List Docs'; ?>
+        </h2>
         <div>
             <?php include('filter_form_trip.php'); ?>
         </div>
         <div class="clearfix"></div>
     </div>
     <div id="posts">
-        <?php include('list_trip_table.php'); ?>
+        <?php
+        // Pass flag via global for AJAX fallback
+        $GLOBALS['pending_pod_mode'] = $pending_pod_mode;
+        include('list_trip_table.php');
+        ?>
     </div>
 </div>
 
@@ -23,7 +31,7 @@ $(function () {
         $.ajax({
             type: 'get',
             url: 'list_trip_table.php',
-            data: $('#forms').serialize(),
+            data: $('#forms').serialize() + '&pending_pod_mode=<?= $pending_pod_mode ? 1 : 0 ?>',
             success: function (data) {
                 $('#posts').html(data);
             }
