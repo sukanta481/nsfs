@@ -5,7 +5,6 @@ $is_ajax = (
     (isset($_POST['ajax']) && $_POST['ajax'] == '1')
 );
 
-// Only include header/footer if not AJAX
 if (!$is_ajax) include("include/header.php");
 
 $doc_no = isset($_GET['doc_no']) ? mysqli_real_escape_string($conn, trim($_GET['doc_no'])) : '';
@@ -13,34 +12,71 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['doc_no'])) {
     $doc_no = mysqli_real_escape_string($conn, trim($_POST['doc_no']));
 }
 $get_shipping_details_row = false;
+$branch_office_name = '';
 if ($doc_no) {
     $get_shipping_details_sql = "SELECT * FROM tbl_shipping_details WHERE doc_no='" . $doc_no . "'";
     $get_shipping_details_rs = mysqli_query($conn, $get_shipping_details_sql);
     $get_shipping_details_row = mysqli_fetch_assoc($get_shipping_details_rs);
+
+    // Branch Office name resolve (if any)
+    if ($get_shipping_details_row && !empty($get_shipping_details_row['branch_office'])) {
+        $office_id = (int)$get_shipping_details_row['branch_office'];
+        $office_sql = "SELECT office_name FROM tbl_offices WHERE office_id='$office_id' LIMIT 1";
+        $office_rs = mysqli_query($conn, $office_sql);
+        if ($office_row = mysqli_fetch_assoc($office_rs)) {
+            $branch_office_name = $office_row['office_name'];
+        }
+    }
 }
 if ($get_shipping_details_row) {
     $sid = $get_shipping_details_row['shipping_details_id'];
-    // Show ALL statuses for this shipment, oldest first
+
+    // Fetch ALL trip status rows for this shipment, oldest first
     $status_sql = "SELECT * FROM tbl_trip_status WHERE ship_id='$sid' ORDER BY updateddate ASC";
     $status_rs = mysqli_query($conn, $status_sql);
-    $history = [];
-    while ($row = mysqli_fetch_assoc($status_rs)) $history[] = $row;
 
-    // Define timeline steps
-    $timeline = [
-        ['label' => 'Shipment Created',   'db_status' => 'Created',      'desc' => '', 'time' => null],
-        ['label' => 'Picked Up',          'db_status' => 'Picked Up',    'desc' => $get_shipping_details_row['client_address'], 'time' => null],
-        ['label' => 'In Transit',         'db_status' => 'In Transit',   'desc' => '', 'time' => null],
-        ['label' => 'Out for Delivery',   'db_status' => 'Out for Delivery', 'desc' => '', 'time' => null],
-        ['label' => 'Delivered',          'db_status' => 'Delivered',    'desc' => '', 'time' => null],
-    ];
+    // Group all status+note under each status
+    $status_notes = [];
+    while ($row = mysqli_fetch_assoc($status_rs)) {
+        $status = $row['status'];
+        if (!isset($status_notes[$status])) $status_notes[$status] = [];
+        $status_notes[$status][] = [
+            'note' => $row['note'],
+            'date' => date('d M Y, h:i A', strtotime($row['updateddate']))
+        ];
+    }
+
+    // Define timeline steps based on branch office
+    if (empty($get_shipping_details_row['branch_office'])) {
+        // Main branch, direct delivery
+        $timeline = [
+            // ['label' => 'Shipment Created', 'db_status' => 'Created', 'desc' => '', 'time' => null],
+            ['label' => 'Picked Up', 'db_status' => 'Picked Up', 'desc' => $get_shipping_details_row['client_address'], 'time' => null],
+            ['label' => 'In Transit', 'db_status' => 'In Transit', 'desc' => '', 'time' => null],
+            ['label' => 'Out for Delivery', 'db_status' => 'Out for Delivery', 'desc' => '', 'time' => null],
+            ['label' => 'Delivered', 'db_status' => 'Delivered', 'desc' => '', 'time' => null],
+        ];
+    } else {
+        // Branch transfer shipment
+        $timeline = [
+            // ['label' => 'Shipment Created', 'db_status' => 'Created', 'desc' => '', 'time' => null],
+            ['label' => 'Picked Up', 'db_status' => 'Picked Up', 'desc' => $get_shipping_details_row['client_address'], 'time' => null],
+            ['label' => 'Manifest Created', 'db_status' => 'Manifest Created', 'desc' => $branch_office_name, 'time' => null],
+            ['label' => 'In Transit to Branch', 'db_status' => 'In Transit to Branch', 'desc' => '', 'time' => null],
+            ['label' => 'Arrived at Branch', 'db_status' => 'Arrived at Branch', 'desc' => $branch_office_name, 'time' => null],
+            ['label' => 'Out for Delivery', 'db_status' => 'Out for Delivery', 'desc' => '', 'time' => null],
+            ['label' => 'Delivered', 'db_status' => 'Delivered', 'desc' => '', 'time' => null],
+        ];
+    }
+    // Attach time to timeline
     foreach ($timeline as $k => $step) {
-        foreach ($history as $h) {
-            if (strcasecmp($h['status'], $step['db_status']) == 0) {
-                $timeline[$k]['time'] = date('d M Y, h:i A', strtotime($h['updateddate']));
-            }
+        if (isset($status_notes[$step['db_status']])) {
+            // Take the most recent update time for this status
+            $most_recent = end($status_notes[$step['db_status']]);
+            $timeline[$k]['time'] = $most_recent['date'];
         }
     }
+
     $car_no = $delivery_agent = $contact_number = $client_name = '-';
     $client_name = $get_shipping_details_row['client_name'] ?? '-';
     $get_car_sql = "SELECT * FROM tbl_car WHERE car_id=(SELECT car_id FROM tbl_register WHERE register_id='" . $get_shipping_details_row['register_id'] . "')";
@@ -57,11 +93,11 @@ if ($get_shipping_details_row) {
     foreach ($timeline as $i => $step) { if ($step['time']) $last_done_idx = $i; }
 } else {
     $timeline = [];
+    $status_notes = [];
     $car_no = $delivery_agent = $contact_number = $client_name = $pickup_date = '-';
     $last_done_idx = -1;
 }
 
-// Output main HTML container only on non-AJAX
 if (!$is_ajax) { ?>
 <section style="background: #f5f8fd; min-height:80vh; padding:42px 0;">
   <div class="container">
@@ -74,7 +110,7 @@ if (!$is_ajax) { ?>
         </form>
       </div>
       <div class="col-lg-12" id="trackingResultBox">
-<?php } // End if !ajax ?>
+<?php } ?>
 
         <div class="row justify-content-center flex-wrap-reverse">
           <!-- Timeline/Left Panel (now first on mobile) -->
@@ -115,7 +151,6 @@ if (!$is_ajax) { ?>
                     </div>
                   </div>
                 <?php endforeach; ?>
-                <!-- Animated fill line (JS will adjust the height) -->
                 <div class="track-timeline-fill"></div>
               </div>
             </div>
@@ -123,40 +158,35 @@ if (!$is_ajax) { ?>
           <!-- Shipment Details/Right Panel -->
           <div class="col-12 col-md-7 col-lg-5 mb-4">
             <div class="shipment-card">
-              <!-- Header with arrow: small screens only -->
               <div class="shipment-header d-flex d-md-none" id="shipmentToggle" style="cursor:pointer;align-items:center;justify-content:space-between;">
                 <span class="shipment-title" style="margin:0;"><i class="fa fa-archive"></i> Shipment Details</span>
                 <span id="shipmentArrow" style="font-size:1.5rem;transition:transform 0.25s;">&#9654;</span>
               </div>
-              <!-- Collapsible details: small screens only -->
               <div id="shipmentDetails" class="shipment-details d-md-none" style="display:none;">
                 <table class="table table-borderless mb-0">
-                  <tr><td>Shipment ID</td><td><?= $get_shipping_details_row['doc'] ?? '-' ?></td></tr>
-                  <tr><td>Order Number</td><td>-</td></tr>
-                  <tr><td>Order Date</td><td><?= $pickup_date ?></td></tr>
-                  <tr><td>Order Items</td><td><?= htmlspecialchars($client_name) ?></td></tr>
-                  <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
-                  <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
-                  <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
-                  <tr><td>Mode of Payment</td><td>-</td></tr>
-                  <tr><td>Order Value</td><td>-</td></tr>
-                </table>
-              </div>
-              <!-- Always visible details: big screens only -->
-              <div class="shipment-title d-none d-md-flex" style="margin-bottom:16px;">
-                <i class="fa fa-archive"></i> Shipment Details
-              </div>
-              <div class="shipment-details d-none d-md-block">
-                <table class="table table-borderless mb-0">
-                  <tr><td>Shipment ID</td><td><?= $get_shipping_details_row['doc'] ?? '-' ?></td></tr>
-                  <!-- <tr><td>Order Number</td><td>-</td></tr> -->
+                  <tr><td>Shipment ID</td><td><?= $get_shipping_details_row['doc_no'] ?? '-' ?></td></tr>
                   <tr><td>Order Date</td><td><?= $pickup_date ?></td></tr>
                   <tr><td>Client Name</td><td><?= htmlspecialchars($client_name) ?></td></tr>
                   <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
                   <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
                   <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
+                  <tr><td>Branch Office</td><td><?= htmlspecialchars($branch_office_name ?: '-') ?></td></tr>
                   <tr><td>Mode of Payment</td><td>-</td></tr>
-                  <!-- <tr><td>Order Value</td><td>-</td></tr> -->
+                </table>
+              </div>
+              <div class="shipment-title d-none d-md-flex" style="margin-bottom:16px;">
+                <i class="fa fa-archive"></i> Shipment Details
+              </div>
+              <div class="shipment-details d-none d-md-block">
+                <table class="table table-borderless mb-0">
+                  <tr><td>Shipment ID</td><td><?= $get_shipping_details_row['doc_no'] ?? '-' ?></td></tr>
+                  <tr><td>Order Date</td><td><?= $pickup_date ?></td></tr>
+                  <tr><td>Client Name</td><td><?= htmlspecialchars($client_name) ?></td></tr>
+                  <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
+                  <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
+                  <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
+                  <tr><td>Branch Office</td><td><?= htmlspecialchars($branch_office_name ?: '-') ?></td></tr>
+                  <tr><td>Mode of Payment</td><td>-</td></tr>
                 </table>
               </div>
             </div>
@@ -175,28 +205,31 @@ if (!$is_ajax) { ?>
               </div>
               <div class="modal-body">
                 <div class="modal-timeline">
-                  <?php foreach ($timeline as $i => $step): if ($step['time']) { ?>
+                  <?php foreach ($status_notes as $status => $notes): ?>
                     <div class="modal-step">
-                      <div class="modal-step-label"><?= $step['label'] ?></div>
-                      <?php if (!empty($step['desc'])): ?>
-                        <div class="modal-step-desc"><?= htmlspecialchars($step['desc']) ?></div>
-                      <?php endif; ?>
-                      <div class="modal-step-time"><?= $step['time'] ?></div>
+                      <div class="modal-step-label"><b><?= htmlspecialchars($status) ?></b></div>
+                      <?php foreach ($notes as $n): ?>
+                        <?php if ($n['note']) { ?>
+                          <div class="modal-step-desc"><?= htmlspecialchars($n['note']) ?></div>
+                        <?php } ?>
+                        <div class="modal-step-time"><?= $n['date'] ?></div>
+                      <?php endforeach; ?>
                     </div>
-                  <?php } endforeach; ?>
+                  <?php endforeach; ?>
                 </div>
               </div>
             </div>
           </div>
         </div>
 <?php
-// End main container only on non-AJAX
 if (!$is_ajax) { ?>
       </div><!-- /trackingResultBox -->
     </div>
   </div>
 </section>
 <?php include("include/footer.php"); } ?>
+<!-- ... your style & JS unchanged ... -->
+
 <style>
 body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background:#f5f8fd;}
 .track-box {

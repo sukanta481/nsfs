@@ -133,7 +133,8 @@ if (isset($_POST['save_register'])) {
         VALUES ('$ship_id', 'Picked Up', '".mysqli_real_escape_string($conn, $status_note)."', '".mysqli_real_escape_string($conn, $location)."', '$updateddate')");
 
    // Redirect back to add_register.php with success message
-    header("Location: ../../add_register.php?msg=success");
+    // ✅ This is correct!
+    header("Location: ../../register.php?type=add_register&msg=success");
     exit;
 
 }

@@ -2,10 +2,7 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-// ... rest of your code
-?>
 
-<?php
 include_once(__DIR__ . '/includes/notifications/send_email.php');
 // (Add SMS/WhatsApp includes here if needed)
 
@@ -16,9 +13,10 @@ if (isset($_POST['edit_trip'])) {
     $shipping_id = $_POST['shipping_id'];
     $new_status = trim($_POST['status']);
     $reason_of_delay = $_POST['reason_of_delay'] ?? '';
+    $manual_note = trim($_POST['manual_note'] ?? '');
 
     // 1. Fetch details BEFORE update
-    $sql_prev = mysqli_query($conn, "SELECT status, doc_no, company_email, client_email, client_name, company_id, proof_of_delivery FROM tbl_shipping_details WHERE shipping_details_id = '$shipping_details_id'");
+    $sql_prev = mysqli_query($conn, "SELECT status, doc_no, company_email, client_email, client_name, company_id, proof_of_delivery, branch_office FROM tbl_shipping_details WHERE shipping_details_id = '$shipping_details_id'");
     $prev_row = mysqli_fetch_assoc($sql_prev);
 
     $doc = $prev_row['doc_no'];
@@ -27,6 +25,16 @@ if (isset($_POST['edit_trip'])) {
     $company_email = $prev_row['company_email'];
     $company_id = $prev_row['company_id'];
     $proof_of_delivery = $prev_row['proof_of_delivery'];
+    $branch_office = $prev_row['branch_office'];
+
+    // Fetch branch office name
+    $branch_office_name = '';
+    if (!empty($branch_office)) {
+        $sql_branch = mysqli_query($conn, "SELECT office_name FROM tbl_offices WHERE office_id='" . mysqli_real_escape_string($conn, $branch_office) . "'");
+        if ($row_branch = mysqli_fetch_assoc($sql_branch)) {
+            $branch_office_name = $row_branch['office_name'];
+        }
+    }
 
     // Company name
     $company_name = '';
@@ -42,6 +50,31 @@ if (isset($_POST['edit_trip'])) {
         move_uploaded_file($pod_tmp, "post_img/$pod_name");
         $proof_of_delivery = $pod_name;
     }
+
+    // Note logic: you can map a default note per status
+    $auto_notes = [
+        'Created' => "Shipment created in system.",
+        'Picked Up' => "Parcel picked up from consignor and received at North Super Fast Service Main Office, Kolkata. Docket number generated.",
+        'Manifest Created' => "Parcel grouped with other shipments for $branch_office_name. Scheduled for dispatch.",
+        'In Transit' => "Parcel is ready to transit to $client_name.",
+        'In Transit to Branch' => "Parcel is on the way to $branch_office_name.",
+        'Arrived at Branch' => "Parcel has arrived at $branch_office_name.",
+        'Out for Delivery' => "Parcel is out for delivery to $client_name.",
+        'Delivered' => $proof_of_delivery
+            ? "Parcel delivered to consignee. [Click here to view Proof of Delivery (POD)]"
+            : "Parcel delivered to consignee. POD upload is pending.",
+        'Delay' => "Parcel delivery delayed.",
+    ];
+
+    $auto_note = $auto_notes[$new_status] ?? '';
+    // If a manual note is added, append it
+    // Only use manual note if present, else auto note
+        if ($manual_note) {
+            $final_note = $manual_note;
+        } else {
+            $final_note = $auto_note;
+        }
+
 
     // SEND NOTIFICATION only for 'Out for Delivery' and 'Delivered'
     if ($new_status === "Out for Delivery" || $new_status === "Delivered") {
@@ -72,10 +105,22 @@ if (isset($_POST['edit_trip'])) {
         WHERE shipping_details_id='$shipping_details_id'";
     mysqli_query($conn, $update_sql);
 
-    // Log audit (optional)
+    // Log audit (history)
     $created_time = date('Y-m-d H:i:s');
-    $ins_trip_status = "INSERT INTO tbl_trip_status (ship_id, status, updateddate) VALUES ('$shipping_details_id', '$new_status', '$created_time')";
+    $ins_trip_status = "INSERT INTO tbl_trip_status 
+        (doc_no, ship_id, status, note, updateddate) 
+        VALUES (
+            '" . mysqli_real_escape_string($conn, $doc) . "',
+            '$shipping_details_id', 
+            '" . mysqli_real_escape_string($conn, $new_status) . "',
+            '" . mysqli_real_escape_string($conn, $final_note) . "',
+            '$created_time')";
     mysqli_query($conn, $ins_trip_status);
+
+    // Redirect after successful POST to avoid duplicate insert on refresh
+    // Build the correct redirect URL using current GET params
+
+
 }
 
 // --- GET SHIPPING DETAILS (for display) ---
@@ -84,7 +129,40 @@ $get_shipping_sql = "SELECT * FROM tbl_shipping_details WHERE shipping_details_i
 $get_shipping_rs = mysqli_query($conn, $get_shipping_sql);
 $get_shipping_row = mysqli_fetch_array($get_shipping_rs);
 $current_status = $get_shipping_row['status'];
+$branch_office = $get_shipping_row['branch_office'];
+
+
+// Set status list dynamically based on branch_office value
+if (empty($branch_office)) {
+    // Main branch - direct delivery
+    $status_list = [
+        'Created',
+        'Picked Up',
+        'In Transit',
+        'Out for Delivery',
+        'Delivered',
+        'Delay'
+    ];
+} else {
+    // Branch transfer
+    $status_list = [
+        'Created',
+        'Picked Up',
+        'Manifest Created',
+        'In Transit to Branch',
+        'Arrived at Branch',
+        'Out for Delivery',
+        'Delivered',
+        'Delay'
+    ];
+}
 ?>
+<?php
+if (isset($_GET['success'])) {
+    echo "<div class='alert alert-success'>Status updated successfully!</div>";
+}
+?>
+
 
 <!-- HTML starts here -->
 <div class="x_panel">
@@ -148,19 +226,11 @@ $current_status = $get_shipping_row['status'];
             <div class="item form-group">
                 <label class="control-label col-md-3 col-sm-3 col-xs-12">Status:</label>
                 <div class="col-md-6 col-sm-6 col-xs-12">
-                    <select class="form-control col-md-7 col-xs-12" name="status" onchange="change_status(this.value);">
+                    <select class="form-control col-md-7 col-xs-12" name="status" id="status_select" onchange="showAutoNote(this.value);change_status(this.value);">
                         <option value="<?= htmlspecialchars($current_status) ?>" selected>
                             <?= $current_status ? $current_status : "Select Status" ?>
                         </option>
                         <?php
-                        $status_list = [
-                            'Created',
-                            'Picked Up',
-                            'In Transit',
-                            'Delay',
-                            'Out for Delivery',
-                            'Delivered'
-                        ];
                         foreach ($status_list as $s) {
                             if ($s != $current_status) {
                                 echo '<option value="' . $s . '">' . $s . '</option>';
@@ -168,6 +238,22 @@ $current_status = $get_shipping_row['status'];
                         }
                         ?>
                     </select>
+                </div>
+            </div>
+
+            <!-- Auto Note area (shows when status is selected) -->
+            <div class="item form-group" id="auto_note_sec" style="display:none;">
+                <label class="control-label col-md-3 col-sm-3 col-xs-12">Auto Note:</label>
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <div id="auto_note" style="background:#f4f7fa;padding:7px 13px;border-radius:4px;color:#234;font-size:1.03em;"></div>
+                </div>
+            </div>
+
+            <!-- Add extra manual note -->
+            <div class="item form-group">
+                <label class="control-label col-md-3 col-sm-3 col-xs-12">Add Note:</label>
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <textarea name="manual_note" class="form-control" placeholder="Write any additional note (optional)"></textarea>
                 </div>
             </div>
 
@@ -218,6 +304,30 @@ $current_status = $get_shipping_row['status'];
                         $("#pod_sec").hide();
                     }
                 }
+
+                function showAutoNote(status) {
+                    var branchOffice = <?= json_encode($branch_office) ?>;
+                    var clientName = <?= json_encode($get_shipping_row['client_name']) ?>;
+                    var proofOfDelivery = <?= json_encode($get_shipping_row['proof_of_delivery']) ?>;
+                    var notes = {
+                        'Created': "Shipment created in system.",
+                        'Picked Up': "Parcel picked up from consignor and received at North Super Fast Service Main Office, Kolkata. Docket number generated.",
+                        'Manifest Created': branchOffice ? ("Parcel grouped with other shipments for " + branchOffice + ". Scheduled for dispatch.") : "",
+                        'In Transit': "Parcel is ready to transit to " + clientName + ".",
+                        'In Transit to Branch': branchOffice ? ("Parcel is on the way to " + branchOffice + ".") : "",
+                        'Arrived at Branch': branchOffice ? ("Parcel has arrived at " + branchOffice + ".") : "",
+                        'Out for Delivery': "Parcel is out for delivery to " + clientName + ".",
+                        'Delivered': proofOfDelivery ? "Parcel delivered to consignee. [Click here to view Proof of Delivery (POD)]" : "Parcel delivered to consignee. POD upload is pending.",
+                        'Delay': "Parcel delivery delayed."
+                    };
+                    if (notes[status]) {
+                        $("#auto_note").text(notes[status]);
+                        $("#auto_note_sec").show();
+                    } else {
+                        $("#auto_note").text('');
+                        $("#auto_note_sec").hide();
+                    }
+                }
             </script>
 
             <div class="ln_solid"></div>
@@ -232,3 +342,4 @@ $current_status = $get_shipping_row['status'];
         </form>
     </div>
 </div>
+
