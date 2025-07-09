@@ -1,221 +1,141 @@
 <?php
-$sdid = $_REQUEST['shipping_details_id'];
+require('conn.php');
+$sdid = intval($_REQUEST['shipping_details_id']);
 
+// Fetch shipping & company details
+$get_shipping_detail_sql = "SELECT sd.*, c.company_title, c.company_address, c.company_phone 
+    FROM tbl_shipping_details sd 
+    LEFT JOIN tbl_company c ON sd.company_id = c.company_id 
+    WHERE sd.shipping_details_id = '$sdid' LIMIT 1";
+$get_shipping_detail_rs = mysqli_query($conn, $get_shipping_detail_sql);
+$get_shipping_detail_row = mysqli_fetch_assoc($get_shipping_detail_rs);
 
+if (!$get_shipping_detail_row) die("Docket not found.");
 
+// Helper: Format date
+function dt($d) { return $d ? date('d-M-Y', strtotime($d)) : ''; }
 
-
-$get_shipping_detail_sql="select * from   tbl_shipping_details where shipping_details_id='".$sdid."'";
-$get_shipping_detail_rs=mysqli_query($conn, $get_shipping_detail_sql);
-$get_shipping_detail_row=mysqli_fetch_array($get_shipping_detail_rs);
-
-$get_register_sql="select * from    tbl_register where register_id='".$get_shipping_detail_row['register_id']."'";
-$get_register_rs=mysqli_query($conn, $get_register_sql);
-$get_register_row=mysqli_fetch_array($get_register_rs);
-
-
-$get_shipping_sql="select * from    tbl_shipping where shipping_id='".$get_shipping_detail_row['shipping_id']."'";
-$get_shipping_rs=mysqli_query($conn, $get_shipping_sql);
-$get_shipping_row=mysqli_fetch_array($get_shipping_rs);
+// Pull fields safely
+$car_no = $get_shipping_detail_row['car_number'] ?? '-';
+$doc_no = $get_shipping_detail_row['doc_no'] ?? '-';
+$pickup_date = dt($get_shipping_detail_row['pickup_dates'] ?? '');
+$consignor_name = $get_shipping_detail_row['company_title'] ?? '-';
+$consignor_addr = $get_shipping_detail_row['company_address'] ?? '-';
+$consignor_phone = $get_shipping_detail_row['company_phone'] ?? '-';
+$consignee_name = $get_shipping_detail_row['client_name'] ?? '-';
+$consignee_addr = $get_shipping_detail_row['client_address'] ?? '-';
+$consignee_phone = $get_shipping_detail_row['client_phone'] ?? '-';
+$box = $get_shipping_detail_row['box'] ?? '-';
+$weight = $get_shipping_detail_row['weight'] ?? '-';
+$eway_bill = $get_shipping_detail_row['eway_bill'] ?? '-';
+$item = $get_shipping_detail_row['item'] ?? 'General Merchandise';
+$declared_value = $get_shipping_detail_row['declared_value'] ?? '-';
+$delivery_instruction = $get_shipping_detail_row['delivery_instruction'] ?? '-';
 ?>
-<script>
-	function print_invoice()
-	{
-	document.title = "";	
-	window.print();	
-	}
-</script>
-<div class="x_panel">
-                <div class="x_title">
-                  <h2>Print Invoice </h2>
-                  
-                  <div class="clearfix"></div>
-                </div>
-                <div class="x_content">
 
-                  <div class="invoice_container">	
-                  	<div class="invoice_containerTopprnt">
-                  		<div class="prt_ico prnticon"><a href="#" onclick="print_invoice();"><img src="images/prnt.png" alt=""></a></div>
-                  	<div class="scent_logo ">
-                  		<img src="<?= SITE_URL; ?>assets/images/logo.png" alt="" height="100px";width="100px";>
-                  		<!-- <img src="images/royal.png" alt="" style="float: right;"> -->
-                  		
-                  	</div>
+<style>
+@media print { .no-print { display: none; } }
+.print-invoice-main { font-family: Arial, sans-serif; width: 900px; margin: auto; background: #fff; padding: 20px; }
+.print-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.company-logo { height: 80px; }
+.company-details { text-align: right; font-size: 13px; }
+hr { border: 1px solid #aaa; margin-top: 10px; margin-bottom: 14px; }
+.section { border: 1px solid #555; padding: 13px 20px; margin: 18px 0 0 0; }
+.section-title { font-weight: bold; text-transform: uppercase; font-size: 15px; margin-bottom: 7px; }
+.info-table, .info-table td, .info-table th { border: none; font-size: 15px; }
+.info-table { width: 100%; }
+</style>
 
-<div class="two_part_sec_first">	
-	<div class="left_section_inv">
-		<?php
-
-		$get_page_sql1="select * from  tbl_contact";
-		$get_page_rs1=mysqli_query($conn,$get_page_sql1);
-		$get_page_row1=mysqli_fetch_array($get_page_rs1);
-		
-		?>
-		<h2>NORTH SUPER FAST SERVICE</h2>
-		<div class="cst_address"><?php echo $get_page_row1['contact_address'];?></div>
-		<div class="cst_address"> Mob : <?php echo $get_page_row1['contact_phone2'];?></div>
-		<div class="cst_address"> Email : <?php echo $get_page_row1['contact_email2'];?></div>		
-		
-		
-	</div>
-	<div class="right_section_inv">
-		<div class="cst1"><strong>DOC NO : </strong> <?php echo $get_shipping_detail_row['doc'];?></div>
-		<div class="cst1"><strong>DATE  : </strong> <?php echo $get_shipping_row['shipping_date'];?></div>
-		<div class="cst1"><strong>TRIP NO : </strong> <?php echo $get_shipping_row['trip_no'];?></div>
-		
-	</div>
-</div>
-</div>
-<?php
-if($get_register_row['rented_car']==1)
-{
-	
-	$driver_name=$get_register_row['driver_name'];
-	$driver_number=$get_register_row['driver_number'];
-}
-else
-{
-
-$get_car_sql="select * from  tbl_car where car_id='".$get_register_row['car_id']."'";
-$get_car_rs=mysqli_query($conn,$get_car_sql);
-$get_car_row=mysqli_fetch_array($get_car_rs);
-
-$get_driver_sql="select * from   tbl_driver where driver_id='".$get_register_row['driver_id']."'";
-$get_driver_rs=mysqli_query($conn,$get_driver_sql);
-$get_driver_row=mysqli_fetch_array($get_driver_rs);
-
-$get_helper_sql="select * from   tbl_helper where helper_id='".$get_register_row['helper_id']."'";
-$get_helper_rs=mysqli_query($conn,$get_helper_sql);
-$get_helper_row=mysqli_fetch_array($get_helper_rs);
-
-
-
-	$driver_name=$get_driver_row['driver_name'];
-	$driver_number=$get_driver_row['driver_number'];
-
-}
-?>
-<div class="sales_recp_section">
-	<h6>CAR NO : <?= $get_car_row['car_number'];?></h6>
-	<div class="date_sec_inv">
-		<table class="table border-none m-0">
-			<tr>
-				<td><strong>Driver Name :</strong></td>
-				<td><?php echo $driver_name;?></td>
-				<td><strong>Phone No :</strong></td>
-				<td><?php echo $driver_number;?></td>
-			</tr>
-		</table>
-	</div>
-	<?php
-	if(($get_helper_row['helper_name'] || $get_helper_row['helper_number']) && $get_register_row['rented_car']==0)
-	{
-	?>
-	<div class="date_sec_inv">
-		<table class="table border-none m-0">
-			<tr>
-				<td><strong>Helper Name :</strong></td>
-				<td><?php echo $get_helper_row['helper_name'];?></td>
-				<td><strong>Phone No :</strong></td>
-				<td><?php echo $get_register_row['helper_number'];?></td>
-			</tr>
-		</table>
-	</div>
-	<?php
-	}
-	?>
-	
-	<div class="two_part_sec">
-		<div class="left_section_inv">
-			<h5>CONSIGNOR:</h5>
-			<?php
-          	$get_company_sql="select * from    tbl_company where company_id='".$get_shipping_detail_row['company_id']."'";
-          	$get_company_rs=mysqli_query($conn,$get_company_sql);
-			$get_company_row=mysqli_fetch_array($get_company_rs);
-			?>
-			
-			<div class="cst1"><strong>Company Name: </strong> <?= $get_company_row['company_title'];?></div>
-			<div class="cst1"><strong>Address : </strong> <?php echo $get_company_row['company_address'];?></div>
-			<div class="cst1"><strong>Phone : </strong> <?php echo $get_company_row['company_phone'];?></div>
-		
-		</div>
-		<div class="right_section_inv">
-			<h5>CONSIGEE</h5>			
-			
-			<div class="cst1"><strong>Company Name : </strong> <?= $get_shipping_detail_row['client_name'];?></div>
-			<div class="cst1"><strong>Address : </strong> <?= $get_shipping_detail_row['client_address'];?></div>
-			<div class="cst1"><strong>Phone : </strong> <?= $get_shipping_detail_row['client_phone'];?></div>
-		</div>
-</div>
-    
-<div class="table_section_inv">
-    <table style="border-collapse: collapse; width:100%; margin:0;" border="0" cellpadding="0" cellspacing="0" width="100%">
-		<tbody class="tbody_sec" style="border:1px solid #000; width: 100%;">
-	    	<tr class="slno_tr">
-	    		<td class="slno_Row" style="width: 100%;">
-	    			<table class="slno_Row_table" style="width: 100%;">
-	    				<thead style="width: 100%;">
-	    					<tr class="hd_sec hdblueHed">
-	    						
-	    						<td>DOC NO</td>
-	    						<td>BOX (UNIT)</td>
-	    						<td>EOA BILL (NO)	</td>
-	    						<td>WEIGHT (KG)</td>
-	    						<!-- <td>UNIT PRICE</td> -->
-	    					</tr>
-	    					
-	    					<tr class="pro_row">
-	    						
-	    						<td><?= $get_shipping_detail_row['doc'];?></td>
-	    						
-	    						<td>
-	    							<?= $get_shipping_detail_row['box'];?>
-	    						</td>
-	    						<?php
-	    						if($get_shipping_detail_row['have_eoa_bill_no']==1)
-								{
-	    						?>
-	    						<td>
-	    							<?= $get_shipping_detail_row['eoa_bill_no'];?>
-	    						</td>
-	    						<?php
-								}
-								else
-								{
-								?>
-	    						<td>
-	    							N/A
-	    						</td>
-	    						<?php	
-								}
-	    						?>
-	    						
-	    						<td>
-	    							
-	    							<?= $get_shipping_detail_row['weight'];?>
-	    						</td>
-	    						
-	    						<!-- <td>
-	    							<?= $get_shipping_detail_row['unit_price'];?>
-	    						</td> -->
-	    					</tr>	    					    					
-	    					
-	    					
-	    					
-	    					
-	    				</thead>
-	    			</table>
-	    		</td>
-	    	</tr>
-	    </tbody>
+<div class="print-invoice-main">
+  <div class="print-header">
+    <img src="images/logo.png" class="company-logo">
+    <div class="company-details">
+      <strong>NORTH SUPER FAST SERVICE</strong><br>
+      Barasat.algoria.moynacheck,<br>
+      kolkata - 700125<br>
+      Mob: 9933999998<br>
+      Email: onestepup@northsuperfastservice.com
+    </div>
+  </div>
+  <hr>
+  <table class="info-table">
+    <tr>
+      <td>
+        <b>Vehicle No.:</b> <?= htmlspecialchars($car_no) ?>
+      </td>
+      <td>
+        <b>GOODS CONSIGNMENT NOTE - Non Negotiable</b>
+      </td>
+      <td>
+        <b>GCN No.:</b> <?= htmlspecialchars($doc_no) ?><br>
+        <b>Date:</b> <?= htmlspecialchars($pickup_date) ?>
+      </td>
+    </tr>
+  </table>
+  <div class="section">
+    <table style="width:100%">
+      <tr>
+        <td valign="top" width="50%">
+          <div class="section-title">Consignor</div>
+          <b>Name:</b> <?= htmlspecialchars($consignor_name) ?><br>
+          <b>Address:</b> <?= htmlspecialchars($consignor_addr) ?><br>
+          <b>Phone:</b> <?= htmlspecialchars($consignor_phone) ?>
+        </td>
+        <td valign="top" width="50%">
+          <div class="section-title">Consignee</div>
+          <b>Name:</b> <?= htmlspecialchars($consignee_name) ?><br>
+          <b>Address:</b> <?= htmlspecialchars($consignee_addr) ?><br>
+          <b>Phone:</b> <?= htmlspecialchars($consignee_phone) ?>
+        </td>
+      </tr>
     </table>
- </div>   
- <div class="lower_text">If you have any questions concerning this invoice please call us on the number above</div>   
+  </div>
 
-</div>     
-  
-</div>
-</div>
+  <div class="section">
+    <table class="info-table" style="width:100%;">
+      <tr>
+        <th>Volume</th>
+        <th>Gross Wt</th>
+        <th>Chargeable Wt</th>
+        <th>Box</th>
+        <th>Eway Bill</th>
+        <th>Description of Goods</th>
+      </tr>
+      <tr>
+        <td>-</td>
+        <td><?= htmlspecialchars($weight) ?></td>
+        <td><?= htmlspecialchars($weight) ?></td>
+        <td><?= htmlspecialchars($box) ?></td>
+        <td><?= htmlspecialchars($eway_bill) ?></td>
+        <td><?= htmlspecialchars($item) ?></td>
+      </tr>
+    </table>
+  </div>
 
-                </div>
-              </div>
+  <div class="section">
+    <div><b>Declared Value:</b> <?= htmlspecialchars($declared_value) ?></div>
+    <div><b>Delivery Instruction:</b> <?= htmlspecialchars($delivery_instruction) ?></div>
+  </div>
+  <div class="section">
+    <table class="info-table" style="width:100%;">
+      <tr>
+        <th>Proof of delivery</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Received by</th>
+      </tr>
+      <tr>
+        <td style="height:32px;"></td>
+        <td></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+  </div>
+  <div style="margin-top:18px; font-size:12px;">
+    If you have any questions concerning this invoice, please call us on the number above.
+  </div>
+  <div class="no-print" style="margin-top:15px;">
+    <button onclick="window.print()" style="padding:7px 22px; font-size:15px;">Print</button>
+  </div>
+</div>

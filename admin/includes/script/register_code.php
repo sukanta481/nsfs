@@ -57,39 +57,49 @@ if (isset($_POST['save_register'])) {
 
     // --------- HANDLING RENTED OR PERSONAL CAR LOGIC ----------
     if ($rented_car == '1') {
-        // Rented car: use manual inputs
-        $final_car_id = '';
-        $final_car_number = $car_number;
-        $final_driver_id = '';
-        $final_driver_name = $driver_name;
-        $final_driver_number = $driver_number_rent;
-        $final_helper_id = '';
-        $final_helper_name = $helper_name;
-        $final_helper_number = $helper_number;
+    // Rented car: use manual inputs
+    $final_car_id = '';
+    $final_car_number = $car_number;
+    $final_driver_id = '';
+    $final_driver_name = $driver_name;
+    $final_driver_number = $driver_number_rent;
+    $final_helper_id = '';
+    $final_helper_name = $helper_name;
+    $final_helper_number = $helper_number;
+} else {
+    // Personal car: use selected IDs, fetch car number and helper name/number from tables
+    $final_car_id = $car_id;
+    // --- Fetch car number by car_id ---
+    if ($car_id) {
+        $car_number_sql = mysqli_query($conn, "SELECT car_number FROM tbl_car WHERE car_id='" . mysqli_real_escape_string($conn, $car_id) . "' LIMIT 1");
+        if ($row = mysqli_fetch_assoc($car_number_sql)) {
+            $final_car_number = $row['car_number'];
+        } else {
+            $final_car_number = '';
+        }
     } else {
-        // Personal car: use selected IDs, fetch helper name/number from tbl_helper
-        $final_car_id = $car_id;
         $final_car_number = '';
-        $final_driver_id = $driver_id;
-        $final_driver_name = '';
-        $final_driver_number = $driver_number;
-        $final_helper_id = $helper_id;
-
-        // ----------- Fetch helper name/number by ID ------------
-        if ($helper_id) {
-            $get_helper = mysqli_query($conn, "SELECT helper_name, helper_number FROM tbl_helper WHERE helper_id='" . mysqli_real_escape_string($conn, $helper_id) . "' LIMIT 1");
-            if ($row = mysqli_fetch_assoc($get_helper)) {
-                $final_helper_name = $row['helper_name'];
-                $final_helper_number = $row['helper_number'];
-            } else {
-                $final_helper_name = '';
-                $final_helper_number = $helper_number;
-            }
+    }
+    $final_driver_id = $driver_id;
+    $final_driver_name = '';
+    $final_driver_number = $driver_number;
+    $final_helper_id = $helper_id;
+    // --- Fetch helper name/number by ID ---
+    if ($helper_id) {
+        $get_helper = mysqli_query($conn, "SELECT helper_name, helper_number FROM tbl_helper WHERE helper_id='" . mysqli_real_escape_string($conn, $helper_id) . "' LIMIT 1");
+        if ($row = mysqli_fetch_assoc($get_helper)) {
+            $final_helper_name = $row['helper_name'];
+            $final_helper_number = $row['helper_number'];
         } else {
             $final_helper_name = '';
             $final_helper_number = $helper_number;
         }
+    } else {
+        $final_helper_name = '';
+        $final_helper_number = $helper_number;
     }
+}
+
 
     // ---------- SAVE THE DATA ----------
     $add_shipping_details_sql = "INSERT INTO tbl_shipping_details SET

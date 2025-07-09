@@ -17,8 +17,15 @@ if (!empty($fromdate) && !empty($todate)) {
     $where[] = "(sd.pickup_dates BETWEEN '".mysqli_real_escape_string($conn, $fromdate)."' AND '".mysqli_real_escape_string($conn, $todate)."')";
 }
 if (!empty($doc_type)) {
-    $where[] = "sd.doc_type='".mysqli_real_escape_string($conn, $doc_type)."'";
+    if ($doc_type == 'NON-DRS') {
+        $where[] = "sd.status='Picked Up' AND (sd.branch_office IS NULL OR sd.branch_office='' OR sd.branch_office=0)";
+    } else if ($doc_type == 'DRS') {
+        $where[] = "sd.status='Picked Up' AND sd.branch_office IS NOT NULL AND sd.branch_office<>'' AND sd.branch_office<>0";
+    } else {
+        $where[] = "sd.doc_type='".mysqli_real_escape_string($conn, $doc_type)."'";
+    }
 }
+
 // Pending POD logic
 if ($is_pending_pod) {
     $where[] = "sd.status='Delivered'";
@@ -58,10 +65,10 @@ $rowCount = 1;
             <tr>
                 <th>Sl</th>
                 <th>Pickup Date</th>
-                <th>Docket No</th>
-                <th>DRS Type</th>
+                <th>Docket No</th>                
                 <th>Consignor Company</th>
                 <th>Consignee Name</th>
+                <th>ADDRESS</th>
                 <th>Status</th>
                 <th>Action</th>
             </tr>
@@ -73,14 +80,14 @@ while($row = mysqli_fetch_array($exe)) {
             <tr>
                 <td><?= $rowCount ?></td>
                 <td><?= htmlspecialchars($row['pickup_dates'] ?? 'N/A') ?></td>
-                <td><?= htmlspecialchars($row['doc_no'] ?? '-') ?></td>
-                <td><?= htmlspecialchars($row['doc_type'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($row['doc_no'] ?? '-') ?></td>                
                 <td><?= htmlspecialchars($row['company_title'] ?? '-') ?></td>
                 <td><?= htmlspecialchars($row['client_name'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($row['client_address'] ?? '-') ?></td>
                 <td><?= htmlspecialchars($row['status'] ?? '-') ?></td>
                 <td>
                     <a class="btn btn-info btn-xs" href="trip.php?type=edit_trip_company&lp=ac&shipping_details_id=<?= urlencode($row['shipping_details_id']); ?>&<?= session_name() . '=' . session_id(); ?>">Edit Doc Status</a>
-                    <a class="btn btn-success btn-xs" href="register.php?type=print_doc&lp=cu&shipping_details_id=<?= $row['shipping_details_id']; ?>" target="_blank">Print</a>
+                    <a class="btn btn-success btn-xs" href="print_doc.php?shipping_details_id=<?= $row['shipping_details_id']; ?>" target="_blank">Print</a>
                     <a class="btn btn-danger btn-xs" href="javascript:void(0);" onclick="delconfirmshipping('<?= $row['shipping_details_id'] ?>');">Delete</a>
                 </td>
             </tr>

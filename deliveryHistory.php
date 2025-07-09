@@ -1,4 +1,7 @@
 <?php
+// Connect DB if not already
+// include("include/db_connect.php"); // Uncomment if not already included above
+
 // Detect AJAX
 $is_ajax = (
     (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') ||
@@ -7,12 +10,14 @@ $is_ajax = (
 
 if (!$is_ajax) include("include/header.php");
 
+// ... your DB connection and header logic ...
+
 $doc_no = isset($_GET['doc_no']) ? mysqli_real_escape_string($conn, trim($_GET['doc_no'])) : '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['doc_no'])) {
     $doc_no = mysqli_real_escape_string($conn, trim($_POST['doc_no']));
 }
 $get_shipping_details_row = false;
-$branch_office_name = '';
+$branch_office_name = '-';
 if ($doc_no) {
     $get_shipping_details_sql = "SELECT * FROM tbl_shipping_details WHERE doc_no='" . $doc_no . "'";
     $get_shipping_details_rs = mysqli_query($conn, $get_shipping_details_sql);
@@ -28,6 +33,7 @@ if ($doc_no) {
         }
     }
 }
+
 if ($get_shipping_details_row) {
     $sid = $get_shipping_details_row['shipping_details_id'];
 
@@ -50,7 +56,6 @@ if ($get_shipping_details_row) {
     if (empty($get_shipping_details_row['branch_office'])) {
         // Main branch, direct delivery
         $timeline = [
-            // ['label' => 'Shipment Created', 'db_status' => 'Created', 'desc' => '', 'time' => null],
             ['label' => 'Picked Up', 'db_status' => 'Picked Up', 'desc' => $get_shipping_details_row['client_address'], 'time' => null],
             ['label' => 'In Transit', 'db_status' => 'In Transit', 'desc' => '', 'time' => null],
             ['label' => 'Out for Delivery', 'db_status' => 'Out for Delivery', 'desc' => '', 'time' => null],
@@ -59,7 +64,6 @@ if ($get_shipping_details_row) {
     } else {
         // Branch transfer shipment
         $timeline = [
-            // ['label' => 'Shipment Created', 'db_status' => 'Created', 'desc' => '', 'time' => null],
             ['label' => 'Picked Up', 'db_status' => 'Picked Up', 'desc' => $get_shipping_details_row['client_address'], 'time' => null],
             ['label' => 'Manifest Created', 'db_status' => 'Manifest Created', 'desc' => $branch_office_name, 'time' => null],
             ['label' => 'In Transit to Branch', 'db_status' => 'In Transit to Branch', 'desc' => '', 'time' => null],
@@ -71,32 +75,30 @@ if ($get_shipping_details_row) {
     // Attach time to timeline
     foreach ($timeline as $k => $step) {
         if (isset($status_notes[$step['db_status']])) {
-            // Take the most recent update time for this status
             $most_recent = end($status_notes[$step['db_status']]);
             $timeline[$k]['time'] = $most_recent['date'];
         }
     }
 
-    $car_no = $delivery_agent = $contact_number = $client_name = '-';
-    $client_name = $get_shipping_details_row['client_name'] ?? '-';
-    $get_car_sql = "SELECT * FROM tbl_car WHERE car_id=(SELECT car_id FROM tbl_register WHERE register_id='" . $get_shipping_details_row['register_id'] . "')";
-    $get_car_rs = mysqli_query($conn, $get_car_sql);
-    if ($car_row = mysqli_fetch_assoc($get_car_rs)) $car_no = $car_row['car_number'];
-    $get_helper_sql = "SELECT * FROM tbl_helper WHERE helper_id=(SELECT helper_id FROM tbl_register WHERE register_id='" . $get_shipping_details_row['register_id'] . "')";
-    $get_helper_rs = mysqli_query($conn, $get_helper_sql);
-    if ($helper_row = mysqli_fetch_assoc($get_helper_rs)) {
-        $delivery_agent = $helper_row['helper_name'];
-        $contact_number = $helper_row['helper_number'];
-    }
-    $pickup_date = !empty($get_shipping_details_row['pickup_dates']) ? date('d M Y', strtotime($get_shipping_details_row['pickup_dates'])) : '-';
+    // --- SHIPMENT DETAILS (read directly from tbl_shipping_details) ---
+    $client_name    = !empty($get_shipping_details_row['client_name'])    ? $get_shipping_details_row['client_name']    : '-';
+    $pickup_date    = !empty($get_shipping_details_row['pickup_dates'])   ? date('d M Y', strtotime($get_shipping_details_row['pickup_dates'])) : '-';
+    $car_no         = !empty($get_shipping_details_row['car_number'])     ? $get_shipping_details_row['car_number']     : '-';
+    $delivery_agent = !empty($get_shipping_details_row['helper_name'])    ? $get_shipping_details_row['helper_name']    : '-';
+    $contact_number = !empty($get_shipping_details_row['helper_number'])  ? $get_shipping_details_row['helper_number']  : '-';
+
     $last_done_idx = -1;
     foreach ($timeline as $i => $step) { if ($step['time']) $last_done_idx = $i; }
 } else {
     $timeline = [];
     $status_notes = [];
-    $car_no = $delivery_agent = $contact_number = $client_name = $pickup_date = '-';
+    $car_no = $delivery_agent = $contact_number = $client_name = $pickup_date = $branch_office_name = '-';
     $last_done_idx = -1;
 }
+
+
+// Debugging: Uncomment below to see what data you have
+// echo '<pre>'; print_r($get_shipping_details_row); echo '</pre>';
 
 if (!$is_ajax) { ?>
 <section style="background: #f5f8fd; min-height:80vh; padding:42px 0;">
@@ -170,8 +172,8 @@ if (!$is_ajax) { ?>
                   <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
                   <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
                   <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
-                  <tr><td>Branch Office</td><td><?= htmlspecialchars($branch_office_name ?: '-') ?></td></tr>
-                  <tr><td>Mode of Payment</td><td>-</td></tr>
+                  <!-- <tr><td>Branch Office</td><td><?= htmlspecialchars($branch_office_name) ?></td></tr> -->
+                  <!-- <tr><td>Mode of Payment</td><td>-</td></tr> -->
                 </table>
               </div>
               <div class="shipment-title d-none d-md-flex" style="margin-bottom:16px;">
@@ -185,8 +187,8 @@ if (!$is_ajax) { ?>
                   <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
                   <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
                   <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
-                  <tr><td>Branch Office</td><td><?= htmlspecialchars($branch_office_name ?: '-') ?></td></tr>
-                  <tr><td>Mode of Payment</td><td>-</td></tr>
+                  <!-- <tr><td>Branch Office</td><td><?= htmlspecialchars($branch_office_name) ?></td></tr> -->
+                  <!-- <tr><td>Mode of Payment</td><td>-</td></tr> -->
                 </table>
               </div>
             </div>
@@ -228,7 +230,8 @@ if (!$is_ajax) { ?>
   </div>
 </section>
 <?php include("include/footer.php"); } ?>
-<!-- ... your style & JS unchanged ... -->
+<!-- ... keep your CSS and JS as before ... -->
+
 
 <style>
 body { font-family: 'Inter', 'Segoe UI', Arial, sans-serif; background:#f5f8fd;}
