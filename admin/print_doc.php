@@ -112,30 +112,67 @@ hr { border: 1px solid #aaa; margin-top: 10px; margin-bottom: 14px; }
     </table>
   </div>
 
-  <div class="section">
+  <div class="section" style="padding:0;">
+  <table style="width:100%; border-collapse:collapse;" border="1" cellpadding="7">
+    <tr style="background:#fafafa;">
+      <th style="font-weight:700;">Invoice No</th>
+      <th style="font-weight:700;">Eway bill No</th>
+      <th style="font-weight:700;">Description of Goods<br>(said to contain)</th>
+      <th style="font-weight:700;">No of Pkg</th>
+      <th style="font-weight:700;">Remarks</th>
+      <th style="font-weight:700;">Trip Number</th>
+    </tr>
+    <tr>
+      <td><?= htmlspecialchars($get_shipping_detail_row['invoice_no'] ?? '-') ?></td>
+      <td><?= htmlspecialchars($eway_bill) ?></td>
+      <td><?= htmlspecialchars($item) ?></td>
+      <td><?= htmlspecialchars($box) ?></td>
+      <td></td>
+      <td><?= htmlspecialchars($get_shipping_detail_row['trip_number'] ?? '-') ?></td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="display:flex;justify-content:space-between;align-items:stretch;gap:10px;">
+  <div style="width:50%;border-right:1px solid #999;padding-right:14px;">
     <div><b>Declared Value:</b> <?= htmlspecialchars($declared_value) ?></div>
-    <div><b>Delivery Instruction:</b> <?= htmlspecialchars($delivery_instruction) ?></div>
+    <div style="font-size:12px;margin-top:8px;line-height:1.4;">
+      <small>We do hereby certify that the above particulars of goods consigned by us have been and have been correctly entered into and the consignment is booked with full knowledge of the terms and conditions of this G.C Note, which we accept.</small>
+    </div>
+    <div style="margin-top:16px;"><b>Signature of Consignor, his Agent or Representative</b></div>
   </div>
-  <div class="section">
-    <table class="info-table" style="width:100%;">
+  <div style="width:50%;padding-left:14px;">
+    <div><b>Delivery Instruction:</b> <?= htmlspecialchars($delivery_instruction) ?></div>
+    <div style="font-size:12px;margin-top:8px;line-height:1.4;">
+      <small>Any Octroi, sales tax, entry tax, duties or taxes as may be applicable on the consignment will be paid by consignee at the time of delivery of consignment.</small>
+    </div>
+    <div style="margin-top:16px;"><b>Proof of delivery</b></div>
+    <table style="width:100%;margin-top:5px;font-size:14px;">
       <tr>
-        <th>Proof of delivery</th>
-        <th>Date</th>
-        <th>Time</th>
-        <th>Received by</th>
+        <td style="width:33%;">Date:</td>
+        <td style="width:33%;">Time:</td>
+        <td style="width:34%;">Received by (Name Sign):</td>
       </tr>
       <tr>
-        <td style="height:32px;"></td>
+        <td style="height:28px;"></td>
         <td></td>
         <td></td>
-        <td></td>
+      </tr>
+      <tr>
+        <td colspan="3">Remarks:</td>
+      </tr>
+      <tr>
+        <td colspan="3" style="height:22px;"></td>
       </tr>
     </table>
   </div>
-  <div style="margin-top:18px; font-size:12px;">
-    If you have any questions concerning this invoice, please call us on the number above.
-  </div>
-  <div class="no-print" style="margin-top:15px;">
-    <button onclick="window.print()" style="padding:7px 22px; font-size:15px;">Print</button>
-  </div>
+</div>
+
+<div style="margin-top:18px; font-size:12px;">
+  If you have any questions concerning this invoice, please call us on the number above.
+</div>
+<div class="no-print" style="margin-top:15px;">
+  <button onclick="window.print()" style="padding:7px 22px; font-size:15px;">Print</button>
+</div>
+
 </div>
