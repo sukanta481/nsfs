@@ -43,22 +43,42 @@ if (isset($_POST['edit_trip'])) {
         if ($crow = mysqli_fetch_assoc($csql)) $company_name = $crow['company_title'];
     }
 
-    if ($new_status == 'Delivered' && !empty($_FILES['proof_of_delivery']['name'])) {
-    $pod_name = time() . $_FILES['proof_of_delivery']['name'];
+    // File upload for POD (Proof of Delivery)
+    $upload_success = true; // Default for cases where file is not uploaded
+    // File upload for POD (Proof of Delivery)
+$upload_success = true; // Default for cases where file is not uploaded
+if ($new_status == 'Delivered' && !empty($_FILES['proof_of_delivery']['name'])) {
+    $original_name = $_FILES['proof_of_delivery']['name'];
+    $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+    $allowed_exts = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
+    if (!in_array($ext, $allowed_exts)) {
+        die('File type not allowed');
+    }
+    $pod_name = time() . '_' . preg_replace('/[^a-zA-Z0-9_\-\.]/', '', pathinfo($original_name, PATHINFO_FILENAME)) . '.' . $ext;
+
+    // Save to /admin/post_img/pod/
+    $save_dir = __DIR__ . '/post_img/pod/';
+
+    // Create folder if not exists
+    if (!file_exists($save_dir)) {
+        mkdir($save_dir, 0775, true); // Try to create the folder
+    }
+
     $pod_tmp = $_FILES['proof_of_delivery']['tmp_name'];
-    $target_path = "post_image/pod/$pod_name";
-    $upload_success = move_uploaded_file($pod_tmp, $target_path);
+    $upload_success = move_uploaded_file($pod_tmp, $save_dir . $pod_name);
     $proof_of_delivery = $pod_name;
 
+    // Error handling
     if ($_FILES['proof_of_delivery']['error'] != UPLOAD_ERR_OK) {
         echo "<div style='color:red;'>File upload error code: " . $_FILES['proof_of_delivery']['error'] . "</div>";
     } else if (!$upload_success) {
-        // This will only show if move_uploaded_file fails AND no upload error
         echo "<div style='color:red;'>move_uploaded_file failed! Check your folder path and permissions.</div>";
     }
     } else {
         $proof_of_delivery = $prev_row['proof_of_delivery'];
     }
+
+
 
 
 
@@ -295,7 +315,7 @@ if (isset($_GET['success'])) {
                     <?php
                     if ($get_shipping_row['proof_of_delivery'] != '') {
                         ?>
-                        <img src="post_img/<?= $get_shipping_row['proof_of_delivery']; ?>" width="200" height="200">
+                        <img src="post_img/pod/<?= htmlspecialchars($get_shipping_row['proof_of_delivery']); ?>" width="200" height="200">
                     <?php
                     }
                     ?>

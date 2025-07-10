@@ -180,7 +180,7 @@ if (!$is_ajax) { ?>
                       if (empty($pod_file)) {
                           echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;">POD Pending</span>';
                       } else {
-                          $pod_path = 'admin/post_image/pod/' . $pod_file; // adjust if needed
+                          $pod_path = '/post_img/pod/' . $pod_file; // adjust if needed
                           echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;">View POD</a>
                           <a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success">Download</a>';
                       }
@@ -206,16 +206,18 @@ if (!$is_ajax) { ?>
                   $status = $get_shipping_details_row['status'] ?? '';
                   $pod_file = $get_shipping_details_row['proof_of_delivery'] ?? '';
                   if ($status === 'Delivered') {
-                      echo '<tr><td>Proof of Delivery (POD)</td><td>';
-                      if (empty($pod_file)) {
-                          echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;">POD Pending</span>';
-                      } else {
-                          $pod_path = 'admin/post_image/pod/' . $pod_file; // adjust if needed
-                          echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;">View POD</a>
-                          <a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success">Download</a>';
-                      }
-                      echo '</td></tr>';
+                  echo '<tr><td>Proof of Delivery (POD)</td><td>';
+                  if (empty($pod_file)) {
+                      echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;">POD Pending</span>';
+                  } else {
+                      $pod_ext = strtolower(pathinfo($pod_file, PATHINFO_EXTENSION));
+                      $pod_path = '/post_img/pod/' . $pod_file;
+                      echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;">View POD</a> ';
+                      echo '<a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success">Download</a>';
                   }
+                  echo '</td></tr>';
+              }
+
                   ?>
                   <!-- POD row end -->
                 </table>
