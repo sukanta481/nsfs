@@ -96,7 +96,6 @@ if ($get_shipping_details_row) {
     $last_done_idx = -1;
 }
 
-
 // Debugging: Uncomment below to see what data you have
 // echo '<pre>'; print_r($get_shipping_details_row); echo '</pre>';
 
@@ -172,8 +171,23 @@ if (!$is_ajax) { ?>
                   <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
                   <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
                   <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
-                  <!-- <tr><td>Branch Office</td><td><?= htmlspecialchars($branch_office_name) ?></td></tr> -->
-                  <!-- <tr><td>Mode of Payment</td><td>-</td></tr> -->
+                  <!-- POD row start -->
+                  <?php
+                  $status = $get_shipping_details_row['status'] ?? '';
+                  $pod_file = $get_shipping_details_row['proof_of_delivery'] ?? '';
+                  if ($status === 'Delivered') {
+                      echo '<tr><td>Proof of Delivery (POD)</td><td>';
+                      if (empty($pod_file)) {
+                          echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;">POD Pending</span>';
+                      } else {
+                          $pod_path = 'admin/post_image/pod/' . $pod_file; // adjust if needed
+                          echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;">View POD</a>
+                          <a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success">Download</a>';
+                      }
+                      echo '</td></tr>';
+                  }
+                  ?>
+                  <!-- POD row end -->
                 </table>
               </div>
               <div class="shipment-title d-none d-md-flex" style="margin-bottom:16px;">
@@ -187,8 +201,23 @@ if (!$is_ajax) { ?>
                   <tr><td>Delivery Agent</td><td><?= htmlspecialchars($delivery_agent) ?></td></tr>
                   <tr><td>Contact Number</td><td><?= htmlspecialchars($contact_number) ?></td></tr>
                   <tr><td>Car No.</td><td><?= htmlspecialchars($car_no) ?></td></tr>
-                  <!-- <tr><td>Branch Office</td><td><?= htmlspecialchars($branch_office_name) ?></td></tr> -->
-                  <!-- <tr><td>Mode of Payment</td><td>-</td></tr> -->
+                  <!-- POD row start -->
+                  <?php
+                  $status = $get_shipping_details_row['status'] ?? '';
+                  $pod_file = $get_shipping_details_row['proof_of_delivery'] ?? '';
+                  if ($status === 'Delivered') {
+                      echo '<tr><td>Proof of Delivery (POD)</td><td>';
+                      if (empty($pod_file)) {
+                          echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;">POD Pending</span>';
+                      } else {
+                          $pod_path = 'admin/post_image/pod/' . $pod_file; // adjust if needed
+                          echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;">View POD</a>
+                          <a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success">Download</a>';
+                      }
+                      echo '</td></tr>';
+                  }
+                  ?>
+                  <!-- POD row end -->
                 </table>
               </div>
             </div>
@@ -231,6 +260,9 @@ if (!$is_ajax) { ?>
 </section>
 <?php include("include/footer.php"); } ?>
 <!-- ... keep your CSS and JS as before ... -->
+
+<!-- (CSS and JS as you posted) -->
+
 
 
 <style>

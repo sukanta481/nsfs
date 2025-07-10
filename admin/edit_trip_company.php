@@ -43,13 +43,25 @@ if (isset($_POST['edit_trip'])) {
         if ($crow = mysqli_fetch_assoc($csql)) $company_name = $crow['company_title'];
     }
 
-    // File upload for POD (Proof of Delivery)
     if ($new_status == 'Delivered' && !empty($_FILES['proof_of_delivery']['name'])) {
-        $pod_name = time() . $_FILES['proof_of_delivery']['name'];
-        $pod_tmp = $_FILES['proof_of_delivery']['tmp_name'];
-        move_uploaded_file($pod_tmp, "post_img/$pod_name");
-        $proof_of_delivery = $pod_name;
+    $pod_name = time() . $_FILES['proof_of_delivery']['name'];
+    $pod_tmp = $_FILES['proof_of_delivery']['tmp_name'];
+    $target_path = "post_image/pod/$pod_name";
+    $upload_success = move_uploaded_file($pod_tmp, $target_path);
+    $proof_of_delivery = $pod_name;
+
+    if ($_FILES['proof_of_delivery']['error'] != UPLOAD_ERR_OK) {
+        echo "<div style='color:red;'>File upload error code: " . $_FILES['proof_of_delivery']['error'] . "</div>";
+    } else if (!$upload_success) {
+        // This will only show if move_uploaded_file fails AND no upload error
+        echo "<div style='color:red;'>move_uploaded_file failed! Check your folder path and permissions.</div>";
     }
+    } else {
+        $proof_of_delivery = $prev_row['proof_of_delivery'];
+    }
+
+
+
 
     // Note logic: you can map a default note per status
     $auto_notes = [
