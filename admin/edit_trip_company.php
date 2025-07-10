@@ -16,7 +16,7 @@ if (isset($_POST['edit_trip'])) {
     $manual_note = trim($_POST['manual_note'] ?? '');
 
     // 1. Fetch details BEFORE update
-    $sql_prev = mysqli_query($conn, "SELECT status, doc_no, company_email, client_email, client_name, company_id, proof_of_delivery, branch_office FROM tbl_shipping_details WHERE shipping_details_id = '$shipping_details_id'");
+    $sql_prev = mysqli_query($conn, "SELECT status, doc_no, company_email, client_email, client_name, company_id, proof_of_delivery, branch_office, car_number, helper_name, helper_number FROM tbl_shipping_details WHERE shipping_details_id = '$shipping_details_id'");
     $prev_row = mysqli_fetch_assoc($sql_prev);
 
     $doc = $prev_row['doc_no'];
@@ -26,6 +26,9 @@ if (isset($_POST['edit_trip'])) {
     $company_id = $prev_row['company_id'];
     $proof_of_delivery = $prev_row['proof_of_delivery'];
     $branch_office = $prev_row['branch_office'];
+    $car_number_prev = $prev_row['car_number'];
+    $helper_name_prev = $prev_row['helper_name'];
+    $helper_number_prev = $prev_row['helper_number'];
 
     // Fetch branch office name
     $branch_office_name = '';
@@ -45,53 +48,66 @@ if (isset($_POST['edit_trip'])) {
 
     // File upload for POD (Proof of Delivery)
     $upload_success = true; // Default for cases where file is not uploaded
-    // File upload for POD (Proof of Delivery)
-$upload_success = true; // Default for cases where file is not uploaded
-if ($new_status == 'Delivered' && !empty($_FILES['proof_of_delivery']['name'])) {
-    $original_name = $_FILES['proof_of_delivery']['name'];
-    $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
-    $allowed_exts = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
-    if (!in_array($ext, $allowed_exts)) {
-        die('File type not allowed');
-    }
-    $pod_name = time() . '_' . preg_replace('/[^a-zA-Z0-9_\-\.]/', '', pathinfo($original_name, PATHINFO_FILENAME)) . '.' . $ext;
+    if ($new_status == 'Delivered' && !empty($_FILES['proof_of_delivery']['name'])) {
+        $original_name = $_FILES['proof_of_delivery']['name'];
+        $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
+        $allowed_exts = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
+        if (!in_array($ext, $allowed_exts)) {
+            die('File type not allowed');
+        }
+        $pod_name = time() . '_' . preg_replace('/[^a-zA-Z0-9_\-\.]/', '', pathinfo($original_name, PATHINFO_FILENAME)) . '.' . $ext;
 
-    // Save to /admin/post_img/pod/
-    $save_dir = __DIR__ . '/post_img/pod/';
+        // Save to /admin/post_img/pod/
+        $save_dir = __DIR__ . '/post_img/pod/';
 
-    // Create folder if not exists
-    if (!file_exists($save_dir)) {
-        mkdir($save_dir, 0775, true); // Try to create the folder
-    }
+        // Create folder if not exists
+        if (!file_exists($save_dir)) {
+            mkdir($save_dir, 0775, true); // Try to create the folder
+        }
 
-    $pod_tmp = $_FILES['proof_of_delivery']['tmp_name'];
-    $upload_success = move_uploaded_file($pod_tmp, $save_dir . $pod_name);
-    $proof_of_delivery = $pod_name;
+        $pod_tmp = $_FILES['proof_of_delivery']['tmp_name'];
+        $upload_success = move_uploaded_file($pod_tmp, $save_dir . $pod_name);
+        $proof_of_delivery = $pod_name;
 
-    // Error handling
-    if ($_FILES['proof_of_delivery']['error'] != UPLOAD_ERR_OK) {
-        echo "<div style='color:red;'>File upload error code: " . $_FILES['proof_of_delivery']['error'] . "</div>";
-    } else if (!$upload_success) {
-        echo "<div style='color:red;'>move_uploaded_file failed! Check your folder path and permissions.</div>";
-    }
+        // Error handling
+        if ($_FILES['proof_of_delivery']['error'] != UPLOAD_ERR_OK) {
+            echo "<div style='color:red;'>File upload error code: " . $_FILES['proof_of_delivery']['error'] . "</div>";
+        } else if (!$upload_success) {
+            echo "<div style='color:red;'>move_uploaded_file failed! Check your folder path and permissions.</div>";
+        }
     } else {
         $proof_of_delivery = $prev_row['proof_of_delivery'];
     }
 
+    // GET UPDATED CAR/AGENT DETAILS IF "OUT FOR DELIVERY" (or fallback to previous)
+    $car_number = $car_number_prev;
+    $helper_name = $helper_name_prev;
+    $helper_number = $helper_number_prev;
 
+    if ($new_status == "Out for Delivery") {
+        $car_number = isset($_POST['car_number']) ? trim($_POST['car_number']) : $car_number_prev;
+        $helper_name = isset($_POST['helper_name']) ? trim($_POST['helper_name']) : $helper_name_prev;
+        $helper_number = isset($_POST['helper_number']) ? trim($_POST['helper_number']) : $helper_number_prev;
+    }
 
+    // Note logic: add car/agent info for transit/delivery statuses
+    function format_agent_vehicle($car, $helper, $number) {
+        $parts = [];
+        if ($car) $parts[] = "Vehicle: $car";
+        if ($helper) $parts[] = "Agent: $helper" . ($number ? " ($number)" : "");
+        return count($parts) ? implode(", ", $parts) : "";
+    }
+    $car_agent_string = format_agent_vehicle($car_number, $helper_name, $helper_number);
 
-
-
-    // Note logic: you can map a default note per status
+    // Build notes
     $auto_notes = [
         'Created' => "Shipment created in system.",
         'Picked Up' => "Parcel picked up from consignor and received at North Super Fast Service Main Office, Kolkata. Docket number generated.",
         'Manifest Created' => "Parcel grouped with other shipments for $branch_office_name. Scheduled for dispatch.",
-        'In Transit' => "Parcel is ready to transit to $client_name.",
-        'In Transit to Branch' => "Parcel is on the way to $branch_office_name.",
+        'In Transit' => "Parcel is ready to transit to $client_name." . ($car_agent_string ? " $car_agent_string." : ""),
+        'In Transit to Branch' => "Parcel is on the way to $branch_office_name." . ($car_agent_string ? " $car_agent_string." : ""),
         'Arrived at Branch' => "Parcel has arrived at $branch_office_name.",
-        'Out for Delivery' => "Parcel is out for delivery to $client_name.",
+        'Out for Delivery' => "Parcel is out for delivery to $client_name." . ($car_agent_string ? " $car_agent_string." : ""),
         'Delivered' => $proof_of_delivery
             ? "Parcel delivered to consignee. [Click here to view Proof of Delivery (POD)]"
             : "Parcel delivered to consignee. POD upload is pending.",
@@ -99,14 +115,8 @@ if ($new_status == 'Delivered' && !empty($_FILES['proof_of_delivery']['name'])) 
     ];
 
     $auto_note = $auto_notes[$new_status] ?? '';
-    // If a manual note is added, append it
     // Only use manual note if present, else auto note
-        if ($manual_note) {
-            $final_note = $manual_note;
-        } else {
-            $final_note = $auto_note;
-        }
-
+    $final_note = $manual_note ? $manual_note : $auto_note;
 
     // SEND NOTIFICATION only for 'Out for Delivery' and 'Delivered'
     if ($new_status === "Out for Delivery" || $new_status === "Delivered") {
@@ -129,11 +139,14 @@ if ($new_status == 'Delivered' && !empty($_FILES['proof_of_delivery']['name'])) 
         $status_message = "<div style='background:#4dd0e1;padding:12px;color:#fff;border-radius:5px;margin-bottom:12px;'>Status updated successfully!</div>";
     }
 
-    // UPDATE status in DB
+    // UPDATE status in DB (update car/agent for Out for Delivery, otherwise keep previous)
     $update_sql = "UPDATE tbl_shipping_details SET 
-        status='$new_status', 
+        status='" . mysqli_real_escape_string($conn, $new_status) . "', 
         reason_of_delay='" . mysqli_real_escape_string($conn, $reason_of_delay) . "', 
-        proof_of_delivery='$proof_of_delivery' 
+        proof_of_delivery='" . mysqli_real_escape_string($conn, $proof_of_delivery) . "',
+        car_number='" . mysqli_real_escape_string($conn, $car_number) . "',
+        helper_name='" . mysqli_real_escape_string($conn, $helper_name) . "',
+        helper_number='" . mysqli_real_escape_string($conn, $helper_number) . "'
         WHERE shipping_details_id='$shipping_details_id'";
     mysqli_query($conn, $update_sql);
 
@@ -149,10 +162,7 @@ if ($new_status == 'Delivered' && !empty($_FILES['proof_of_delivery']['name'])) 
             '$created_time')";
     mysqli_query($conn, $ins_trip_status);
 
-    // Redirect after successful POST to avoid duplicate insert on refresh
-    // Build the correct redirect URL using current GET params
-
-
+    // (Optional) Redirect after successful POST to avoid duplicate insert on refresh
 }
 
 // --- GET SHIPPING DETAILS (for display) ---
@@ -162,7 +172,6 @@ $get_shipping_rs = mysqli_query($conn, $get_shipping_sql);
 $get_shipping_row = mysqli_fetch_array($get_shipping_rs);
 $current_status = $get_shipping_row['status'];
 $branch_office = $get_shipping_row['branch_office'];
-
 
 // Set status list dynamically based on branch_office value
 if (empty($branch_office)) {
@@ -281,6 +290,27 @@ if (isset($_GET['success'])) {
                 </div>
             </div>
 
+            <!-- Out for Delivery details -->
+            <div class="item form-group">
+            <label class="control-label col-md-3 col-sm-3 col-xs-12">Car No.:</label>
+            <div class="col-md-6 col-sm-6 col-xs-12">
+                <input type="text" name="car_number" value="<?= htmlspecialchars($get_shipping_row['car_number']); ?>" class="form-control">
+            </div>
+            </div>
+            <div class="item form-group">
+                <label class="control-label col-md-3 col-sm-3 col-xs-12">Agent Name:</label>
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <input type="text" name="helper_name" value="<?= htmlspecialchars($get_shipping_row['helper_name']); ?>" class="form-control">
+                </div>
+            </div>
+            <div class="item form-group">
+                <label class="control-label col-md-3 col-sm-3 col-xs-12">Agent Number:</label>
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <input type="text" name="helper_number" value="<?= htmlspecialchars($get_shipping_row['helper_number']); ?>" class="form-control">
+                </div>
+            </div>
+
+
             <!-- Add extra manual note -->
             <div class="item form-group">
                 <label class="control-label col-md-3 col-sm-3 col-xs-12">Add Note:</label>
@@ -328,28 +358,40 @@ if (isset($_GET['success'])) {
                     if (v == 'Delay') {
                         $("#rod_sec").show();
                         $("#pod_sec").hide();
+                        $("#out_for_delivery_fields").hide();
                     } else if (v == 'Delivered') {
                         $("#rod_sec").hide();
                         $("#pod_sec").show();
+                        $("#out_for_delivery_fields").hide();
+                    } else if (v == 'Out for Delivery') {
+                        $("#rod_sec").hide();
+                        $("#pod_sec").hide();
+                        $("#out_for_delivery_fields").show();
                     } else {
                         $("#rod_sec").hide();
                         $("#pod_sec").hide();
+                        $("#out_for_delivery_fields").hide();
                     }
                 }
 
                 function showAutoNote(status) {
                     var branchOffice = <?= json_encode($branch_office) ?>;
                     var clientName = <?= json_encode($get_shipping_row['client_name']) ?>;
-                    var proofOfDelivery = <?= json_encode($get_shipping_row['proof_of_delivery']) ?>;
+                    var carNo = $("[name='car_number']").val();
+                    var helperName = $("[name='helper_name']").val();
+                    var helperNumber = $("[name='helper_number']").val();
+                    var carAgent = "";
+                    if (carNo) carAgent += " Vehicle: " + carNo + ".";
+                    if (helperName) carAgent += " Agent: " + helperName + (helperNumber ? " (" + helperNumber + ")" : "") + ".";
                     var notes = {
                         'Created': "Shipment created in system.",
                         'Picked Up': "Parcel picked up from consignor and received at North Super Fast Service Main Office, Kolkata. Docket number generated.",
                         'Manifest Created': branchOffice ? ("Parcel grouped with other shipments for " + branchOffice + ". Scheduled for dispatch.") : "",
-                        'In Transit': "Parcel is ready to transit to " + clientName + ".",
-                        'In Transit to Branch': branchOffice ? ("Parcel is on the way to " + branchOffice + ".") : "",
+                        'In Transit': "Parcel is ready to transit to " + clientName + "." + carAgent,
+                        'In Transit to Branch': branchOffice ? ("Parcel is on the way to " + branchOffice + "." + carAgent) : "",
                         'Arrived at Branch': branchOffice ? ("Parcel has arrived at " + branchOffice + ".") : "",
-                        'Out for Delivery': "Parcel is out for delivery to " + clientName + ".",
-                        'Delivered': proofOfDelivery ? "Parcel delivered to consignee. [Click here to view Proof of Delivery (POD)]" : "Parcel delivered to consignee. POD upload is pending.",
+                        'Out for Delivery': "Parcel is out for delivery to " + clientName + "." + carAgent,
+                        'Delivered': "Parcel delivered to consignee.",
                         'Delay': "Parcel delivery delayed."
                     };
                     if (notes[status]) {
@@ -360,6 +402,14 @@ if (isset($_GET['success'])) {
                         $("#auto_note_sec").hide();
                     }
                 }
+
+                // Show fields if already out for delivery
+                $(document).ready(function(){
+                    var currentStatus = "<?= $current_status ?>";
+                    if(currentStatus == "Out for Delivery") {
+                        $("#out_for_delivery_fields").show();
+                    }
+                });
             </script>
 
             <div class="ln_solid"></div>
@@ -374,4 +424,3 @@ if (isset($_GET['success'])) {
         </form>
     </div>
 </div>
-

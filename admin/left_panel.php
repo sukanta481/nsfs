@@ -70,6 +70,7 @@
 
                     <li><a href="delay_reason.php?type=list_delay_reason&lp=ac&<?php echo session_name().'='.session_id();?>">All Delay Reason</a></li>
             <li><a href="delay_reason.php?type=add_delay_reason&lp=ac&<?php echo session_name().'='.session_id();?>">Add Delay Reason</a></li>
+           <li><a href="register.php?type=crud_register&lp=ac&<?php echo session_name().'='.session_id();?>">Register</a></li>
             <li><a href="register.php?type=list_register&lp=ac&<?php echo session_name().'='.session_id();?>">All Register</a></li>
                     <li><a href="register.php?type=add_register&lp=ac&<?php echo session_name().'='.session_id();?>">Add Register</a></li>
                     	<li><a href="trip.php?type=list_trip&lp=ac&<?php echo session_name().'='.session_id();?>">All Tip</a></li>

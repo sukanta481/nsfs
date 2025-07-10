@@ -27,16 +27,23 @@
       <div class="row">
             <div class="col-md-12 col-sm-12 col-xs-12">
          	<?php 
-						if(isset($type) && ($type=='list_register')) {
-							require 'list_register.php';
-						}elseif(isset($type) && ($type=='add_register')){
-							require 'add_register.php';
-						}elseif(isset($type) && ($type=='edit_register')){
-							require 'edit_register.php';
-						}else{
-							//Do Nothing......................
-						} 
+				if(isset($type) && ($type=='list_register')) {
+					require 'list_register.php';
+				}elseif(isset($type) && ($type=='add_register')){
+					require 'add_register.php';
+				}elseif(isset($type) && ($type=='edit_register')){
+					require 'edit_register.php';
+				}
+				// ---- NEW: TEST CRUD PAGE ----
+				elseif(isset($type) && ($type=='crud_register')){
+					require 'register_crud.php'; // <--- New AJAX CRUD file
+				}
+				// ---- END NEW ----
+				else{
+					//Do Nothing......................
+				} 
 			?>
+
               
             </div>
       </div>
