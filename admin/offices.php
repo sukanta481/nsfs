@@ -8,16 +8,23 @@ if (isset($_POST['save_office'])) {
     $name = trim($_POST['office_name']);
     $address = trim($_POST['office_address']);
     $phone = trim($_POST['office_phone']);
+    $person_name = trim($_POST['office_person_name'] ?? '');
     $id = $_POST['office_id'] ?? '';
 
+    // Check if column exists, if not add it
+    $check_col = mysqli_query($conn, "SHOW COLUMNS FROM tbl_offices LIKE 'office_person_name'");
+    if (mysqli_num_rows($check_col) == 0) {
+        mysqli_query($conn, "ALTER TABLE tbl_offices ADD COLUMN office_person_name VARCHAR(255) DEFAULT NULL AFTER office_phone");
+    }
+
     if ($id) {
-        $stmt = $conn->prepare("UPDATE tbl_offices SET office_name=?, office_address=?, office_phone=? WHERE office_id=?");
-        $stmt->bind_param("sssi", $name, $address, $phone, $id);
+        $stmt = $conn->prepare("UPDATE tbl_offices SET office_name=?, office_address=?, office_phone=?, office_person_name=? WHERE office_id=?");
+        $stmt->bind_param("ssssi", $name, $address, $phone, $person_name, $id);
         $stmt->execute();
         $msg = "Office updated successfully!";
     } else {
-        $stmt = $conn->prepare("INSERT INTO tbl_offices (office_name, office_address, office_phone) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $name, $address, $phone);
+        $stmt = $conn->prepare("INSERT INTO tbl_offices (office_name, office_address, office_phone, office_person_name) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $name, $address, $phone, $person_name);
         $stmt->execute();
         $msg = "Office added successfully!";
     }
@@ -73,6 +80,10 @@ $res = $conn->query("SELECT * FROM tbl_offices ORDER BY office_id DESC");
           <input type="text" name="office_name" required class="form-control" value="<?= htmlspecialchars($edit['office_name'] ?? '') ?>" style="min-width:160px;">
         </div>
         <div>
+          <label>Person Name</label>
+          <input type="text" name="office_person_name" class="form-control" value="<?= htmlspecialchars($edit['office_person_name'] ?? '') ?>" style="min-width:160px;" placeholder="e.g., MANIK DA">
+        </div>
+        <div>
           <label>Address <span style="color:red">*</span></label>
           <input type="text" name="office_address" required class="form-control" value="<?= htmlspecialchars($edit['office_address'] ?? '') ?>" style="min-width:220px;">
         </div>
@@ -95,6 +106,7 @@ $res = $conn->query("SELECT * FROM tbl_offices ORDER BY office_id DESC");
             <tr>
               <th>#</th>
               <th>Office Name</th>
+              <th>Person Name</th>
               <th>Address</th>
               <th>Phone</th>
               <th width="135"></th>
@@ -105,6 +117,7 @@ $res = $conn->query("SELECT * FROM tbl_offices ORDER BY office_id DESC");
               <tr>
                 <td><?= $i++ ?></td>
                 <td><?= htmlspecialchars($row['office_name']) ?></td>
+                <td><?= htmlspecialchars($row['office_person_name'] ?? '') ?></td>
                 <td><?= htmlspecialchars($row['office_address']) ?></td>
                 <td><?= htmlspecialchars($row['office_phone']) ?></td>
                 <td>

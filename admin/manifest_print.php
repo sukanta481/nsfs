@@ -194,7 +194,15 @@ while($row = mysqli_fetch_assoc($res_data)) {
     </div>
 </div>
 <div class="manifest-row">
-  <div class="info"><strong>TO:</strong> <?= htmlspecialchars($office['office_name'] ?? '') ?><br><?= htmlspecialchars($office['office_address'] ?? '') ?><br><?= htmlspecialchars($office['office_phone'] ?? '') ?></div>
+  <div class="info">
+    <strong>TO</strong><br>
+    <?php if(!empty($office['office_person_name'])): ?>
+      <?= strtoupper(htmlspecialchars($office['office_person_name'])) ?><br>
+    <?php endif; ?>
+    <?= strtoupper(htmlspecialchars($office['office_name'] ?? '')) ?><br>
+    <?= strtoupper(htmlspecialchars($office['office_address'] ?? '')) ?><br>
+    <?= htmlspecialchars($office['office_phone'] ?? '') ?>
+  </div>
   <div class="info"><strong>DATE:</strong> <?= $date ?><br>
   <strong>VEHICLE NO:</strong> <?= $vehicle ?><br>
   <strong>DRIVER NAME:</strong> <?= $driver ?></div>
