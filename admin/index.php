@@ -79,7 +79,7 @@ require 'top_header.php';
           <div class="stat-card stat-card-dark">
             <div class="stat-icon"><i class="fa fa-th-list"></i></div>
             <div class="stat-content">
-              <div class="stat-label">Total Dockets</div>
+              <div class="stat-label">TOTAL DOCKETS</div>
               <div class="stat-value"><?= $total_docket ?></div>
             </div>
           </div>
@@ -88,7 +88,7 @@ require 'top_header.php';
           <div class="stat-card stat-card-warning">
             <div class="stat-icon"><i class="fa fa-clock-o"></i></div>
             <div class="stat-content">
-              <div class="stat-label">Pending</div>
+              <div class="stat-label">PENDING</div>
               <div class="stat-value"><?= $non_drs ?></div>
             </div>
           </div>
@@ -97,7 +97,7 @@ require 'top_header.php';
           <div class="stat-card stat-card-info">
             <div class="stat-icon"><i class="fa fa-truck"></i></div>
             <div class="stat-content">
-              <div class="stat-label">In Transit</div>
+              <div class="stat-label">IN TRANSIT</div>
               <div class="stat-value"><?= $intransit ?></div>
             </div>
           </div>
@@ -106,7 +106,7 @@ require 'top_header.php';
           <div class="stat-card stat-card-success">
             <div class="stat-icon"><i class="fa fa-check-circle"></i></div>
             <div class="stat-content">
-              <div class="stat-label">Delivered</div>
+              <div class="stat-label">DELIVERED</div>
               <div class="stat-value"><?= $delivered ?></div>
             </div>
           </div>
@@ -115,7 +115,7 @@ require 'top_header.php';
           <div class="stat-card stat-card-manifest">
             <div class="stat-icon"><i class="fa fa-file-text"></i></div>
             <div class="stat-content">
-              <div class="stat-label">Manifest</div>
+              <div class="stat-label">MANIFEST</div>
               <div class="stat-value"><?= $manifest_count ?></div>
             </div>
           </div>
@@ -166,7 +166,11 @@ require 'top_header.php';
                         LEFT JOIN tbl_client cl ON sd.client_id = cl.client_id
                         ORDER BY sd.shipping_id DESC LIMIT 20";
                 $result = mysqli_query($conn, $sql);
-                if($result && mysqli_num_rows($result) > 0) {
+                
+                if(!$result) {
+                  echo '<tr><td colspan="7" style="text-align:center;padding:40px;color:#e74c3c;">
+                        <strong>Database Error:</strong> '.htmlspecialchars(mysqli_error($conn)).'</td></tr>';
+                } else if(mysqli_num_rows($result) > 0) {
                   while($row = mysqli_fetch_assoc($result)) {
                     $status_class = '';
                     switch($row['status']) {
@@ -177,7 +181,7 @@ require 'top_header.php';
                       case 'Delayed': $status_class = 'status-delayed'; break;
                       default: $status_class = 'status-default';
                     }
-                    $created_date = date('M d, Y g:i A', strtotime($row['created_at'] ?? 'now'));
+                    $created_date = date('M d, Y g:i A', strtotime($row['created_at'] ?? date('Y-m-d H:i:s')));
                     ?>
                     <tr>
                       <td><strong><?= htmlspecialchars($row['tracking_no'] ?? $row['shipping_id']) ?></strong></td>
@@ -203,7 +207,9 @@ require 'top_header.php';
                     <?php
                   }
                 } else {
-                  echo '<tr><td colspan="7" style="text-align:center;padding:40px;">No dockets found</td></tr>';
+                  echo '<tr><td colspan="7" style="text-align:center;padding:50px;font-size:1.1rem;color:#7f8c8d;">
+                        <i class="fa fa-inbox" style="font-size:3rem;display:block;margin-bottom:15px;opacity:0.5;"></i>
+                        <strong>No dockets found</strong></td></tr>';
                 }
                 ?>
               </tbody>
@@ -253,6 +259,10 @@ require 'top_header.php';
   
   <style>
 /* Modern Dashboard Styles */
+* {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
 .right_col { 
   background: linear-gradient(135deg, #e8f0f7 0%, #f5f8fb 100%) !important; 
   min-height: 100vh; 
@@ -546,21 +556,22 @@ require 'top_header.php';
 }
 
 .stat-label {
-  font-size: 0.95rem;
-  color: #7f8c8d;
-  font-weight: 600;
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-weight: 700;
   margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   transition: color 0.4s;
 }
 
 .stat-value {
-  font-size: 2.8rem;
-  font-weight: 800;
+  font-size: 3rem;
+  font-weight: 900;
   color: #2c3e50;
   line-height: 1;
   transition: color 0.4s;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
 }
 
 /* Search Section */
@@ -661,11 +672,13 @@ require 'top_header.php';
   background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
   color: #fff;
   padding: 20px 30px;
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   gap: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .table-responsive {
@@ -685,10 +698,11 @@ require 'top_header.php';
 .dockets-table thead th {
   padding: 15px 20px;
   text-align: left;
-  font-weight: 600;
-  font-size: 0.95rem;
+  font-weight: 700;
+  font-size: 0.85rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  color: #fff;
 }
 
 .dockets-table tbody tr {
@@ -702,8 +716,14 @@ require 'top_header.php';
 
 .dockets-table tbody td {
   padding: 18px 20px;
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: #2c3e50;
+  font-weight: 500;
+}
+
+.dockets-table tbody td strong {
+  font-weight: 700;
+  color: #1a1a1a;
 }
 
 /* Status Badges */
@@ -855,8 +875,12 @@ require 'top_header.php';
     font-size: 1.6rem;
   }
   
+  .stat-label {
+    font-size: 0.7rem;
+  }
+  
   .stat-value {
-    font-size: 2rem;
+    font-size: 2.2rem;
   }
   
   .search-section {
@@ -879,14 +903,14 @@ require 'top_header.php';
   }
   
   .dockets-header {
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     padding: 15px 20px;
   }
   
   .dockets-table thead th,
   .dockets-table tbody td {
     padding: 12px 10px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
   }
 }
 
@@ -894,9 +918,14 @@ require 'top_header.php';
   .header-icon { font-size: 1.5rem; padding: 8px; }
   .header-title { font-size: 1.2rem; }
   .stat-icon { width: 50px; height: 50px; font-size: 1.4rem; }
-  .stat-value { font-size: 1.8rem; }
-  .stat-label { font-size: 0.85rem; }
-  .dockets-table { font-size: 0.8rem; }
+  .stat-value { font-size: 2rem; }
+  .stat-label { font-size: 0.65rem; }
+  .dockets-table { font-size: 0.85rem; }
+  .dockets-table thead th,
+  .dockets-table tbody td {
+    font-size: 0.85rem;
+    padding: 10px 8px;
+  }
   .action-buttons { flex-direction: column; gap: 5px; }
   .action-btn { width: 32px; height: 32px; }
 }
