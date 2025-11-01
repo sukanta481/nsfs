@@ -1,4 +1,26 @@
 <?php require 'top_header.php'; ?>
+<style>
+@media (max-width:768px) {
+    .page-title h3 { font-size: 1.2rem; }
+    .x_panel { padding: 10px !important; }
+    .x_title h2 { font-size: 1.1rem; }
+    table { font-size: 0.9rem; }
+    table th, table td { padding: 8px 4px !important; }
+    .btn { font-size: 0.9rem; padding: 4px 8px; }
+    .form-control { font-size: 1rem; }
+    .form-group label { font-size: 1rem; }
+}
+
+@media (max-width:576px) {
+    .page-title h3 { font-size: 1.05rem; }
+    .x_title h2 { font-size: 1rem; }
+    table { font-size: 0.85rem; }
+    table th, table td { padding: 6px 3px !important; }
+    .btn { font-size: 0.85rem; padding: 4px 6px; min-width: 60px; }
+    .form-control { font-size: 0.95rem; padding: 8px; }
+    .form-group label { font-size: 0.95rem; }
+}
+</style>
 <body class="nav-md">
 
   <div class="container body">

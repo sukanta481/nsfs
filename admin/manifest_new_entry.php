@@ -296,3 +296,69 @@ $(function() {
   recalcTotals();
 });
 </script>
+
+<style>
+/* Responsive Design for Manifest Entry */
+@media (max-width: 1400px) {
+  .x_panel { padding: 25px 18px; }
+  table { font-size: 1rem !important; }
+}
+
+@media (max-width: 1200px) {
+  .x_panel { padding: 20px 15px; }
+  h2 { font-size: 1.6rem !important; }
+  /* Car/Driver/Checkbox grid */
+  div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 992px) {
+  table th, table td { padding: 10px 6px !important; font-size: 0.95rem !important; }
+  input.form-control { font-size: 0.95rem !important; padding: 6px !important; }
+  .btn-lg { font-size: 1.1rem !important; padding: 12px 30px !important; }
+}
+
+@media (max-width: 768px) {
+  .x_panel { padding: 15px 10px; border-radius: 12px; }
+  h2 { font-size: 1.4rem !important; }
+  
+  /* Make table horizontally scrollable */
+  div[style*="overflow-x:auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  table { min-width: 1200px; font-size: 0.9rem !important; }
+  table th, table td { padding: 8px 5px !important; font-size: 0.9rem !important; }
+  input.form-control { font-size: 0.9rem !important; min-width: 70px !important; }
+  
+  /* Totals section */
+  div[style*="display:flex"] > div:has(.btn-lg) {
+    width: 100%;
+    text-align: center;
+  }
+  .btn-lg { width: 100%; font-size: 1rem !important; padding: 10px 20px !important; }
+  
+  /* Car/Driver selection boxes */
+  div[style*="background:#f5f7fa"] { padding: 15px !important; }
+  label { font-size: 1rem !important; }
+  select.form-control, input.form-control { height: 42px !important; font-size: 1rem !important; }
+}
+
+@media (max-width: 576px) {
+  .x_panel { padding: 10px 8px; }
+  h2 { font-size: 1.2rem !important; }
+  table { font-size: 0.85rem !important; }
+  table th, table td { padding: 6px 4px !important; font-size: 0.85rem !important; }
+  input.form-control { font-size: 0.85rem !important; padding: 5px !important; min-width: 60px !important; }
+  
+  /* Gradient total cards */
+  div[style*="linear-gradient"] {
+    padding: 12px 15px !important;
+    font-size: 1rem !important;
+  }
+  div[style*="linear-gradient"] > div[style*="font-size:1.6rem"] {
+    font-size: 1.3rem !important;
+  }
+}
+</style>

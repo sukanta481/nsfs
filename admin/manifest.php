@@ -134,7 +134,19 @@ require 'top_header.php';
       }
       .btn {
         font-size: 1rem;
+        padding: 8px 14px;
       }
+    }
+    
+    @media (max-width: 576px) {
+      .dashboard-title { font-size: 1.3rem; }
+      .dashboard-subtitle { font-size: 0.9rem; }
+      .manifest-control-panel { padding: 12px !important; }
+      .form-control { font-size: 0.95rem; height: 42px !important; }
+      .btn { font-size: 0.95rem; padding: 8px 12px; height: 42px !important; }
+      label { font-size: 1rem !important; }
+      #quick_stats > div > div { font-size: 0.9rem !important; }
+      #stat_total, #stat_latest { font-size: 1.4rem !important; }
     }
   </style>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

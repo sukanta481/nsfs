@@ -209,4 +209,26 @@ function editOffice(id, name, person, address, phone) {
     table { font-size: 1rem; }
     .x_panel {padding:12px 4px;}
 }
+
+@media (max-width:768px){
+    .dashboard-title { font-size:1.15rem; }
+    table { font-size: 0.95rem; }
+    table th, table td { padding: 8px !important; }
+    .btn { font-size: 1rem; padding: 6px 12px; }
+    .modal-title { font-size: 1.2rem; }
+    .modal-body label { font-size: 1rem; }
+    .modal-body .form-control { font-size: 1rem; }
+}
+
+@media (max-width:576px){
+    .dashboard-title { font-size:1.05rem; }
+    table { font-size: 0.85rem; }
+    table th, table td { padding: 6px !important; }
+    .btn { font-size: 0.9rem; padding: 5px 10px; min-width: 70px; }
+    .modal-dialog { margin: 10px !important; max-width: calc(100% - 20px) !important; }
+    .modal-title { font-size: 1.1rem; }
+    .modal-body label { font-size: 0.95rem; }
+    .modal-body .form-control { font-size: 0.95rem; padding: 8px; }
+    .modal-header .close { font-size: 1.7rem; }
+}
 </style>
