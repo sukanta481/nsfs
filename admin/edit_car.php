@@ -90,19 +90,16 @@ $rc =mysqli_fetch_array($q);
                       </div>
                     </div>
                     
-                    <!-- <div class="item form-group">
+                    <div class="item form-group">
                       <label class="control-label col-md-3 col-sm-3 col-xs-12" >Active Status <span class="required">*</span>
                       </label>
                       <div class="col-md-6 col-sm-6 col-xs-12">
-                     
-                      
-                      <input type="radio" name="active_status" value="1" <?php if($rc['active_status']==1){ echo "checked";}?>>Yes
-                       <input type="radio" name="active_status" value="0" <?php if($rc['active_status']==0){ echo "checked";}?>>No
-                     
-                       
- 
+                        <select name="active_status" required="required" class="form-control col-md-7 col-xs-12">
+                          <option value="1" <?php if($rc['active_status']==1){ echo "selected";}?>>Yes - Active</option>
+                          <option value="0" <?php if($rc['active_status']==0){ echo "selected";}?>>No - Inactive</option>
+                        </select>
                       </div>
-                    </div> -->
+                    </div>
                               
             
                     

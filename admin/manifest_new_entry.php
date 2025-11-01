@@ -11,11 +11,26 @@ if (!$office_id) {
 $office = mysqli_fetch_assoc(mysqli_query($conn, "SELECT office_name FROM tbl_offices WHERE office_id=$office_id"));
 
 // Get cars for dropdown
-$cars = mysqli_query($conn, "SELECT car_id, car_number FROM tbl_car WHERE active_status=1 ORDER BY car_number ASC");
+$cars_query = "SELECT car_id, car_number FROM tbl_car WHERE active_status=1 ORDER BY car_number ASC";
+$cars = mysqli_query($conn, $cars_query);
+if (!$cars) {
+    echo "<!-- Car Query Error: " . mysqli_error($conn) . " -->";
+    $cars = mysqli_query($conn, "SELECT car_id, car_number FROM tbl_car ORDER BY car_number ASC"); // fallback without filter
+}
 
 // Get drivers for dropdown
-$drivers = mysqli_query($conn, "SELECT driver_id, driver_name FROM tbl_driver WHERE active_status=1 ORDER BY driver_name ASC");
+$drivers_query = "SELECT driver_id, driver_name FROM tbl_driver WHERE active_status=1 ORDER BY driver_name ASC";
+$drivers = mysqli_query($conn, $drivers_query);
+if (!$drivers) {
+    echo "<!-- Driver Query Error: " . mysqli_error($conn) . " -->";
+    $drivers = mysqli_query($conn, "SELECT driver_id, driver_name FROM tbl_driver ORDER BY driver_name ASC"); // fallback without filter
+}
+
+// Debug info
+$car_count = $cars ? mysqli_num_rows($cars) : 0;
+$driver_count = $drivers ? mysqli_num_rows($drivers) : 0;
 ?>
+<!-- DEBUG: Found <?= $car_count ?> cars and <?= $driver_count ?> drivers -->
 
 <div class="x_panel" style="border-radius:20px;background:white;padding:35px;box-shadow:0 6px 25px rgba(0,0,0,0.1);">
   <div class="x_title" style="margin-bottom:25px;padding-bottom:20px;border-bottom:3px solid #e3f2fd;">
