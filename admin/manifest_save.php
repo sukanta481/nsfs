@@ -145,7 +145,7 @@ try {
 
     mysqli_commit($conn);
 
-    echo "<div class='alert alert-success'>success: Manifest <strong>".htmlspecialchars($manifest_no)."</strong> saved successfully (ID: ".intval($manifest_id).").<br><a href='manifest_print.php?manifest_id=".intval($manifest_id)."' target='_blank' class='btn btn-primary' style='margin-top:8px;padding:6px 12px;'><i class='fa fa-print'></i> Print Manifest</a></div>";
+    echo "<div class='alert alert-success'>success: Manifest <strong>".htmlspecialchars($manifest_no)."</strong> saved successfully (ID: ".intval($manifest_id).").<br><button type='button' class='btn btn-primary' onclick=\"window.open('manifest_print.php?manifest_id=".intval($manifest_id)."', '_blank')\" style='margin-top:8px;padding:6px 12px;'><i class='fa fa-print'></i> Print Manifest</button></div>";
 } catch (Exception $ex) {
     mysqli_rollback($conn);
     echo "<div class='alert alert-danger'>Error saving manifest: " . htmlspecialchars($ex->getMessage()) . "</div>";
