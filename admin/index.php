@@ -69,56 +69,56 @@ require 'top_header.php';
         // 8. Pending POD (Delivered but proof_of_delivery empty)
         $pending_pod = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details WHERE status='Delivered' AND (proof_of_delivery IS NULL OR proof_of_delivery='')");
 
-        // 9. Manifest Count
-        $manifest_count = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details WHERE status='Manifest Created'");
+        // 9. Manifest Count from tbl_manifest
+        $manifest_count = fetch_count("SELECT COUNT(*) as c FROM tbl_manifest");
         ?>
         
         <!-- Stats Cards Grid -->
         <div class="stats-grid">
           <!-- Total Dockets Card -->
-          <div class="stat-card stat-card-dark">
+          <a href="trip.php?type=list_trip" class="stat-card stat-card-dark">
             <div class="stat-icon"><i class="fa fa-th-list"></i></div>
             <div class="stat-content">
               <div class="stat-label">TOTAL DOCKETS</div>
               <div class="stat-value"><?= $total_docket ?></div>
             </div>
-          </div>
+          </a>
           
           <!-- Pending Card -->
-          <div class="stat-card stat-card-warning">
+          <a href="trip.php?type=list_trip&status=Picked%20Up" class="stat-card stat-card-warning">
             <div class="stat-icon"><i class="fa fa-clock-o"></i></div>
             <div class="stat-content">
               <div class="stat-label">PENDING</div>
               <div class="stat-value"><?= $non_drs ?></div>
             </div>
-          </div>
+          </a>
           
           <!-- In Transit Card -->
-          <div class="stat-card stat-card-info">
+          <a href="trip.php?type=list_trip&status=In%20Transit" class="stat-card stat-card-info">
             <div class="stat-icon"><i class="fa fa-truck"></i></div>
             <div class="stat-content">
               <div class="stat-label">IN TRANSIT</div>
               <div class="stat-value"><?= $intransit ?></div>
             </div>
-          </div>
+          </a>
           
           <!-- Delivered Card -->
-          <div class="stat-card stat-card-success">
+          <a href="trip.php?type=list_trip&status=Delivered" class="stat-card stat-card-success">
             <div class="stat-icon"><i class="fa fa-check-circle"></i></div>
             <div class="stat-content">
               <div class="stat-label">DELIVERED</div>
               <div class="stat-value"><?= $delivered ?></div>
             </div>
-          </div>
+          </a>
           
           <!-- Manifest Card -->
-          <div class="stat-card stat-card-manifest">
+          <a href="manifest.php" class="stat-card stat-card-manifest">
             <div class="stat-icon"><i class="fa fa-file-text"></i></div>
             <div class="stat-content">
               <div class="stat-label">MANIFEST</div>
               <div class="stat-value"><?= $manifest_count ?></div>
             </div>
-          </div>
+          </a>
         </div>
 
         <!-- Search and Filter Section -->
@@ -420,6 +420,9 @@ require 'top_header.php';
   display: flex;
   align-items: center;
   gap: 20px;
+  text-decoration: none !important;
+  color: inherit !important;
+  cursor: pointer;
 }
 
 .stat-card::before {
@@ -545,13 +548,13 @@ require 'top_header.php';
 }
 
 .stat-icon {
-  width: 70px;
-  height: 70px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+  font-size: 2.5rem;
   background: rgba(0,0,0,0.05);
   color: #2c3e50;
   transition: all 0.4s;
@@ -588,24 +591,24 @@ require 'top_header.php';
 }
 
 .stat-label {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   color: #6c757d;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.5px;
   transition: color 0.4s;
   font-family: 'Inter', sans-serif;
 }
 
 .stat-value {
-  font-size: 3.2rem;
+  font-size: 3.8rem;
   font-weight: 900;
   color: #2c3e50;
   line-height: 1;
   transition: color 0.4s;
   font-family: 'Inter', sans-serif;
-  letter-spacing: -1px;
+  letter-spacing: -2px;
 }
 
 /* Search Section */
@@ -624,10 +627,10 @@ require 'top_header.php';
 .search-input {
   flex: 1;
   min-width: 300px;
-  padding: 12px 20px;
+  padding: 14px 22px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   transition: all 0.3s;
   font-family: 'Inter', sans-serif;
   font-weight: 500;
@@ -640,10 +643,10 @@ require 'top_header.php';
 }
 
 .status-filter {
-  padding: 12px 20px;
+  padding: 14px 22px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   background: #fff;
   cursor: pointer;
   transition: all 0.3s;
@@ -657,12 +660,12 @@ require 'top_header.php';
 }
 
 .btn-search {
-  padding: 12px 30px;
+  padding: 14px 32px;
   background: #3498db;
   color: #fff;
   border: none;
   border-radius: 10px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
@@ -680,12 +683,12 @@ require 'top_header.php';
 }
 
 .btn-reset {
-  padding: 12px 30px;
+  padding: 14px 32px;
   background: #95a5a6;
   color: #fff;
   border: none;
   border-radius: 10px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
@@ -713,8 +716,8 @@ require 'top_header.php';
 .dockets-header {
   background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
   color: #fff;
-  padding: 20px 30px;
-  font-size: 1.1rem;
+  padding: 22px 30px;
+  font-size: 1.3rem;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -739,10 +742,10 @@ require 'top_header.php';
 }
 
 .dockets-table thead th {
-  padding: 15px 20px;
+  padding: 18px 22px;
   text-align: left;
   font-weight: 800;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   text-transform: uppercase;
   letter-spacing: 1.2px;
   color: #fff;
@@ -759,8 +762,8 @@ require 'top_header.php';
 }
 
 .dockets-table tbody td {
-  padding: 18px 20px;
-  font-size: 1rem;
+  padding: 20px 22px;
+  font-size: 1.1rem;
   color: #2c3e50;
   font-weight: 600;
   font-family: 'Inter', sans-serif;
@@ -774,9 +777,9 @@ require 'top_header.php';
 
 /* Status Badges */
 .status-badge {
-  padding: 6px 16px;
+  padding: 8px 18px;
   border-radius: 20px;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 700;
   display: inline-block;
   text-align: center;
@@ -881,9 +884,10 @@ require 'top_header.php';
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
   }
-  .stat-card { padding: 25px 20px; }
-  .stat-icon { width: 60px; height: 60px; font-size: 1.8rem; }
-  .stat-value { font-size: 2.3rem; }
+  .stat-card { padding: 28px 22px; }
+  .stat-icon { width: 70px; height: 70px; font-size: 2.2rem; }
+  .stat-label { font-size: 0.8rem; }
+  .stat-value { font-size: 3.2rem; }
 }
 
 @media (max-width: 768px) {
@@ -914,21 +918,21 @@ require 'top_header.php';
   }
   
   .stat-card {
-    padding: 20px 18px;
+    padding: 22px 20px;
   }
   
   .stat-icon {
-    width: 55px;
-    height: 55px;
-    font-size: 1.6rem;
+    width: 65px;
+    height: 65px;
+    font-size: 2rem;
   }
   
   .stat-label {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
   }
   
   .stat-value {
-    font-size: 2.2rem;
+    font-size: 2.8rem;
   }
   
   .search-section {
@@ -940,10 +944,12 @@ require 'top_header.php';
   .search-input {
     width: 100%;
     min-width: auto;
+    font-size: 1rem;
   }
   
   .status-filter, .btn-search, .btn-reset {
     width: 100%;
+    font-size: 1rem;
   }
   
   .dockets-section {
@@ -951,29 +957,30 @@ require 'top_header.php';
   }
   
   .dockets-header {
-    font-size: 0.95rem;
-    padding: 15px 20px;
+    font-size: 1.1rem;
+    padding: 18px 20px;
   }
   
   .dockets-table thead th,
   .dockets-table tbody td {
-    padding: 12px 10px;
-    font-size: 0.9rem;
+    padding: 14px 12px;
+    font-size: 0.95rem;
   }
 }
 
 @media (max-width: 576px) {
   .header-icon { font-size: 1.5rem; padding: 8px; }
   .header-title { font-size: 1.2rem; }
-  .stat-icon { width: 50px; height: 50px; font-size: 1.4rem; }
-  .stat-value { font-size: 2rem; }
-  .stat-label { font-size: 0.65rem; }
-  .dockets-table { font-size: 0.85rem; }
+  .stat-icon { width: 60px; height: 60px; font-size: 1.8rem; }
+  .stat-value { font-size: 2.4rem; }
+  .stat-label { font-size: 0.7rem; }
+  .dockets-table { font-size: 0.9rem; }
   .dockets-table thead th,
   .dockets-table tbody td {
-    font-size: 0.85rem;
-    padding: 10px 8px;
+    font-size: 0.9rem;
+    padding: 12px 10px;
   }
+  .status-badge { font-size: 0.85rem; padding: 6px 14px; }
   .action-buttons { flex-direction: column; gap: 5px; }
   .action-btn { width: 32px; height: 32px; }
 }
