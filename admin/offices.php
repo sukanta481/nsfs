@@ -2,7 +2,7 @@
 require 'top_header.php';
 require 'conn.php';
 
-// Handle Add/Edit
+// Handle Add/Edit via AJAX or POST
 $msg = '';
 if (isset($_POST['save_office'])) {
     $name = trim($_POST['office_name']);
@@ -35,14 +35,8 @@ if (isset($_GET['delete'])) {
     $delid = intval($_GET['delete']);
     $conn->query("DELETE FROM tbl_offices WHERE office_id=$delid LIMIT 1");
     $msg = "Office deleted!";
-}
-
-// Handle Edit load
-$edit = null;
-if (isset($_GET['edit'])) {
-    $editid = intval($_GET['edit']);
-    $res = $conn->query("SELECT * FROM tbl_offices WHERE office_id=$editid");
-    $edit = $res->fetch_assoc();
+    header("Location: offices.php?msg=deleted");
+    exit;
 }
 
 // Get all offices for listing
@@ -64,7 +58,7 @@ $res = $conn->query("SELECT * FROM tbl_offices ORDER BY office_id DESC");
 
       <?php if($msg): ?>
         <div class="alert alert-success" style="margin-bottom:20px;">
-          <?= $msg ?>
+          <i class="fa fa-check-circle"></i> <?= $msg ?>
         </div>
         <script>
         setTimeout(function() {
@@ -73,33 +67,13 @@ $res = $conn->query("SELECT * FROM tbl_offices ORDER BY office_id DESC");
         </script>
       <?php endif; ?>
 
-      <form method="post" autocomplete="off" style="display:flex;gap:15px;margin-bottom:18px;flex-wrap:wrap;align-items:flex-end;">
-        <input type="hidden" name="office_id" value="<?= $edit['office_id'] ?? '' ?>">
-        <div>
-          <label>Office Name <span style="color:red">*</span></label>
-          <input type="text" name="office_name" required class="form-control" value="<?= htmlspecialchars($edit['office_name'] ?? '') ?>" style="min-width:160px;">
-        </div>
-        <div>
-          <label>Person Name</label>
-          <input type="text" name="office_person_name" class="form-control" value="<?= htmlspecialchars($edit['office_person_name'] ?? '') ?>" style="min-width:160px;" placeholder="e.g., MANIK DA">
-        </div>
-        <div>
-          <label>Address <span style="color:red">*</span></label>
-          <input type="text" name="office_address" required class="form-control" value="<?= htmlspecialchars($edit['office_address'] ?? '') ?>" style="min-width:220px;">
-        </div>
-        <div>
-          <label>Phone <span style="color:red">*</span></label>
-          <input type="text" name="office_phone" required class="form-control" value="<?= htmlspecialchars($edit['office_phone'] ?? '') ?>" style="min-width:110px;">
-        </div>
-        <div>
-          <button class="btn btn-success" name="save_office" style="margin-bottom:2px;">
-            <?= $edit ? 'Update' : 'Add' ?>
-          </button>
-          <?php if($edit): ?>
-            <a href="offices.php" class="btn btn-secondary" style="margin-left:5px;">Cancel</a>
-          <?php endif; ?>
-        </div>
-      </form>
+      <!-- Add New Office Button -->
+      <div style="margin-bottom:20px;">
+        <button class="btn btn-success" data-toggle="modal" data-target="#officeModal" onclick="resetForm()">
+          <i class="fa fa-plus-circle"></i> Add New Office
+        </button>
+      </div>
+
       <div style="overflow-x:auto;">
         <table class="table table-bordered table-striped" style="background:#fff;">
           <thead>
@@ -121,8 +95,12 @@ $res = $conn->query("SELECT * FROM tbl_offices ORDER BY office_id DESC");
                 <td><?= htmlspecialchars($row['office_address']) ?></td>
                 <td><?= htmlspecialchars($row['office_phone']) ?></td>
                 <td>
-                  <a href="offices.php?edit=<?= $row['office_id'] ?>" class="btn btn-info btn-xs">Edit</a>
-                  <a href="offices.php?delete=<?= $row['office_id'] ?>" class="btn btn-danger btn-xs" onclick="return confirm('Delete this office?');">Delete</a>
+                  <button class="btn btn-info btn-xs" onclick="editOffice(<?= $row['office_id'] ?>, '<?= htmlspecialchars($row['office_name'], ENT_QUOTES) ?>', '<?= htmlspecialchars($row['office_person_name'] ?? '', ENT_QUOTES) ?>', '<?= htmlspecialchars($row['office_address'], ENT_QUOTES) ?>', '<?= htmlspecialchars($row['office_phone'], ENT_QUOTES) ?>')">
+                    <i class="fa fa-edit"></i> Edit
+                  </button>
+                  <a href="offices.php?delete=<?= $row['office_id'] ?>" class="btn btn-danger btn-xs" onclick="return confirm('Delete this office?');">
+                    <i class="fa fa-trash"></i> Delete
+                  </a>
                 </td>
               </tr>
             <?php endwhile ?>
@@ -132,6 +110,76 @@ $res = $conn->query("SELECT * FROM tbl_offices ORDER BY office_id DESC");
     </div>
   </div>
 </div>
+
+<!-- Edit/Add Office Modal -->
+<div class="modal fade" id="officeModal" tabindex="-1" role="dialog" aria-labelledby="officeModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <h4 class="modal-title" id="officeModalLabel">
+          <i class="fa fa-building"></i> <span id="modalTitle">Add New Office</span>
+        </h4>
+      </div>
+      <form method="post" id="officeForm" autocomplete="off">
+        <div class="modal-body">
+          <input type="hidden" name="office_id" id="office_id">
+          
+          <div class="form-group">
+            <label>Office Name <span style="color:red">*</span></label>
+            <input type="text" name="office_name" id="office_name" required class="form-control" placeholder="Enter office name">
+          </div>
+          
+          <div class="form-group">
+            <label>Person Name</label>
+            <input type="text" name="office_person_name" id="office_person_name" class="form-control" placeholder="e.g., MANIK DA">
+          </div>
+          
+          <div class="form-group">
+            <label>Address <span style="color:red">*</span></label>
+            <input type="text" name="office_address" id="office_address" required class="form-control" placeholder="Enter office address">
+          </div>
+          
+          <div class="form-group">
+            <label>Phone <span style="color:red">*</span></label>
+            <input type="text" name="office_phone" id="office_phone" required class="form-control" placeholder="Enter phone number">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">
+            <i class="fa fa-times"></i> Cancel
+          </button>
+          <button type="submit" name="save_office" class="btn btn-success">
+            <i class="fa fa-save"></i> <span id="submitBtn">Save Office</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function resetForm() {
+  document.getElementById('officeForm').reset();
+  document.getElementById('office_id').value = '';
+  document.getElementById('modalTitle').textContent = 'Add New Office';
+  document.getElementById('submitBtn').textContent = 'Save Office';
+}
+
+function editOffice(id, name, person, address, phone) {
+  document.getElementById('office_id').value = id;
+  document.getElementById('office_name').value = name;
+  document.getElementById('office_person_name').value = person;
+  document.getElementById('office_address').value = address;
+  document.getElementById('office_phone').value = phone;
+  document.getElementById('modalTitle').textContent = 'Edit Office';
+  document.getElementById('submitBtn').textContent = 'Update Office';
+  $('#officeModal').modal('show');
+}
+</script>
+
    <?php require 'footer.php'; ?>
     </div>
   </div>
@@ -146,6 +194,10 @@ $res = $conn->query("SELECT * FROM tbl_offices ORDER BY office_id DESC");
 .x_title {border-bottom: 1.5px solid #e6e9ed; margin-bottom: 25px; padding-bottom: 5px;}
 .x_title h2 {margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -.5px;}
 .x_content {padding: 0;}
+.modal-header {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 5px 5px 0 0;}
+.modal-header .close {color: white; opacity: 0.8;}
+.modal-header .close:hover {opacity: 1;}
+.modal-title {font-weight: 700;}
 @media (max-width:900px){
     .dashboard-title { font-size:1.19rem; }
     .right_col { padding:6px 2px 40px 2px; }
