@@ -469,18 +469,18 @@ require 'top_header.php';
 }
 
 .stat-label {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: #6c757d;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
   transition: color 0.4s;
   font-family: 'Inter', sans-serif;
 }
 
 .stat-value {
-  font-size: 3.8rem;
+  font-size: 4.5rem;
   font-weight: 900;
   color: #2c3e50;
   line-height: 1;
@@ -505,10 +505,10 @@ require 'top_header.php';
 .search-input {
   flex: 1;
   min-width: 300px;
-  padding: 14px 22px;
+  padding: 16px 24px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   transition: all 0.3s;
   font-family: 'Inter', sans-serif;
   font-weight: 500;
@@ -521,10 +521,10 @@ require 'top_header.php';
 }
 
 .status-filter {
-  padding: 14px 22px;
+  padding: 16px 24px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   background: #fff;
   cursor: pointer;
   transition: all 0.3s;
@@ -538,20 +538,20 @@ require 'top_header.php';
 }
 
 .btn-search {
-  padding: 14px 32px;
+  padding: 16px 36px;
   background: #3498db;
   color: #fff;
   border: none;
   border-radius: 10px;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-family: 'Inter', sans-serif;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
 }
 
 .btn-search:hover {
@@ -561,20 +561,20 @@ require 'top_header.php';
 }
 
 .btn-reset {
-  padding: 14px 32px;
+  padding: 16px 36px;
   background: #95a5a6;
   color: #fff;
   border: none;
   border-radius: 10px;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-family: 'Inter', sans-serif;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
 }
 
 .btn-reset:hover {
@@ -594,14 +594,14 @@ require 'top_header.php';
 .dockets-header {
   background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
   color: #fff;
-  padding: 22px 30px;
-  font-size: 1.3rem;
+  padding: 24px 32px;
+  font-size: 1.5rem;
   font-weight: 800;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   font-family: 'Inter', sans-serif;
 }
 
@@ -620,12 +620,12 @@ require 'top_header.php';
 }
 
 .dockets-table thead th {
-  padding: 18px 22px;
+  padding: 20px 24px;
   text-align: left;
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.5px;
   color: #fff;
   font-family: 'Inter', sans-serif;
 }
@@ -640,8 +640,8 @@ require 'top_header.php';
 }
 
 .dockets-table tbody td {
-  padding: 20px 22px;
-  font-size: 1.1rem;
+  padding: 22px 24px;
+  font-size: 1.2rem;
   color: #2c3e50;
   font-weight: 600;
   font-family: 'Inter', sans-serif;
@@ -655,14 +655,14 @@ require 'top_header.php';
 
 /* Status Badges */
 .status-badge {
-  padding: 8px 18px;
-  border-radius: 20px;
-  font-size: 0.95rem;
+  padding: 10px 20px;
+  border-radius: 22px;
+  font-size: 1.05rem;
   font-weight: 700;
   display: inline-block;
   text-align: center;
   font-family: 'Inter', sans-serif;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
 }
 
 .status-transit {
