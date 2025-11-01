@@ -160,11 +160,23 @@ require 'top_header.php';
               </thead>
               <tbody id="docketsTableBody">
                 <?php
-                $sql = "SELECT sd.*, c.consignor_name, cl.client_name 
-                        FROM tbl_shipping_details sd
-                        LEFT JOIN tbl_consignor c ON sd.consignor_id = c.consignor_id
-                        LEFT JOIN tbl_client cl ON sd.client_id = cl.client_id
-                        ORDER BY sd.shipping_id DESC LIMIT 20";
+                // First check if tables exist
+                $tables_exist = true;
+                $check_consignor = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_consignor'");
+                $check_client = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_client'");
+                
+                if(mysqli_num_rows($check_consignor) > 0 && mysqli_num_rows($check_client) > 0) {
+                  $sql = "SELECT sd.*, c.consignor_name, cl.client_name 
+                          FROM tbl_shipping_details sd
+                          LEFT JOIN tbl_consignor c ON sd.consignor_id = c.consignor_id
+                          LEFT JOIN tbl_client cl ON sd.client_id = cl.client_id
+                          ORDER BY sd.shipping_id DESC LIMIT 20";
+                } else {
+                  // If tables don't exist, just get shipping details
+                  $sql = "SELECT * FROM tbl_shipping_details ORDER BY shipping_id DESC LIMIT 20";
+                  $tables_exist = false;
+                }
+                
                 $result = mysqli_query($conn, $sql);
                 
                 if(!$result) {
@@ -182,11 +194,24 @@ require 'top_header.php';
                       default: $status_class = 'status-default';
                     }
                     $created_date = date('M d, Y g:i A', strtotime($row['created_at'] ?? date('Y-m-d H:i:s')));
+                    
+                    // Get sender and receiver based on table availability
+                    $sender_name = 'N/A';
+                    $receiver_name = 'N/A';
+                    
+                    if($tables_exist) {
+                      $sender_name = $row['consignor_name'] ?? 'N/A';
+                      $receiver_name = $row['client_name'] ?? 'N/A';
+                    } else {
+                      // Fallback to direct fields if they exist
+                      $sender_name = $row['sender_name'] ?? $row['consignor_name'] ?? 'N/A';
+                      $receiver_name = $row['receiver_name'] ?? $row['client_name'] ?? 'N/A';
+                    }
                     ?>
                     <tr>
-                      <td><strong><?= htmlspecialchars($row['tracking_no'] ?? $row['shipping_id']) ?></strong></td>
-                      <td><?= htmlspecialchars($row['consignor_name'] ?? 'N/A') ?></td>
-                      <td><?= htmlspecialchars($row['client_name'] ?? 'N/A') ?></td>
+                      <td><strong><?= htmlspecialchars($row['doc_no'] ?? $row['shipping_id']) ?></strong></td>
+                      <td><?= htmlspecialchars($sender_name) ?></td>
+                      <td><?= htmlspecialchars($receiver_name) ?></td>
                       <td><?= htmlspecialchars($row['service_type'] ?? 'Standard') ?></td>
                       <td><span class="status-badge <?= $status_class ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></span></td>
                       <td><?= $created_date ?></td>
@@ -259,8 +284,12 @@ require 'top_header.php';
   
   <style>
 /* Modern Dashboard Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 * {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .right_col { 
@@ -297,9 +326,10 @@ require 'top_header.php';
 .header-title {
   color: #fff;
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
-  letter-spacing: 0.5px;
+  letter-spacing: -0.5px;
+  font-family: 'Inter', sans-serif;
 }
 
 .header-actions {
@@ -312,7 +342,7 @@ require 'top_header.php';
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   text-decoration: none !important;
   display: flex;
   align-items: center;
@@ -320,6 +350,8 @@ require 'top_header.php';
   transition: all 0.3s;
   border: none;
   cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.3px;
 }
 
 .btn-users {
@@ -556,22 +588,24 @@ require 'top_header.php';
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #6c757d;
   font-weight: 700;
   margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
   transition: color 0.4s;
+  font-family: 'Inter', sans-serif;
 }
 
 .stat-value {
-  font-size: 3rem;
+  font-size: 3.2rem;
   font-weight: 900;
   color: #2c3e50;
   line-height: 1;
   transition: color 0.4s;
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -1px;
 }
 
 /* Search Section */
@@ -595,6 +629,8 @@ require 'top_header.php';
   border-radius: 10px;
   font-size: 1rem;
   transition: all 0.3s;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
 }
 
 .search-input:focus {
@@ -611,6 +647,8 @@ require 'top_header.php';
   background: #fff;
   cursor: pointer;
   transition: all 0.3s;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
 }
 
 .status-filter:focus {
@@ -625,12 +663,14 @@ require 'top_header.php';
   border: none;
   border-radius: 10px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
   align-items: center;
   gap: 8px;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.3px;
 }
 
 .btn-search:hover {
@@ -646,12 +686,14 @@ require 'top_header.php';
   border: none;
   border-radius: 10px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
   align-items: center;
   gap: 8px;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.3px;
 }
 
 .btn-reset:hover {
@@ -678,7 +720,8 @@ require 'top_header.php';
   align-items: center;
   gap: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  font-family: 'Inter', sans-serif;
 }
 
 .table-responsive {
@@ -698,11 +741,12 @@ require 'top_header.php';
 .dockets-table thead th {
   padding: 15px 20px;
   text-align: left;
-  font-weight: 700;
-  font-size: 0.85rem;
+  font-weight: 800;
+  font-size: 0.8rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
   color: #fff;
+  font-family: 'Inter', sans-serif;
 }
 
 .dockets-table tbody tr {
@@ -718,12 +762,14 @@ require 'top_header.php';
   padding: 18px 20px;
   font-size: 1rem;
   color: #2c3e50;
-  font-weight: 500;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
 }
 
 .dockets-table tbody td strong {
-  font-weight: 700;
+  font-weight: 800;
   color: #1a1a1a;
+  letter-spacing: 0.3px;
 }
 
 /* Status Badges */
@@ -731,9 +777,11 @@ require 'top_header.php';
   padding: 6px 16px;
   border-radius: 20px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   display: inline-block;
   text-align: center;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.3px;
 }
 
 .status-transit {
