@@ -1,5 +1,6 @@
 <?php
 $message = '';
+$carmsg = ''; // Initialize carmsg variable
 $type = $_GET['type'] ?? ''; // SAFE
 
 ini_set("post_max_size", "10M");
