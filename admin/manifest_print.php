@@ -3,7 +3,7 @@ require 'conn.php';
 
 $manifest_id = intval($_GET['manifest_id'] ?? 0);
 if (!$manifest_id) {
-    die("Invalid manifest ID");
+    die("Invalid manifest ID. Please provide a valid manifest_id parameter.");
 }
 
 // -- Get Manifest info with Office details --
@@ -11,10 +11,16 @@ $manifest_sql = "SELECT m.*, o.*
     FROM tbl_manifest m 
     JOIN tbl_offices o ON m.office_id = o.office_id 
     WHERE m.manifest_id = $manifest_id";
-$manifest = mysqli_fetch_assoc(mysqli_query($conn, $manifest_sql));
+$result = mysqli_query($conn, $manifest_sql);
+
+if (!$result) {
+    die("Database error: " . mysqli_error($conn));
+}
+
+$manifest = mysqli_fetch_assoc($result);
 
 if (!$manifest) {
-    die("Manifest not found");
+    die("Manifest not found with ID: $manifest_id. Please check if the manifest exists in the database.");
 }
 
 // -- Get Manifest Details --
