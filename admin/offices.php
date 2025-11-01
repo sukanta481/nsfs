@@ -188,20 +188,25 @@ function editOffice(id, name, person, address, phone) {
 <style>
 /* Match main panel padding/style */
 .dashboard-title {font-weight:800;letter-spacing:-.5px;color:#222;}
-.table {font-size:1rem;}
-.btn-xs {padding:3px 10px;font-size:.95em;}
+.table {font-size:1.15rem;}
+.table th {font-size:1.2rem; font-weight:700;}
+.table td {font-size:1.1rem; padding:12px 8px;}
+.btn-xs {padding:5px 12px;font-size:1rem;}
 .x_panel {background: #fff; border-radius: 16px; box-shadow: 0 8px 32px 0 rgba(78,110,255,0.07); padding: 30px 22px 24px 22px;}
 .x_title {border-bottom: 1.5px solid #e6e9ed; margin-bottom: 25px; padding-bottom: 5px;}
-.x_title h2 {margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -.5px;}
+.x_title h2 {margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -.5px;}
 .x_content {padding: 0;}
 .modal-header {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 5px 5px 0 0;}
-.modal-header .close {color: white; opacity: 0.8;}
+.modal-header .close {color: white; opacity: 0.8; font-size:2rem;}
 .modal-header .close:hover {opacity: 1;}
-.modal-title {font-weight: 700;}
+.modal-title {font-weight: 700; font-size:1.4rem;}
+.modal-body label {font-size:1.1rem; font-weight:600;}
+.modal-body .form-control {font-size:1.1rem; padding:10px;}
+.btn {font-size:1.05rem; padding:8px 16px;}
 @media (max-width:900px){
     .dashboard-title { font-size:1.19rem; }
     .right_col { padding:6px 2px 40px 2px; }
-    table { font-size: .95rem; }
+    table { font-size: 1rem; }
     .x_panel {padding:12px 4px;}
 }
 </style>

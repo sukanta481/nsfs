@@ -21,11 +21,11 @@ require 'top_header.php';
             
             <!-- Step 1: Select Office -->
             <div>
-              <label style="display:block;font-weight:600;color:#444;margin-bottom:8px;font-size:0.9rem;">
-                <span style="background:#007bff;color:white;border-radius:50%;padding:2px 8px;font-size:0.85rem;margin-right:6px;">1</span>
+              <label style="display:block;font-weight:600;color:#444;margin-bottom:8px;font-size:1.05rem;">
+                <span style="background:#007bff;color:white;border-radius:50%;padding:4px 10px;font-size:1rem;margin-right:6px;">1</span>
                 Select Office
               </label>
-              <select id="manifest_location" class="form-control" style="height:42px;font-size:1rem;">
+              <select id="manifest_location" class="form-control" style="height:48px;font-size:1.15rem;">
                 <option value="">Choose office...</option>
                 <?php
                 $locations = mysqli_query($conn, "SELECT office_id, office_name FROM tbl_offices ORDER BY office_name ASC");
@@ -38,15 +38,15 @@ require 'top_header.php';
 
             <!-- Step 2: View or Create -->
             <div id="action_container" style="display:none;">
-              <label style="display:block;font-weight:600;color:#444;margin-bottom:8px;font-size:0.9rem;">
-                <span style="background:#28a745;color:white;border-radius:50%;padding:2px 8px;font-size:0.85rem;margin-right:6px;">2</span>
+              <label style="display:block;font-weight:600;color:#444;margin-bottom:8px;font-size:1.05rem;">
+                <span style="background:#28a745;color:white;border-radius:50%;padding:4px 10px;font-size:1rem;margin-right:6px;">2</span>
                 What would you like to do?
               </label>
               <div style="display:flex;gap:10px;">
-                <button type="button" class="btn btn-success" id="btn_create_new" style="flex:1;height:42px;font-weight:600;">
+                <button type="button" class="btn btn-success" id="btn_create_new" style="flex:1;height:48px;font-weight:600;font-size:1.1rem;">
                   <i class="fa fa-plus-circle"></i> Create New
                 </button>
-                <button type="button" class="btn btn-primary" id="btn_view_existing" style="flex:1;height:42px;font-weight:600;">
+                <button type="button" class="btn btn-primary" id="btn_view_existing" style="flex:1;height:48px;font-weight:600;font-size:1.1rem;">
                   <i class="fa fa-search"></i> View Existing
                 </button>
               </div>
@@ -54,11 +54,11 @@ require 'top_header.php';
 
             <!-- Step 3: Select Manifest (shown only when viewing) -->
             <div id="manifest_selector" style="display:none;">
-              <label style="display:block;font-weight:600;color:#444;margin-bottom:8px;font-size:0.9rem;">
-                <span style="background:#ffc107;color:#333;border-radius:50%;padding:2px 8px;font-size:0.85rem;margin-right:6px;">3</span>
+              <label style="display:block;font-weight:600;color:#444;margin-bottom:8px;font-size:1.05rem;">
+                <span style="background:#ffc107;color:#333;border-radius:50%;padding:4px 10px;font-size:1rem;margin-right:6px;">3</span>
                 Select Manifest
               </label>
-              <select id="manifest_id_select" class="form-control" style="height:42px;font-size:1rem;">
+              <select id="manifest_id_select" class="form-control" style="height:48px;font-size:1.15rem;">
                 <option value="">Choose manifest...</option>
               </select>
             </div>
@@ -68,13 +68,13 @@ require 'top_header.php';
           <!-- Quick Stats -->
           <div id="quick_stats" style="display:none;margin-top:20px;padding-top:20px;border-top:2px dashed #e0e0e0;">
             <div style="display:flex;gap:20px;flex-wrap:wrap;">
-              <div style="flex:1;min-width:150px;padding:12px;background:#f0f9ff;border-radius:8px;">
-                <div style="font-size:0.85rem;color:#666;margin-bottom:4px;">Total Manifests</div>
-                <div style="font-size:1.5rem;font-weight:700;color:#007bff;" id="stat_total">0</div>
+              <div style="flex:1;min-width:150px;padding:16px;background:#f0f9ff;border-radius:8px;">
+                <div style="font-size:1rem;color:#666;margin-bottom:6px;font-weight:600;">Total Manifests</div>
+                <div style="font-size:1.8rem;font-weight:700;color:#007bff;" id="stat_total">0</div>
               </div>
-              <div style="flex:1;min-width:150px;padding:12px;background:#f0fdf4;border-radius:8px;">
-                <div style="font-size:0.85rem;color:#666;margin-bottom:4px;">Latest Manifest</div>
-                <div style="font-size:1rem;font-weight:600;color:#16a34a;" id="stat_latest">-</div>
+              <div style="flex:1;min-width:150px;padding:16px;background:#f0fdf4;border-radius:8px;">
+                <div style="font-size:1rem;color:#666;margin-bottom:6px;font-weight:600;">Latest Manifest</div>
+                <div style="font-size:1.2rem;font-weight:600;color:#16a34a;" id="stat_latest">-</div>
               </div>
             </div>
           </div>
@@ -90,16 +90,36 @@ require 'top_header.php';
 
   <style>
     .dashboard-title { font-weight: 800; color: #222; font-size: 2rem; margin-bottom: 0;}
+    .form-control {
+      font-size: 1.15rem;
+      padding: 10px 12px;
+      height: auto;
+    }
     .form-control:focus {
       border-color: #007bff;
       box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
     }
+    label {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
     .btn {
       transition: all 0.2s ease;
+      font-size: 1.1rem;
+      padding: 10px 18px;
     }
     .btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    #quick_stats {
+      font-size: 1.05rem;
+    }
+    #quick_stats > div > div {
+      font-size: 1rem;
+    }
+    #stat_total, #stat_latest {
+      font-size: 1.6rem !important;
     }
     @media (max-width: 768px) {
       .dashboard-title { font-size: 1.5rem;}
@@ -108,6 +128,12 @@ require 'top_header.php';
       }
       .manifest-control-panel > div {
         grid-template-columns: 1fr !important;
+      }
+      .form-control {
+        font-size: 1rem;
+      }
+      .btn {
+        font-size: 1rem;
       }
     }
   </style>
