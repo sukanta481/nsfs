@@ -53,32 +53,102 @@ while($row = mysqli_fetch_assoc($res_data)) {
 <head>
   <title>Manifest Print</title>
   <style>
-    body { font-family: 'Calibri', Arial, sans-serif; font-size: 15px; color: #222; margin: 0; background: #fff; }
-    .header { border: 1.8px solid #111; margin-bottom: 5px; padding: 12px 16px 6px 16px; display: flex; align-items: flex-start; }
+    @page {
+      size: A4 landscape;
+      margin: 10mm 5mm;
+    }
+    body { 
+      font-family: 'Calibri', Arial, sans-serif; 
+      font-size: 15px; 
+      color: #222; 
+      margin: 0; 
+      background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .header { 
+      border: 1.8px solid #111; 
+      margin-bottom: 5px; 
+      padding: 12px 16px 6px 16px; 
+      display: flex; 
+      align-items: flex-start;
+      page-break-inside: avoid;
+    }
     .header img { width: 200px; margin-right: 18px; }
     .company-meta { flex:1; }
     .company-meta .company-name { font-size: 27px; font-weight: bold; margin-bottom: 6px; }
     .company-meta .meta { margin-bottom: 3px; }
     .company-meta .bold { font-weight: 600; }
-    .manifest-row { border: 1.6px solid #111; margin-bottom: 2px; padding: 6px 14px; display: flex; justify-content: space-between; background: #fafbfe;}
+    .manifest-row { 
+      border: 1.6px solid #111; 
+      margin-bottom: 2px; 
+      padding: 6px 14px; 
+      display: flex; 
+      justify-content: space-between; 
+      background: #fafbfe;
+      page-break-inside: avoid;
+    }
     .manifest-row .info { font-size: 15.7px; }
     .manifest-row .info strong { font-size: 15.9px; margin-right: 6px;}
-    .manifest-title { text-align: center; font-size: 17.2px; font-weight: 600; letter-spacing:1px; margin: 7px 0 6px 0;}
-    table { border: 1px solid #111; border-collapse: collapse; width: 100%; margin: 0 auto; }
-    th, td { border: 1.2px solid #222; padding: 4.5px 8px; font-size: 14.3px; }
-    th { background: #f3f7fa; font-size: 14.5px;}
+    .manifest-title { 
+      text-align: center; 
+      font-size: 17.2px; 
+      font-weight: 600; 
+      letter-spacing:1px; 
+      margin: 7px 0 6px 0;
+      page-break-before: avoid;
+      page-break-after: avoid;
+    }
+    table { 
+      border: 1px solid #111; 
+      border-collapse: collapse; 
+      width: 100%; 
+      margin: 0 auto;
+      table-layout: fixed;
+    }
+    th, td { 
+      border: 1.2px solid #222; 
+      padding: 4.5px 8px; 
+      font-size: 14.3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    th { 
+      background: #f3f7fa; 
+      font-size: 14.5px;
+      white-space: nowrap;
+    }
     .noprint { margin: 16px 5px 0 0; }
+    
+    /* Column widths */
+    table th:nth-child(1) { width: 4%; }  /* SL.NO */
+    table th:nth-child(2) { width: 10%; } /* DOCKET NO */
+    table th:nth-child(3) { width: 15%; } /* CONSIGNEE */
+    table th:nth-child(4) { width: 10%; } /* ITEM */
+    table th:nth-child(5) { width: 20%; } /* ADDRESS */
+    table th:nth-child(6) { width: 5%; }  /* BOX */
+    table th:nth-child(7) { width: 7%; }  /* WEIGHT */
+    table th:nth-child(8) { width: 7%; }  /* RATE */
+    table th:nth-child(9) { width: 8%; }  /* AMOUNT */
+    table th:nth-child(10) { width: 7%; } /* E-WAY BILL */
+    table th:nth-child(11) { width: 7%; } /* PAY TO */
+    
     @media print {
       .noprint { display: none; }
-      th, td { font-size: 13px;}
+      body { margin: 0; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+      th, td { font-size: 13px; border: 1.2px solid #222 !important; }
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
     }
+    
     .manifest-footer-table {
-  width: 100%;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  background: #fff;
-}
+      width: 100%;
+      margin-top: 20px;
+      background: #fff;
+      page-break-inside: avoid;
+    }
 .manifest-footer-table table {
   width: 100%;
   font-size: 16px;
@@ -189,4 +259,21 @@ while($row = mysqli_fetch_assoc($res_data)) {
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  html2canvas(document.body, {scale:2}).then(function(canvas) {
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('l','pt','a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    // Draw image, scale to fit width, keep ratio
+    const imgWidth = pageWidth - 30, imgHeight = canvas.height * imgWidth / canvas.width;
+    pdf.addImage(imgData, 'PNG', 15, 15, imgWidth, imgHeight);
+    pdf.save("manifest.pdf");
+  });
+}
+</script>
+</body>
+</html>
