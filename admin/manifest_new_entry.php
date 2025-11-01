@@ -120,16 +120,16 @@ $driver_count = $drivers ? mysqli_num_rows($drivers) : 0;
             <td><input type="text" name="client_name[]" class="form-control client-field" readonly style="font-size:1.05rem;"></td>
             <td><input type="text" name="item[]" class="form-control client-field" readonly style="font-size:1.05rem;"></td>
             <td><input type="text" name="client_address[]" class="form-control client-field" readonly style="font-size:1.05rem;"></td>
-            <td><input type="number" name="box[]" class="form-control client-field box-input" readonly style="font-size:1.05rem;font-weight:600;"></td>
-            <td><input type="number" name="weight[]" class="form-control client-field" readonly step="0.01" style="font-size:1.05rem;"></td>
+            <td><input type="number" name="box[]" class="form-control client-field box-input" readonly style="font-size:1.05rem;font-weight:600;min-width:80px;text-align:center;"></td>
+            <td><input type="number" name="weight[]" class="form-control client-field" readonly step="0.01" style="font-size:1.05rem;min-width:90px;text-align:center;"></td>
             <td>
-              <input type="number" name="rate[]" class="form-control rate-input" min="0" step="0.01" style="font-size:1.05rem;font-weight:600;">
+              <input type="number" name="rate[]" class="form-control rate-input" min="0" step="0.01" style="font-size:1.05rem;font-weight:600;min-width:90px;text-align:center;">
             </td>
             <td>
-              <input type="text" name="amount[]" class="form-control amount-field" readonly style="font-size:1.05rem;font-weight:700;color:#4caf50;">
+              <input type="text" name="amount[]" class="form-control amount-field" readonly style="font-size:1.05rem;font-weight:700;color:#4caf50;min-width:100px;text-align:center;">
             </td>
-            <td><input type="text" name="eway_bill[]" class="form-control" style="font-size:1.05rem;"></td>
-            <td><input type="number" name="pay_to[]" class="form-control pay-to-input" min="0" step="0.01" style="font-size:1.05rem;font-weight:600;color:#f44336;"></td>
+            <td><input type="text" name="eway_bill[]" class="form-control" style="font-size:1.05rem;min-width:120px;"></td>
+            <td><input type="number" name="pay_to[]" class="form-control pay-to-input" min="0" step="0.01" style="font-size:1.05rem;font-weight:600;color:#f44336;min-width:90px;text-align:center;"></td>
           </tr>
           <?php endfor; ?>
         </tbody>

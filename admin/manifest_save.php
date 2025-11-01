@@ -175,20 +175,36 @@ try {
             // Table doesn't exist, skip saving to shipping details
             echo "<!-- Note: tbl_shipping_details table not found, skipping manual entry save -->";
         } else {
-            // Try to insert using fallback method (more compatible)
+            // Check which columns exist
+            $columns = [];
+            $col_check = mysqli_query($conn, "SHOW COLUMNS FROM tbl_shipping_details");
+            while($col = mysqli_fetch_assoc($col_check)) {
+                $columns[] = $col['Field'];
+            }
+            
+            // Build insert based on available columns
             foreach ($details_to_insert as $d) {
-                $ins_ship = "INSERT INTO tbl_shipping_details (doc_no, client_name, item, client_address, box, weight, rate, eway_bill, pay_to, branch_office, delivery_status) VALUES ('".
-                    mysqli_real_escape_string($conn, $d['doc'])."','".
-                    mysqli_real_escape_string($conn, $d['client'])."','".
-                    mysqli_real_escape_string($conn, $d['item'])."','".
-                    mysqli_real_escape_string($conn, $d['addr'])."','".
-                    intval($d['box'])."','".
-                    floatval($d['weight'])."','".
-                    floatval($d['rate'])."','".
-                    mysqli_real_escape_string($conn, $d['eway'])."','".
-                    floatval($d['pay'])."','".
-                    mysqli_real_escape_string($conn, $office_name_for_branch)."','".
-                    mysqli_real_escape_string($conn, 'pending')."')";
+                $fields = ['doc_no', 'client_name', 'item', 'client_address', 'box', 'weight', 'rate', 'eway_bill', 'pay_to', 'branch_office'];
+                $values = [
+                    mysqli_real_escape_string($conn, $d['doc']),
+                    mysqli_real_escape_string($conn, $d['client']),
+                    mysqli_real_escape_string($conn, $d['item']),
+                    mysqli_real_escape_string($conn, $d['addr']),
+                    intval($d['box']),
+                    floatval($d['weight']),
+                    floatval($d['rate']),
+                    mysqli_real_escape_string($conn, $d['eway']),
+                    floatval($d['pay']),
+                    mysqli_real_escape_string($conn, $office_name_for_branch)
+                ];
+                
+                // Only include delivery_status if column exists
+                if (in_array('delivery_status', $columns)) {
+                    $fields[] = 'delivery_status';
+                    $values[] = mysqli_real_escape_string($conn, 'pending');
+                }
+                
+                $ins_ship = "INSERT INTO tbl_shipping_details (".implode(', ', $fields).") VALUES ('".implode("','", $values)."')";
                     
                 $result = mysqli_query($conn, $ins_ship);
                 if (!$result) {
