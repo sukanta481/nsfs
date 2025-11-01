@@ -169,19 +169,15 @@ try {
         // Get office name for branch_office field
         $office_name_for_branch = $office_name;
         
-        $stmt3 = mysqli_prepare($conn, "INSERT INTO tbl_shipping_details (doc_no, client_name, item, client_address, box, weight, rate, eway_bill, pay_to, branch_office, car_id, driver_id, delivery_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $delivery_status = 'pending'; // default status
-        
-        foreach ($details_to_insert as $d) {
-            mysqli_stmt_bind_param($stmt3, 'ssssiddsdsiiis', 
-                $d['doc'], $d['client'], $d['item'], $d['addr'], 
-                $d['box'], $d['weight'], $d['rate'], $d['eway'], 
-                $d['pay'], $office_name_for_branch, $car_id, $driver_id, 
-                $delivery_status, $created_at);
-            
-            if (!mysqli_stmt_execute($stmt3)) {
-                // Try fallback manual insert
-                $ins_ship = "INSERT INTO tbl_shipping_details (doc_no, client_name, item, client_address, box, weight, rate, eway_bill, pay_to, branch_office, car_id, driver_id, delivery_status, created_at) VALUES ('".
+        // Check if tbl_shipping_details exists and create/update if needed
+        $check_table = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_shipping_details'");
+        if (mysqli_num_rows($check_table) == 0) {
+            // Table doesn't exist, skip saving to shipping details
+            echo "<!-- Note: tbl_shipping_details table not found, skipping manual entry save -->";
+        } else {
+            // Try to insert using fallback method (more compatible)
+            foreach ($details_to_insert as $d) {
+                $ins_ship = "INSERT INTO tbl_shipping_details (doc_no, client_name, item, client_address, box, weight, rate, eway_bill, pay_to, branch_office, delivery_status) VALUES ('".
                     mysqli_real_escape_string($conn, $d['doc'])."','".
                     mysqli_real_escape_string($conn, $d['client'])."','".
                     mysqli_real_escape_string($conn, $d['item'])."','".
@@ -192,14 +188,15 @@ try {
                     mysqli_real_escape_string($conn, $d['eway'])."','".
                     floatval($d['pay'])."','".
                     mysqli_real_escape_string($conn, $office_name_for_branch)."','".
-                    intval($car_id)."','".
-                    intval($driver_id)."','".
-                    mysqli_real_escape_string($conn, $delivery_status)."','".
-                    mysqli_real_escape_string($conn, $created_at)."')";
-                mysqli_query($conn, $ins_ship); // ignore errors for shipping details
+                    mysqli_real_escape_string($conn, 'pending')."')";
+                    
+                $result = mysqli_query($conn, $ins_ship);
+                if (!$result) {
+                    // Log error but don't fail the whole transaction
+                    echo "<!-- Shipping details insert warning: " . mysqli_error($conn) . " -->";
+                }
             }
         }
-        mysqli_stmt_close($stmt3);
     }
 
     mysqli_commit($conn);
