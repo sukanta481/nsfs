@@ -33,7 +33,10 @@ $res = mysqli_query($conn, "SELECT * FROM tbl_shipping_details WHERE branch_offi
           <th>Rate</th>
           <th>Amount</th>
           <th>E-way Bill</th>
+<<<<<<< HEAD
           <th>Pay To</th>
+=======
+>>>>>>> 48325984ca2d6349a2fc0072c845c0d9d4a4c417
         </tr>
       </thead>
       <tbody>
@@ -50,10 +53,14 @@ $res = mysqli_query($conn, "SELECT * FROM tbl_shipping_details WHERE branch_offi
             <input type="number" value="<?= htmlspecialchars($row['rate']) ?>" data-doc="<?= $row['doc_no'] ?>" class="form-control manifest-rate-edit" style="max-width:70px;">
           </td>
           <td><?= number_format($row['rate'] * $row['box'], 2) ?></td>
+<<<<<<< HEAD
           <td><?= htmlspecialchars($row['eway_bill'] ?? '') ?></td>
           <td>
             <input type="number" value="<?= htmlspecialchars($row['pay_to'] ?? '') ?>" data-doc="<?= $row['doc_no'] ?>" class="form-control manifest-pay-edit" style="max-width:70px;">
           </td>
+=======
+          <td><?= htmlspecialchars($row['eway_bill']) ?></td>
+>>>>>>> 48325984ca2d6349a2fc0072c845c0d9d4a4c417
         </tr>
         <?php endwhile; ?>
       </tbody>
