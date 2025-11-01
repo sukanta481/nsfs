@@ -77,26 +77,47 @@ require 'top_header.php';
         <div class="stats-grid">
           <!-- Total Dockets Card -->
           <div class="stat-card stat-card-dark">
-            <div class="stat-label">Total Dockets</div>
-            <div class="stat-value"><?= $total_docket ?></div>
+            <div class="stat-icon"><i class="fa fa-th-list"></i></div>
+            <div class="stat-content">
+              <div class="stat-label">Total Dockets</div>
+              <div class="stat-value"><?= $total_docket ?></div>
+            </div>
           </div>
           
           <!-- Pending Card -->
           <div class="stat-card stat-card-warning">
-            <div class="stat-label">Pending</div>
-            <div class="stat-value"><?= $non_drs ?></div>
+            <div class="stat-icon"><i class="fa fa-clock-o"></i></div>
+            <div class="stat-content">
+              <div class="stat-label">Pending</div>
+              <div class="stat-value"><?= $non_drs ?></div>
+            </div>
           </div>
           
           <!-- In Transit Card -->
           <div class="stat-card stat-card-info">
-            <div class="stat-label">In Transit</div>
-            <div class="stat-value"><?= $intransit ?></div>
+            <div class="stat-icon"><i class="fa fa-truck"></i></div>
+            <div class="stat-content">
+              <div class="stat-label">In Transit</div>
+              <div class="stat-value"><?= $intransit ?></div>
+            </div>
           </div>
           
           <!-- Delivered Card -->
           <div class="stat-card stat-card-success">
-            <div class="stat-label">Delivered</div>
-            <div class="stat-value"><?= $delivered ?></div>
+            <div class="stat-icon"><i class="fa fa-check-circle"></i></div>
+            <div class="stat-content">
+              <div class="stat-label">Delivered</div>
+              <div class="stat-value"><?= $delivered ?></div>
+            </div>
+          </div>
+          
+          <!-- Manifest Card -->
+          <div class="stat-card stat-card-manifest">
+            <div class="stat-icon"><i class="fa fa-file-text"></i></div>
+            <div class="stat-content">
+              <div class="stat-label">Manifest</div>
+              <div class="stat-value"><?= $manifest_count ?></div>
+            </div>
           </div>
         </div>
 
@@ -139,7 +160,11 @@ require 'top_header.php';
               </thead>
               <tbody id="docketsTableBody">
                 <?php
-                $sql = "SELECT * FROM tbl_shipping_details ORDER BY shipping_id DESC LIMIT 20";
+                $sql = "SELECT sd.*, c.consignor_name, cl.client_name 
+                        FROM tbl_shipping_details sd
+                        LEFT JOIN tbl_consignor c ON sd.consignor_id = c.consignor_id
+                        LEFT JOIN tbl_client cl ON sd.client_id = cl.client_id
+                        ORDER BY sd.shipping_id DESC LIMIT 20";
                 $result = mysqli_query($conn, $sql);
                 if($result && mysqli_num_rows($result) > 0) {
                   while($row = mysqli_fetch_assoc($result)) {
@@ -155,9 +180,9 @@ require 'top_header.php';
                     $created_date = date('M d, Y g:i A', strtotime($row['created_at'] ?? 'now'));
                     ?>
                     <tr>
-                      <td><strong><?= htmlspecialchars($row['tracking_no']) ?></strong></td>
-                      <td><?= htmlspecialchars($row['sender_name'] ?? 'N/A') ?></td>
-                      <td><?= htmlspecialchars($row['receiver_name'] ?? 'N/A') ?></td>
+                      <td><strong><?= htmlspecialchars($row['tracking_no'] ?? $row['shipping_id']) ?></strong></td>
+                      <td><?= htmlspecialchars($row['consignor_name'] ?? 'N/A') ?></td>
+                      <td><?= htmlspecialchars($row['client_name'] ?? 'N/A') ?></td>
                       <td><?= htmlspecialchars($row['service_type'] ?? 'Standard') ?></td>
                       <td><span class="status-badge <?= $status_class ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></span></td>
                       <td><?= $created_date ?></td>
@@ -335,7 +360,7 @@ require 'top_header.php';
 /* Stats Cards */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 25px;
   padding: 0 35px;
   margin-bottom: 35px;
@@ -343,45 +368,199 @@ require 'top_header.php';
 
 .stat-card {
   background: #fff;
-  border-radius: 16px;
-  padding: 25px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  border-radius: 20px;
+  padding: 30px 25px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
   border-left: 5px solid;
-  transition: all 0.3s;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3), transparent);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+  transition: all 0.4s;
 }
 
 .stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+  transform: translateY(-10px) scale(1.03);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+}
+
+.stat-card:hover::before {
+  transform: translate(20%, -20%) scale(1.5);
 }
 
 .stat-card-dark {
   border-left-color: #2c3e50;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+}
+
+.stat-card-dark:hover {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: #fff;
+}
+
+.stat-card-dark:hover .stat-label,
+.stat-card-dark:hover .stat-value {
+  color: #fff;
+}
+
+.stat-card-dark:hover .stat-icon {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
 }
 
 .stat-card-warning {
   border-left-color: #f39c12;
+  background: linear-gradient(135deg, #fff 0%, #fffbf0 100%);
+}
+
+.stat-card-warning:hover {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  color: #fff;
+}
+
+.stat-card-warning:hover .stat-label,
+.stat-card-warning:hover .stat-value {
+  color: #fff;
+}
+
+.stat-card-warning:hover .stat-icon {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
 }
 
 .stat-card-info {
   border-left-color: #3498db;
+  background: linear-gradient(135deg, #fff 0%, #f0f8ff 100%);
+}
+
+.stat-card-info:hover {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: #fff;
+}
+
+.stat-card-info:hover .stat-label,
+.stat-card-info:hover .stat-value {
+  color: #fff;
+}
+
+.stat-card-info:hover .stat-icon {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
 }
 
 .stat-card-success {
   border-left-color: #27ae60;
+  background: linear-gradient(135deg, #fff 0%, #f0fff4 100%);
+}
+
+.stat-card-success:hover {
+  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+  color: #fff;
+}
+
+.stat-card-success:hover .stat-label,
+.stat-card-success:hover .stat-value {
+  color: #fff;
+}
+
+.stat-card-success:hover .stat-icon {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+.stat-card-manifest {
+  border-left-color: #9b59b6;
+  background: linear-gradient(135deg, #fff 0%, #f9f0ff 100%);
+}
+
+.stat-card-manifest:hover {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: #fff;
+}
+
+.stat-card-manifest:hover .stat-label,
+.stat-card-manifest:hover .stat-value {
+  color: #fff;
+}
+
+.stat-card-manifest:hover .stat-icon {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+.stat-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background: rgba(0,0,0,0.05);
+  color: #2c3e50;
+  transition: all 0.4s;
+  flex-shrink: 0;
+}
+
+.stat-card-dark .stat-icon {
+  background: rgba(44,62,80,0.1);
+  color: #2c3e50;
+}
+
+.stat-card-warning .stat-icon {
+  background: rgba(243,156,18,0.1);
+  color: #f39c12;
+}
+
+.stat-card-info .stat-icon {
+  background: rgba(52,152,219,0.1);
+  color: #3498db;
+}
+
+.stat-card-success .stat-icon {
+  background: rgba(39,174,96,0.1);
+  color: #27ae60;
+}
+
+.stat-card-manifest .stat-icon {
+  background: rgba(155,89,182,0.1);
+  color: #9b59b6;
+}
+
+.stat-content {
+  flex: 1;
 }
 
 .stat-label {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #7f8c8d;
   font-weight: 600;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: color 0.4s;
 }
 
 .stat-value {
-  font-size: 2.5rem;
-  font-weight: 700;
+  font-size: 2.8rem;
+  font-weight: 800;
   color: #2c3e50;
+  line-height: 1;
+  transition: color 0.4s;
 }
 
 /* Search Section */
@@ -630,7 +809,13 @@ require 'top_header.php';
   .header-title { font-size: 1.4rem; }
   .header-actions { gap: 8px; }
   .header-btn { padding: 8px 15px; font-size: 0.85rem; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stats-grid { 
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .stat-card { padding: 25px 20px; }
+  .stat-icon { width: 60px; height: 60px; font-size: 1.8rem; }
+  .stat-value { font-size: 2.3rem; }
 }
 
 @media (max-width: 768px) {
@@ -657,6 +842,21 @@ require 'top_header.php';
   .stats-grid {
     grid-template-columns: 1fr;
     padding: 0 15px;
+    gap: 15px;
+  }
+  
+  .stat-card {
+    padding: 20px 18px;
+  }
+  
+  .stat-icon {
+    width: 55px;
+    height: 55px;
+    font-size: 1.6rem;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
   }
   
   .search-section {
@@ -693,7 +893,9 @@ require 'top_header.php';
 @media (max-width: 576px) {
   .header-icon { font-size: 1.5rem; padding: 8px; }
   .header-title { font-size: 1.2rem; }
-  .stat-value { font-size: 2rem; }
+  .stat-icon { width: 50px; height: 50px; font-size: 1.4rem; }
+  .stat-value { font-size: 1.8rem; }
+  .stat-label { font-size: 0.85rem; }
   .dockets-table { font-size: 0.8rem; }
   .action-buttons { flex-direction: column; gap: 5px; }
   .action-btn { width: 32px; height: 32px; }
