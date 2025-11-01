@@ -48,7 +48,7 @@
                       <div class="col-md-6 col-sm-6 col-xs-12">
                      
                       
-                      <input type="text" name="driver_number" required="required" class="form-control col-md-7 col-xs-12" value="<?php echo $rc['driver_number'];?>">
+                      <input type="text" name="driver_number" required="required" class="form-control col-md-7 col-xs-12" value="">
                      
                        
  
