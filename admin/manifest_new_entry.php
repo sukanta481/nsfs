@@ -9,77 +9,137 @@ if (!$office_id) {
 
 // Get office name for title
 $office = mysqli_fetch_assoc(mysqli_query($conn, "SELECT office_name FROM tbl_offices WHERE office_id=$office_id"));
+
+// Get cars for dropdown
+$cars = mysqli_query($conn, "SELECT car_id, car_number FROM tbl_car WHERE active_status=1 ORDER BY car_number ASC");
+
+// Get drivers for dropdown
+$drivers = mysqli_query($conn, "SELECT driver_id, driver_name FROM tbl_driver WHERE active_status=1 ORDER BY driver_name ASC");
 ?>
 
-<div class="x_panel" style="border-radius:16px;">
-  <div class="x_title" style="margin-bottom:15px;">
-    <h2>New Manifest Entry - <?= htmlspecialchars($office['office_name']) ?></h2>
+<div class="x_panel" style="border-radius:20px;background:white;padding:35px;box-shadow:0 6px 25px rgba(0,0,0,0.1);">
+  <div class="x_title" style="margin-bottom:25px;padding-bottom:20px;border-bottom:3px solid #e3f2fd;">
+    <h2 style="font-size:2rem;font-weight:800;color:#1a1a1a;">
+      <i class="fa fa-plus-circle" style="color:#4caf50;"></i> New Manifest Entry - <?= htmlspecialchars($office['office_name']) ?>
+    </h2>
     <div class="clearfix"></div>
   </div>
 
   <!-- MESSAGE BOX AT THE TOP -->
-  <div id="manifest_save_result" style="margin-bottom:18px;"></div>
+  <div id="manifest_save_result" style="margin-bottom:20px;"></div>
 
   <form id="manifest_new_form" autocomplete="off">
     <input type="hidden" name="office_id" value="<?= $office_id ?>">
-    <div style="overflow-x:auto;">
-      <table class="table table-bordered table-striped" id="manifest_entry_table" style="background:#fff;">
+    
+    <!-- Car & Driver Dropdowns + Manual Input Checkbox -->
+    <div style="background:#f5f7fa;padding:25px;border-radius:12px;margin-bottom:25px;border:2px solid #e0e0e0;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;align-items:end;">
+        
+        <!-- Car Dropdown -->
+        <div>
+          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.1rem;">
+            <i class="fa fa-car" style="color:#2196f3;"></i> Select Car
+          </label>
+          <select name="car_id" id="car_select" class="form-control" style="height:45px;font-size:1.1rem;font-weight:600;">
+            <option value="">-- Select Car --</option>
+            <?php while($car = mysqli_fetch_assoc($cars)): ?>
+              <option value="<?= $car['car_id'] ?>"><?= htmlspecialchars($car['car_number']) ?></option>
+            <?php endwhile; ?>
+          </select>
+        </div>
+
+        <!-- Driver Dropdown -->
+        <div>
+          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.1rem;">
+            <i class="fa fa-user" style="color:#ff9800;"></i> Select Driver
+          </label>
+          <select name="driver_id" id="driver_select" class="form-control" style="height:45px;font-size:1.1rem;font-weight:600;">
+            <option value="">-- Select Driver --</option>
+            <?php while($driver = mysqli_fetch_assoc($drivers)): ?>
+              <option value="<?= $driver['driver_id'] ?>"><?= htmlspecialchars($driver['driver_name']) ?></option>
+            <?php endwhile; ?>
+          </select>
+        </div>
+
+        <!-- Manual Input Checkbox -->
+        <div>
+          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.1rem;">
+            <i class="fa fa-edit" style="color:#9c27b0;"></i> Input Mode
+          </label>
+          <div style="background:white;padding:12px 20px;border-radius:8px;border:2px solid #e0e0e0;height:45px;display:flex;align-items:center;">
+            <input type="checkbox" id="manual_input_checkbox" style="width:22px;height:22px;margin-right:12px;cursor:pointer;">
+            <label for="manual_input_checkbox" style="margin:0;font-size:1.1rem;font-weight:700;color:#9c27b0;cursor:pointer;">
+              Manual Input
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    
+    <!-- Data Entry Table -->
+    <div style="overflow-x:auto;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
+      <table class="table table-bordered table-hover" id="manifest_entry_table" style="background:#fff;margin:0;font-size:1.05rem;">
         <thead>
-          <tr style="background:#f6faff;">
-            <th>SL. No</th>
-            <th>Docket No</th>
-            <th>Consignee</th>
-            <th>Item</th>
-            <th>Address</th>
-            <th>Box</th>
-            <th>Weight</th>
-            <th>Rate</th>
-            <th>Amount</th>
-            <th>E-way Bill</th>
-            <th>Pay To</th>
+          <tr style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;">
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;">SL</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;min-width:140px;">Docket No</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;min-width:180px;">Consignee</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;min-width:140px;">Item</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;min-width:200px;">Address</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;">Box</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;">Weight</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;">Rate</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;">Amount</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;min-width:130px;">E-way Bill</th>
+            <th style="padding:16px 12px;font-weight:800;font-size:1.15rem;">Pay To</th>
           </tr>
         </thead>
         <tbody>
           <?php for ($i=1; $i<=25; $i++): ?>
           <tr>
-            <td><?= $i ?></td>
+            <td style="padding:12px;font-weight:700;color:#666;text-align:center;font-size:1.1rem;"><?= $i ?></td>
             <td>
-              <input type="text" name="doc_no[]" class="form-control docket-no" data-row="<?= $i ?>" autocomplete="off">
+              <input type="text" name="doc_no[]" class="form-control docket-no" data-row="<?= $i ?>" autocomplete="off" style="font-size:1.05rem;font-weight:600;">
             </td>
-            <td><input type="text" name="client_name[]" class="form-control" readonly></td>
-            <td><input type="text" name="item[]" class="form-control" readonly></td>
-            <td><input type="text" name="client_address[]" class="form-control" readonly></td>
-            <td><input type="text" name="box[]" class="form-control" readonly></td>
-            <td><input type="text" name="weight[]" class="form-control" readonly></td>
+            <td><input type="text" name="client_name[]" class="form-control client-field" readonly style="font-size:1.05rem;"></td>
+            <td><input type="text" name="item[]" class="form-control client-field" readonly style="font-size:1.05rem;"></td>
+            <td><input type="text" name="client_address[]" class="form-control client-field" readonly style="font-size:1.05rem;"></td>
+            <td><input type="number" name="box[]" class="form-control client-field box-input" readonly style="font-size:1.05rem;font-weight:600;"></td>
+            <td><input type="number" name="weight[]" class="form-control client-field" readonly step="0.01" style="font-size:1.05rem;"></td>
             <td>
-              <input type="number" name="rate[]" class="form-control rate-input" min="0" step="0.01">
+              <input type="number" name="rate[]" class="form-control rate-input" min="0" step="0.01" style="font-size:1.05rem;font-weight:600;">
             </td>
             <td>
-              <input type="text" name="amount[]" class="form-control" readonly>
+              <input type="text" name="amount[]" class="form-control amount-field" readonly style="font-size:1.05rem;font-weight:700;color:#4caf50;">
             </td>
-            <td><input type="text" name="eway_bill[]" class="form-control"></td>
-            <td><input type="number" name="pay_to[]" class="form-control" min="0"></td>
+            <td><input type="text" name="eway_bill[]" class="form-control" style="font-size:1.05rem;"></td>
+            <td><input type="number" name="pay_to[]" class="form-control pay-to-input" min="0" step="0.01" style="font-size:1.05rem;font-weight:600;color:#f44336;"></td>
           </tr>
           <?php endfor; ?>
         </tbody>
       </table>
     </div>
-    <div style="margin-top:12px;display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+    
+    <!-- Totals and Submit Button -->
+    <div style="margin-top:25px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;justify-content:space-between;background:#f5f7fa;padding:20px;border-radius:12px;">
       <div>
-        <button type="submit" class="btn btn-success" style="font-weight:600;font-size:1.06rem;padding:8px 35px;">Save</button>
+        <button type="submit" class="btn btn-success btn-lg" style="font-weight:800;font-size:1.3rem;padding:14px 45px;border-radius:10px;box-shadow:0 6px 20px rgba(76,175,80,0.4);">
+          <i class="fa fa-save" style="margin-right:10px;"></i> SAVE MANIFEST
+        </button>
       </div>
-      <div style="display:flex;gap:12px;align-items:center;">
-        <div style="background:#fff;padding:10px 14px;border-radius:8px;border:1px solid #eee;">
-          <div style="font-size:12px;color:#666;">Gross Total</div>
-          <div id="manifest_gross" style="font-weight:700;font-size:1.05rem;">0.00</div>
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+        <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:16px 22px;border-radius:10px;color:white;box-shadow:0 4px 15px rgba(102,126,234,0.4);">
+          <div style="font-size:0.9rem;opacity:0.95;margin-bottom:4px;font-weight:600;">Gross Total</div>
+          <div id="manifest_gross" style="font-weight:900;font-size:1.6rem;">0.00</div>
         </div>
-        <div style="background:#fff;padding:10px 14px;border-radius:8px;border:1px solid #eee;">
-          <div style="font-size:12px;color:#666;">Total To Pay</div>
-          <div id="manifest_pay_total" style="font-weight:700;font-size:1.05rem;">0.00</div>
+        <div style="background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);padding:16px 22px;border-radius:10px;color:white;box-shadow:0 4px 15px rgba(245,87,108,0.4);">
+          <div style="font-size:0.9rem;opacity:0.95;margin-bottom:4px;font-weight:600;">Total To Pay</div>
+          <div id="manifest_pay_total" style="font-weight:900;font-size:1.6rem;">0.00</div>
         </div>
-        <div style="background:#fff;padding:10px 14px;border-radius:8px;border:1px solid #eee;">
-          <div style="font-size:12px;color:#666;">Net Total</div>
-          <div id="manifest_net" style="font-weight:700;font-size:1.05rem;color:#d9534f;">0.00</div>
+        <div style="background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%);padding:16px 22px;border-radius:10px;color:white;box-shadow:0 4px 15px rgba(79,172,254,0.4);">
+          <div style="font-size:0.9rem;opacity:0.95;margin-bottom:4px;font-weight:600;">Net Total</div>
+          <div id="manifest_net" style="font-weight:900;font-size:1.6rem;">0.00</div>
         </div>
       </div>
     </div>
@@ -88,6 +148,25 @@ $office = mysqli_fetch_assoc(mysqli_query($conn, "SELECT office_name FROM tbl_of
 
 <script>
 $(function() {
+  var isManualMode = false;
+
+  // Manual Input Checkbox Toggle
+  $('#manual_input_checkbox').on('change', function() {
+    isManualMode = $(this).is(':checked');
+    
+    if (isManualMode) {
+      // Enable all fields for manual input
+      $('.client-field, .box-input').prop('readonly', false).css('background', '#fff');
+      $('.docket-no').attr('placeholder', 'Enter manually').css('background', '#fffacd');
+      alert('✓ Manual Input Mode: You can now enter all details manually');
+    } else {
+      // Disable fields, back to auto-fetch mode
+      $('.client-field, .box-input').prop('readonly', true).css('background', '#f5f5f5');
+      $('.docket-no').attr('placeholder', 'Auto-fetch').css('background', '#fff');
+      alert('✓ Auto-Fetch Mode: Docket details will be fetched automatically');
+    }
+  });
+
   // Helper: recalc totals
   function recalcTotals() {
     var gross = 0.00;
@@ -106,23 +185,27 @@ $(function() {
     $('#manifest_net').text(net.toFixed(2));
   }
 
-  // Docket No: on blur, fetch data for this row via AJAX
+  // Docket No: on blur, fetch data for this row via AJAX (only in auto mode)
   $(document).on('blur', '.docket-no', function() {
     var $row = $(this).closest('tr');
     var docket_no = $(this).val().trim();
+    
     if (!docket_no) {
       // clear this row
-      $row.find('input').not('.docket-no,.rate-input').val('');
-      $row.find('.rate-input').val('');
-      $row.find('input[name="amount[]"]').val('');
+      $row.find('input').not('.docket-no').val('');
       recalcTotals();
       return;
     }
+
+    // If manual mode, skip auto-fetch
+    if (isManualMode) {
+      return;
+    }
+
+    // Auto-fetch mode
     $.get('manifest_fetch_docket.php', { docket_no: docket_no }, function(res) {
       if (!res || res.status === 'not_found') {
-        $row.find('input').not('.docket-no,.rate-input').val('');
-        $row.find('.rate-input').val('');
-        $row.find('input[name="amount[]"]').val('');
+        $row.find('input').not('.docket-no').val('');
         recalcTotals();
         return;
       }
@@ -142,39 +225,59 @@ $(function() {
     }, 'json');
   });
 
-  // When rate changes, update amount and totals
-  $(document).on('input', '.rate-input', function() {
+  // When rate or box changes, update amount and totals
+  $(document).on('input', '.rate-input, .box-input', function() {
     var $row = $(this).closest('tr');
-    var rate = parseFloat($(this).val()) || 0;
-    var box = parseFloat($row.find('input[name="box[]"]').val()) || 1;
+    var rate = parseFloat($row.find('.rate-input').val()) || 0;
+    var box = parseFloat($row.find('.box-input').val()) || 1;
     $row.find('input[name="amount[]"]').val((rate * box).toFixed(2));
     recalcTotals();
   });
 
   // When pay_to or amount inputs change, recalc totals
-  $(document).on('input', 'input[name="pay_to[]"], input[name="amount[]"]', function(){
+  $(document).on('input', '.pay-to-input, .amount-field', function(){
     recalcTotals();
   });
 
   // Save manifest form
   $('#manifest_new_form').on('submit', function(e) {
     e.preventDefault();
-    $('#manifest_save_result').html('<span style="color:#888;">SavingΓÇª</span>');
-    $.post('manifest_save.php', $(this).serialize(), function(resp) {
+    
+    // Validate car and driver
+    var carId = $('#car_select').val();
+    var driverId = $('#driver_select').val();
+    
+    if (!carId || !driverId) {
+      alert('⚠️ Please select both Car and Driver before saving!');
+      return;
+    }
+
+    $('#manifest_save_result').html('<div class="alert alert-info" style="font-size:1.2rem;"><i class="fa fa-spinner fa-spin"></i> Saving manifest...</div>');
+    
+    var formData = $(this).serialize() + '&is_manual=' + (isManualMode ? '1' : '0');
+    
+    $.post('manifest_save.php', formData, function(resp) {
       $('#manifest_save_result').html(resp);
-      // Optionally reset form if needed
-      if (resp.indexOf('success') !== -1) {
-        $('#manifest_new_form')[0].reset();
-        $('#manifest_gross').text('0.00');
-        $('#manifest_pay_total').text('0.00');
-        $('#manifest_net').text('0.00');
+      // Reset form if success
+      if (resp.indexOf('success') !== -1 || resp.indexOf('Success') !== -1) {
+        setTimeout(function() {
+          $('#manifest_new_form')[0].reset();
+          $('#manual_input_checkbox').prop('checked', false);
+          isManualMode = false;
+          $('.client-field, .box-input').prop('readonly', true).css('background', '#f5f5f5');
+          $('.docket-no').css('background', '#fff');
+          $('#manifest_gross').text('0.00');
+          $('#manifest_pay_total').text('0.00');
+          $('#manifest_net').text('0.00');
+        }, 2000);
       }
       // Scroll to message
       $('html,body').animate({scrollTop: $('#manifest_save_result').offset().top-80}, 400);
     });
   });
 
-  // initial totals
+  // Initial setup
+  $('.client-field, .box-input').prop('readonly', true).css('background', '#f5f5f5');
   recalcTotals();
 });
 </script>

@@ -8,9 +8,12 @@ if (!$manifest_id) {
 }
 
 // Get manifest header
-$manifest_query = "SELECT m.manifest_id, m.manifest_no, m.created_at, m.total_gross, m.total_pay_to, m.net_total, o.office_name
+$manifest_query = "SELECT m.manifest_id, m.manifest_no, m.created_at, m.total_gross, m.total_pay_to, m.net_total, m.car_id, m.driver_id,
+                   o.office_name, c.car_number, d.driver_name
                    FROM tbl_manifest m
                    LEFT JOIN tbl_offices o ON m.office_id = o.office_id
+                   LEFT JOIN tbl_car c ON m.car_id = c.car_id
+                   LEFT JOIN tbl_driver d ON m.driver_id = d.driver_id
                    WHERE m.manifest_id = " . intval($manifest_id);
 $manifest_result = mysqli_query($conn, $manifest_query);
 
@@ -59,6 +62,18 @@ if (!$details_result) {
           <i class="fa fa-calendar" style="color:#ff9800;font-size:1.6rem;"></i>
           <span style="font-size:1.25rem;font-weight:600;"><?= date('d M Y, h:i A', strtotime($manifest['created_at'])) ?></span>
         </div>
+        <?php if (!empty($manifest['car_number'])): ?>
+        <div style="display:flex;align-items:center;gap:12px;color:#555;">
+          <i class="fa fa-truck" style="color:#2196f3;font-size:1.6rem;"></i>
+          <strong style="color:#222;font-size:1.25rem;">Car: <?= htmlspecialchars($manifest['car_number']) ?></strong>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($manifest['driver_name'])): ?>
+        <div style="display:flex;align-items:center;gap:12px;color:#555;">
+          <i class="fa fa-user" style="color:#9c27b0;font-size:1.6rem;"></i>
+          <strong style="color:#222;font-size:1.25rem;">Driver: <?= htmlspecialchars($manifest['driver_name']) ?></strong>
+        </div>
+        <?php endif; ?>
       </div>
     </div>
     <div>

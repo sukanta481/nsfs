@@ -7,9 +7,11 @@ if (!$manifest_id) {
 }
 
 // -- Get Manifest info with Office details --
-$manifest_sql = "SELECT m.*, o.* 
+$manifest_sql = "SELECT m.*, o.*, c.car_number, d.driver_name
     FROM tbl_manifest m 
     JOIN tbl_offices o ON m.office_id = o.office_id 
+    LEFT JOIN tbl_car c ON m.car_id = c.car_id
+    LEFT JOIN tbl_driver d ON m.driver_id = d.driver_id
     WHERE m.manifest_id = $manifest_id";
 $result = mysqli_query($conn, $manifest_sql);
 
@@ -38,9 +40,9 @@ $company = [
 
 // Manifest details (make dynamic as needed)
 $date = date('d.m.Y');
-$manifest_no = 'A-M23-24/000XXXX'; // or auto
-$vehicle = 'WB07K0098'; // optionally get from DB
-$driver = 'JAMALUDDIN'; // optionally get from DB
+$manifest_no = $manifest['manifest_no'] ?? 'A-M23-24/000XXXX';
+$vehicle = $manifest['car_number'] ?? 'N/A';
+$driver = $manifest['driver_name'] ?? 'N/A';
 
 // Get all items and calculate totals (for verification)
 $total_box = 0;
