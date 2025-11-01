@@ -140,19 +140,29 @@ require 'top_header.php';
               <tbody id="docketsTableBody">
                 <?php
                 // First check if tables exist
-                $tables_exist = true;
-                $check_consignor = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_consignor'");
-                $check_client = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_client'");
+                $tables_exist = false;
+                $check_consignor = @mysqli_query($conn, "SHOW TABLES LIKE 'tbl_consignor'");
+                $check_client = @mysqli_query($conn, "SHOW TABLES LIKE 'tbl_client'");
+                $check_company = @mysqli_query($conn, "SHOW TABLES LIKE 'tbl_company'");
                 
-                if(mysqli_num_rows($check_consignor) > 0 && mysqli_num_rows($check_client) > 0) {
+                // Try different table combinations
+                if($check_company && mysqli_num_rows($check_company) > 0) {
+                  // Use tbl_company (consignors)
+                  $sql = "SELECT sd.*, c.company_title as consignor_name, sd.client_name 
+                          FROM tbl_shipping_details sd
+                          LEFT JOIN tbl_company c ON sd.company_id = c.company_id
+                          ORDER BY sd.shipping_details_id DESC LIMIT 20";
+                  $tables_exist = true;
+                } else if($check_consignor && mysqli_num_rows($check_consignor) > 0 && $check_client && mysqli_num_rows($check_client) > 0) {
                   $sql = "SELECT sd.*, c.consignor_name, cl.client_name 
                           FROM tbl_shipping_details sd
                           LEFT JOIN tbl_consignor c ON sd.consignor_id = c.consignor_id
                           LEFT JOIN tbl_client cl ON sd.client_id = cl.client_id
-                          ORDER BY sd.shipping_id DESC LIMIT 20";
+                          ORDER BY sd.shipping_details_id DESC LIMIT 20";
+                  $tables_exist = true;
                 } else {
                   // If tables don't exist, just get shipping details
-                  $sql = "SELECT * FROM tbl_shipping_details ORDER BY shipping_id DESC LIMIT 20";
+                  $sql = "SELECT * FROM tbl_shipping_details ORDER BY shipping_details_id DESC LIMIT 20";
                   $tables_exist = false;
                 }
                 
@@ -188,7 +198,7 @@ require 'top_header.php';
                     }
                     ?>
                     <tr>
-                      <td><strong><?= htmlspecialchars($row['doc_no'] ?? $row['shipping_id']) ?></strong></td>
+                      <td><strong><?= htmlspecialchars($row['doc_no'] ?? $row['shipping_details_id']) ?></strong></td>
                       <td><?= htmlspecialchars($sender_name) ?></td>
                       <td><?= htmlspecialchars($receiver_name) ?></td>
                       <td><?= htmlspecialchars($row['service_type'] ?? 'Standard') ?></td>
@@ -196,13 +206,13 @@ require 'top_header.php';
                       <td><?= $created_date ?></td>
                       <td>
                         <div class="action-buttons">
-                          <a href="trip.php?type=view_trip&id=<?= $row['shipping_id'] ?>" class="action-btn btn-view" title="View">
+                          <a href="trip.php?type=view_trip&id=<?= $row['shipping_details_id'] ?>" class="action-btn btn-view" title="View">
                             <i class="fa fa-eye"></i>
                           </a>
-                          <a href="trip.php?type=edit_trip&id=<?= $row['shipping_id'] ?>" class="action-btn btn-edit" title="Edit">
+                          <a href="trip.php?type=edit_trip&id=<?= $row['shipping_details_id'] ?>" class="action-btn btn-edit" title="Edit">
                             <i class="fa fa-edit"></i>
                           </a>
-                          <a href="javascript:void(0)" onclick="confirmDelete(<?= $row['shipping_id'] ?>)" class="action-btn btn-delete" title="Delete">
+                          <a href="javascript:void(0)" onclick="confirmDelete(<?= $row['shipping_details_id'] ?>)" class="action-btn btn-delete" title="Delete">
                             <i class="fa fa-trash"></i>
                           </a>
                         </div>

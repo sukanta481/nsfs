@@ -14,8 +14,8 @@
     <a href="register.php?type=add_register" class="header-action-btn btn-users">
       <i class="fa fa-users"></i> Manage Users
     </a>
-    <a href="trip.php?type=add_trip" class="header-action-btn btn-new-docket">
-      <i class="fa fa-plus"></i> New Docket
+    <a href="add_trip_modern.php" class="header-action-btn btn-new-docket">
+      <i class="fa fa-plus"></i> New Trip
     </a>
     <div class="header-dropdown">
       <a href="javascript:;" class="header-action-btn btn-admin dropdown-toggle" data-toggle="dropdown" aria-expanded="false">

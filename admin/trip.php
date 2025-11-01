@@ -32,7 +32,9 @@
                   $pending_pod_mode = true;
                   $_GET['status'] = 'Delivered'; // List delivered, but we'll filter PendingPOD inside list_trip_table.php
                 }
-                if(isset($type) && ($type=='list_trip')) {
+                if(isset($type) && ($type=='view_trip')) {
+                  require 'view_trip.php';
+                } elseif(isset($type) && ($type=='list_trip')) {
                   $pending_pod_mode = $pending_pod_mode; // just for clarity
                   require 'list_trip.php';
                 } elseif(isset($type) && ($type=='list_trip_company')) {
