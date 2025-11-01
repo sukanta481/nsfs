@@ -12,27 +12,6 @@ require 'top_header.php';
       <?php require 'header_banner.php';?>      
       <!-- page content -->
       <div class="right_col" role="main" style="padding-top:0px !important;">
-        <!-- Modern Header with Action Buttons -->
-        <div class="modern-header">
-          <div class="header-left">
-            <i class="fa fa-truck header-icon"></i>
-            <h1 class="header-title">Logistics CMS</h1>
-          </div>
-          <div class="header-actions">
-            <a href="register.php?type=add_register" class="header-btn btn-users">
-              <i class="fa fa-users"></i> Manage Users
-            </a>
-            <a href="trip.php?type=add_trip" class="header-btn btn-new-docket">
-              <i class="fa fa-plus"></i> New Docket
-            </a>
-            <a href="#" class="header-btn btn-admin">
-              <i class="fa fa-user-circle"></i> System Administrator
-            </a>
-            <a href="logout.php" class="header-btn btn-logout">
-              <i class="fa fa-sign-out"></i> Logout
-            </a>
-          </div>
-        </div>
         
         <!-- Stats Cards Grid -->
         <?php
@@ -296,107 +275,6 @@ require 'top_header.php';
   background: linear-gradient(135deg, #e8f0f7 0%, #f5f8fb 100%) !important; 
   min-height: 100vh; 
   padding: 0 !important;
-}
-
-/* Modern Header */
-.modern-header {
-  background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
-  padding: 18px 35px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  margin-bottom: 30px;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.header-icon {
-  font-size: 2rem;
-  color: #fff;
-  background: rgba(255,255,255,0.2);
-  padding: 12px;
-  border-radius: 10px;
-}
-
-.header-title {
-  color: #fff;
-  font-size: 1.8rem;
-  font-weight: 800;
-  margin: 0;
-  letter-spacing: -0.5px;
-  font-family: 'Inter', sans-serif;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.header-btn {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-decoration: none !important;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s;
-  border: none;
-  cursor: pointer;
-  font-family: 'Inter', sans-serif;
-  letter-spacing: 0.3px;
-}
-
-.btn-users {
-  background: #ffc107;
-  color: #000;
-}
-
-.btn-users:hover {
-  background: #ffb300;
-  color: #000;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255,193,7,0.4);
-}
-
-.btn-new-docket {
-  background: #fff;
-  color: #2b5876;
-}
-
-.btn-new-docket:hover {
-  background: #f0f0f0;
-  color: #2b5876;
-  transform: translateY(-2px);
-}
-
-.btn-admin {
-  background: rgba(255,255,255,0.15);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.3);
-}
-
-.btn-admin:hover {
-  background: rgba(255,255,255,0.25);
-  color: #fff;
-}
-
-.btn-logout {
-  background: transparent;
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.3);
-}
-
-.btn-logout:hover {
-  background: rgba(255,255,255,0.1);
-  color: #fff;
 }
 
 /* Stats Cards */
@@ -871,15 +749,6 @@ require 'top_header.php';
 
 /* Responsive Styles */
 @media (max-width: 1200px) {
-  .modern-header { padding: 15px 20px; }
-  .stats-grid { padding: 0 20px; gap: 20px; }
-  .search-section, .dockets-section { margin: 0 20px 20px 20px; }
-}
-
-@media (max-width: 992px) {
-  .header-title { font-size: 1.4rem; }
-  .header-actions { gap: 8px; }
-  .header-btn { padding: 8px 15px; font-size: 0.85rem; }
   .stats-grid { 
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
@@ -891,26 +760,6 @@ require 'top_header.php';
 }
 
 @media (max-width: 768px) {
-  .modern-header {
-    flex-direction: column;
-    gap: 15px;
-    padding: 15px;
-  }
-  
-  .header-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
-  
-  .header-btn {
-    padding: 8px 12px;
-    font-size: 0.8rem;
-  }
-  
-  .header-btn i {
-    display: none;
-  }
-  
   .stats-grid {
     grid-template-columns: 1fr;
     padding: 0 15px;
@@ -969,8 +818,6 @@ require 'top_header.php';
 }
 
 @media (max-width: 576px) {
-  .header-icon { font-size: 1.5rem; padding: 8px; }
-  .header-title { font-size: 1.2rem; }
   .stat-icon { width: 60px; height: 60px; font-size: 1.8rem; }
   .stat-value { font-size: 2.4rem; }
   .stat-label { font-size: 0.7rem; }
