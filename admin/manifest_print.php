@@ -44,6 +44,14 @@ $manifest_no = $manifest['manifest_no'] ?? 'A-M23-24/000XXXX';
 $vehicle = $manifest['car_number'] ?? 'N/A';
 $driver = $manifest['driver_name'] ?? 'N/A';
 
+// Office details (from the JOIN query, it's all in $manifest array)
+$office = [
+    'office_name' => $manifest['office_name'] ?? '',
+    'office_person_name' => $manifest['office_person_name'] ?? '',
+    'office_address' => $manifest['office_address'] ?? '',
+    'office_phone' => $manifest['office_phone'] ?? ''
+];
+
 // Get all items and calculate totals (for verification)
 $total_box = 0;
 $total_amount = 0;
