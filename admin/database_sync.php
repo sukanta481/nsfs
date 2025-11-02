@@ -2,10 +2,16 @@
 require 'conn.php';
 
 // Session is already started in top_header.php
-// No need to start it again
-
+// Check for session messages
 $message = '';
 $messageType = '';
+
+if (isset($_SESSION['sync_message'])) {
+    $message = $_SESSION['sync_message'];
+    $messageType = $_SESSION['sync_type'];
+    unset($_SESSION['sync_message']);
+    unset($_SESSION['sync_type']);
+}
 
 // Handle database export
 if (isset($_POST['export_db'])) {
@@ -35,8 +41,10 @@ if (isset($_POST['export_db'])) {
         exec($command, $output, $return_var);
         
         if ($return_var === 0 && file_exists($backup_path)) {
-            $message = "Database exported successfully! File: {$backup_file}";
-            $messageType = 'success';
+            $_SESSION['sync_message'] = "Database exported successfully! File: {$backup_file}";
+            $_SESSION['sync_type'] = 'success';
+            header('Location: database_sync.php?exported=1');
+            exit();
         } else {
             throw new Exception("Backup command failed");
         }
@@ -112,12 +120,16 @@ if (isset($_POST['export_db'])) {
             $sql_dump .= "SET FOREIGN_KEY_CHECKS=1;\n";
             
             file_put_contents($backup_path, $sql_dump);
-            $message = "Database exported successfully! File: {$backup_file} (" . count($tables) . " tables)";
-            $messageType = 'success';
+            $_SESSION['sync_message'] = "Database exported successfully! File: {$backup_file} (" . count($tables) . " tables)";
+            $_SESSION['sync_type'] = 'success';
+            header('Location: database_sync.php?exported=1');
+            exit();
             
         } catch (Exception $e2) {
-            $message = "Error exporting database: " . $e2->getMessage();
-            $messageType = 'error';
+            $_SESSION['sync_message'] = "Error exporting database: " . $e2->getMessage();
+            $_SESSION['sync_type'] = 'error';
+            header('Location: database_sync.php');
+            exit();
         }
     }
 }
@@ -195,16 +207,21 @@ if (isset($_POST['import_db']) && isset($_FILES['sql_file'])) {
         mysqli_query($conn, "SET FOREIGN_KEY_CHECKS=1");
         
         if ($error_count > 0) {
-            $message = "Database import completed with errors! Successful: {$success_count}, Errors: {$error_count}. First error: " . (isset($errors[0]) ? $errors[0] : 'Unknown');
-            $messageType = 'warning';
+            $_SESSION['sync_message'] = "Database import completed with errors! Successful: {$success_count}, Errors: {$error_count}. First error: " . (isset($errors[0]) ? $errors[0] : 'Unknown');
+            $_SESSION['sync_type'] = 'warning';
         } else {
-            $message = "Database imported successfully! {$success_count} queries executed.";
-            $messageType = 'success';
+            $_SESSION['sync_message'] = "Database imported successfully! {$success_count} queries executed.";
+            $_SESSION['sync_type'] = 'success';
         }
         
+        header('Location: database_sync.php?imported=1');
+        exit();
+        
     } catch (Exception $e) {
-        $message = "Error importing database: " . $e->getMessage();
-        $messageType = 'error';
+        $_SESSION['sync_message'] = "Error importing database: " . $e->getMessage();
+        $_SESSION['sync_type'] = 'error';
+        header('Location: database_sync.php');
+        exit();
     }
 }
 
@@ -806,11 +823,13 @@ window.addEventListener('DOMContentLoaded', function() {
     if (alertBox) {
         alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         
-        // Also show browser alert for import success
-        <?php if ($messageType === 'success' && isset($_POST['import_db'])): ?>
-        alert('✅ Database Import Successful!\n\n<?= addslashes($message) ?>');
-        <?php elseif ($messageType === 'success' && isset($_POST['export_db'])): ?>
-        alert('✅ Database Export Successful!\n\n<?= addslashes($message) ?>');
+        // Show browser alert
+        <?php if ($messageType === 'success' && isset($_GET['imported'])): ?>
+        alert('✅ Database Import Successful!\n\n<?= addslashes($message) ?>\n\nYour database has been updated!');
+        <?php elseif ($messageType === 'success' && isset($_GET['exported'])): ?>
+        alert('✅ Database Export Successful!\n\n<?= addslashes($message) ?>\n\nCheck the "Available Backups" section below to download.');
+        <?php elseif ($messageType === 'warning'): ?>
+        alert('⚠️ Import Completed with Warnings!\n\n<?= addslashes($message) ?>');
         <?php elseif ($messageType === 'error'): ?>
         alert('❌ Error!\n\n<?= addslashes($message) ?>');
         <?php endif; ?>
