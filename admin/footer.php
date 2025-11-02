@@ -18,7 +18,7 @@
   background: linear-gradient(135deg, #2c4a61 0%, #1e3a52 100%);
   color: #fff;
   padding: 20px 30px;
-  margin-left: 0;
+  margin-top: 40px;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
   font-family: 'Inter', sans-serif;
   position: relative;

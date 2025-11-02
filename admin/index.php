@@ -292,7 +292,7 @@ require 'top_header.php';
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 25px;
-  padding: 0 35px;
+  padding: 91px 35px 0 35px;
   margin-bottom: 35px;
 }
 
