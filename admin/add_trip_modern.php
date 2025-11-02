@@ -137,10 +137,10 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
         }
 
         .form-group label {
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 600;
             color: #2c3e50;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             display: flex;
             align-items: center;
             gap: 5px;
@@ -151,10 +151,10 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
         }
 
         .form-control {
-            padding: 12px 15px;
+            padding: 8px 12px;
             border: 2px solid #e0e6ed;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 500;
             color: #2c3e50 !important;
             background: #fff !important;
@@ -397,7 +397,12 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             <select name="car_id" class="form-control" required style="color: #000 !important; background: #fff !important;">
                                 <option value="" style="color: #000 !important;">Choose Car</option>
                                 <?php while ($car = mysqli_fetch_assoc($cars)): ?>
-                                    <option value="<?= $car['car_id'] ?>" style="color: #000 !important;"><?= $car['car_number'] ?> - <?= $car['car_model'] ?></option>
+                                    <option value="<?= $car['car_id'] ?>" style="color: #000 !important;">
+                                        <?= htmlspecialchars($car['car_number'] ?? 'N/A') ?>
+                                        <?php if (isset($car['car_model']) && !empty($car['car_model'])): ?>
+                                            - <?= htmlspecialchars($car['car_model']) ?>
+                                        <?php endif; ?>
+                                    </option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
@@ -407,10 +412,12 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                                 <i class="fas fa-user-tie"></i>
                                 Select Driver <span class="required">*</span>
                             </label>
-                            <select name="driver_id" class="form-control" required onchange="getDriverPhone(this.value)" style="color: #000 !important; background: #fff !important;">
+                            <select name="driver_id" class="form-control" required onchange="getDriverPhone()" style="color: #000 !important; background: #fff !important;">
                                 <option value="" style="color: #000 !important;">Choose Driver</option>
                                 <?php while ($driver = mysqli_fetch_assoc($drivers)): ?>
-                                    <option value="<?= $driver['driver_id'] ?>" data-phone="<?= $driver['driver_phone'] ?>" style="color: #000 !important;"><?= $driver['driver_name'] ?></option>
+                                    <option value="<?= $driver['driver_id'] ?>" data-phone="<?= htmlspecialchars($driver['driver_phone'] ?? '') ?>" style="color: #000 !important;">
+                                        <?= htmlspecialchars($driver['driver_name']) ?>
+                                    </option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
@@ -428,10 +435,12 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                                 <i class="fas fa-user"></i>
                                 Select Helper
                             </label>
-                            <select name="helper_id" class="form-control" onchange="getHelperPhone(this.value)" style="color: #000 !important; background: #fff !important;">
+                            <select name="helper_id" class="form-control" onchange="getHelperPhone()" style="color: #000 !important; background: #fff !important;">
                                 <option value="" style="color: #000 !important;">Choose Helper (Optional)</option>
                                 <?php while ($helper = mysqli_fetch_assoc($helpers)): ?>
-                                    <option value="<?= $helper['helper_id'] ?>" data-phone="<?= $helper['helper_phone'] ?>" style="color: #000 !important;"><?= $helper['helper_name'] ?></option>
+                                    <option value="<?= $helper['helper_id'] ?>" data-phone="<?= htmlspecialchars($helper['helper_phone'] ?? '') ?>" style="color: #000 !important;">
+                                        <?= htmlspecialchars($helper['helper_name']) ?>
+                                    </option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
@@ -497,14 +506,14 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
     <script>
         let docketCount = 0;
 
-        function getDriverPhone(driverId) {
+        function getDriverPhone() {
             const select = document.querySelector('select[name="driver_id"]');
             const option = select.options[select.selectedIndex];
             const phone = option.getAttribute('data-phone');
             document.getElementById('driver_phone').value = phone || '';
         }
 
-        function getHelperPhone(helperId) {
+        function getHelperPhone() {
             const select = document.querySelector('select[name="helper_id"]');
             const option = select.options[select.selectedIndex];
             const phone = option.getAttribute('data-phone');
