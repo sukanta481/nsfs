@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .register-list-container {
     font-family: 'Inter', sans-serif;
-    padding: 0px 35px 120px 35px;
+    padding: 0px 15px 10px 15px;
     min-height: calc(100vh - 160px);
     margin-top: 0;
 }

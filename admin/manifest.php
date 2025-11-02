@@ -56,6 +56,15 @@ require 'top_header.php';
             <div id="manifest_selector" style="display:none;">
               <label style="display:block;font-weight:600;color:#444;margin-bottom:8px;font-size:1.05rem;">
                 <span style="background:#ffc107;color:#333;border-radius:50%;padding:4px 10px;font-size:1rem;margin-right:6px;">3</span>
+                Filter by Date (Optional)
+              </label>
+              <input type="date" id="manifest_date_filter" class="form-control" style="height:48px;font-size:1.15rem;" placeholder="Select date...">
+            </div>
+
+            <!-- Step 4: Select Manifest -->
+            <div id="manifest_list_selector" style="display:none;">
+              <label style="display:block;font-weight:600;color:#444;margin-bottom:8px;font-size:1.05rem;">
+                <span style="background:#dc3545;color:white;border-radius:50%;padding:4px 10px;font-size:1rem;margin-right:6px;">4</span>
                 Select Manifest
               </label>
               <select id="manifest_id_select" class="form-control" style="height:48px;font-size:1.15rem;">
@@ -177,6 +186,7 @@ require 'top_header.php';
       $('#btn_create_new').on('click', function() {
         currentMode = 'create';
         $('#manifest_selector').hide();
+        $('#manifest_list_selector').hide();
         $('#manifest_content').html('<div style="padding:40px;text-align:center;"><i class="fa fa-spinner fa-spin fa-2x"></i><br><span style="margin-top:12px;display:inline-block;">Loading form...</span></div>');
         
         $.get('manifest_new_entry.php', {office_id: selectedOfficeId}, function(html) {
@@ -195,11 +205,20 @@ require 'top_header.php';
         currentMode = 'view';
         $('#manifest_content').html('');
         $('#manifest_selector').fadeIn(300);
+        $('#manifest_list_selector').fadeIn(300);
+        
+        // Load all manifests by default
+        loadFilteredManifests();
         
         // Smooth scroll to selector
         $('html, body').animate({
           scrollTop: $('#manifest_selector').offset().top - 100
         }, 400);
+      });
+
+      // Date filter change
+      $('#manifest_date_filter').on('change', function() {
+        loadFilteredManifests();
       });
 
       // Step 3: Manifest Selection
@@ -232,8 +251,33 @@ require 'top_header.php';
             if (data.count > 0) {
               $('#stat_latest').text(data.manifests[0].manifest_no);
               $('#quick_stats').fadeIn(300);
-              
-              // Populate manifest selector
+            } else {
+              $('#stat_latest').text('No manifests yet');
+              $('#quick_stats').fadeIn(300);
+            }
+          }
+        }, 'json').fail(function() {
+          console.error('Failed to load manifests list');
+        });
+      }
+
+      // Load filtered manifests based on date
+      function loadFilteredManifests() {
+        var dateFilter = $('#manifest_date_filter').val();
+        
+        var params = {
+          office_id: selectedOfficeId
+        };
+        
+        if (dateFilter) {
+          params.date = dateFilter;
+        }
+        
+        $('#manifest_id_select').html('<option value="">Loading...</option>');
+        
+        $.get('manifest_get_list.php', params, function(data) {
+          if (data.success) {
+            if (data.count > 0) {
               var options = '<option value="">Choose manifest...</option>';
               $.each(data.manifests, function(i, m) {
                 options += '<option value="' + m.manifest_id + '">' + 
@@ -242,13 +286,15 @@ require 'top_header.php';
               });
               $('#manifest_id_select').html(options);
             } else {
-              $('#stat_latest').text('No manifests yet');
-              $('#quick_stats').fadeIn(300);
-              $('#manifest_id_select').html('<option value="">No manifests found</option>');
+              if (dateFilter) {
+                $('#manifest_id_select').html('<option value="">No manifests found for this date</option>');
+              } else {
+                $('#manifest_id_select').html('<option value="">No manifests found</option>');
+              }
             }
           }
         }, 'json').fail(function() {
-          console.error('Failed to load manifests list');
+          $('#manifest_id_select').html('<option value="">Error loading manifests</option>');
         });
       }
     });
