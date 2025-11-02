@@ -51,37 +51,68 @@ if (isset($_POST['export_db'])) {
             }
             
             $sql_dump = "-- Database Backup\n";
-            $sql_dump .= "-- Generated on: " . date('Y-m-d H:i:s') . "\n\n";
+            $sql_dump .= "-- Generated on: " . date('Y-m-d H:i:s') . "\n";
+            $sql_dump .= "-- PHP Version: " . phpversion() . "\n\n";
+            $sql_dump .= "SET SQL_MODE = \"NO_AUTO_VALUE_ON_ZERO\";\n";
+            $sql_dump .= "SET time_zone = \"+00:00\";\n";
+            $sql_dump .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
             
             foreach ($tables as $table) {
+                $sql_dump .= "\n-- --------------------------------------------------------\n";
+                $sql_dump .= "-- Table structure for table `{$table}`\n";
+                $sql_dump .= "-- --------------------------------------------------------\n\n";
+                
                 // Get table structure
                 $result = mysqli_query($conn, "SHOW CREATE TABLE `{$table}`");
                 $row = mysqli_fetch_row($result);
-                $sql_dump .= "\n\n-- Table structure for `{$table}`\n";
                 $sql_dump .= "DROP TABLE IF EXISTS `{$table}`;\n";
-                $sql_dump .= $row[1] . ";\n";
+                $sql_dump .= $row[1] . ";\n\n";
                 
-                // Get table data
+                // Get table data with column names
                 $result = mysqli_query($conn, "SELECT * FROM `{$table}`");
-                if (mysqli_num_rows($result) > 0) {
-                    $sql_dump .= "\n-- Dumping data for table `{$table}`\n";
+                $num_rows = mysqli_num_rows($result);
+                
+                if ($num_rows > 0) {
+                    $sql_dump .= "-- Dumping data for table `{$table}` ({$num_rows} rows)\n\n";
+                    
+                    // Get column names
+                    $fields = mysqli_fetch_fields($result);
+                    $columns = array_map(function($field) { return "`{$field->name}`"; }, $fields);
+                    $column_list = implode(', ', $columns);
+                    
+                    // Insert data in batches
+                    $batch_size = 100;
+                    $row_count = 0;
+                    $insert_prefix = "INSERT INTO `{$table}` ({$column_list}) VALUES\n";
+                    $values_array = [];
+                    
                     while ($row = mysqli_fetch_assoc($result)) {
-                        $sql_dump .= "INSERT INTO `{$table}` VALUES (";
                         $values = array();
                         foreach ($row as $value) {
                             if ($value === null) {
                                 $values[] = 'NULL';
+                            } elseif (is_numeric($value)) {
+                                $values[] = $value;
                             } else {
                                 $values[] = "'" . mysqli_real_escape_string($conn, $value) . "'";
                             }
                         }
-                        $sql_dump .= implode(', ', $values) . ");\n";
+                        $values_array[] = '(' . implode(', ', $values) . ')';
+                        $row_count++;
+                        
+                        // Write batch when reaching batch size or last row
+                        if ($row_count % $batch_size === 0 || $row_count === $num_rows) {
+                            $sql_dump .= $insert_prefix . implode(",\n", $values_array) . ";\n\n";
+                            $values_array = [];
+                        }
                     }
                 }
             }
             
+            $sql_dump .= "SET FOREIGN_KEY_CHECKS=1;\n";
+            
             file_put_contents($backup_path, $sql_dump);
-            $message = "Database exported successfully (PHP method)! File: {$backup_file}";
+            $message = "Database exported successfully! File: {$backup_file} (" . count($tables) . " tables)";
             $messageType = 'success';
             
         } catch (Exception $e2) {
@@ -97,33 +128,79 @@ if (isset($_POST['import_db']) && isset($_FILES['sql_file'])) {
         $file = $_FILES['sql_file'];
         
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception("File upload error");
+            throw new Exception("File upload error: " . $file['error']);
         }
         
         if (pathinfo($file['name'], PATHINFO_EXTENSION) !== 'sql') {
             throw new Exception("Please upload a .sql file");
         }
         
+        // Read the SQL file
         $sql_content = file_get_contents($file['tmp_name']);
         
-        // Split SQL into individual queries
-        $queries = array_filter(array_map('trim', explode(';', $sql_content)));
+        if (empty($sql_content)) {
+            throw new Exception("SQL file is empty");
+        }
+        
+        // Disable foreign key checks temporarily
+        mysqli_query($conn, "SET FOREIGN_KEY_CHECKS=0");
+        mysqli_query($conn, "SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO'");
+        mysqli_query($conn, "SET time_zone = '+00:00'");
+        
+        // Split queries properly (handle multi-line statements)
+        $queries = [];
+        $current_query = '';
+        $lines = explode("\n", $sql_content);
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            // Skip comments and empty lines
+            if (empty($line) || substr($line, 0, 2) === '--' || substr($line, 0, 1) === '#') {
+                continue;
+            }
+            
+            // Add line to current query
+            $current_query .= $line . ' ';
+            
+            // Check if query is complete (ends with semicolon)
+            if (substr(rtrim($line), -1) === ';') {
+                $queries[] = trim($current_query);
+                $current_query = '';
+            }
+        }
+        
+        // Add last query if exists
+        if (!empty($current_query)) {
+            $queries[] = trim($current_query);
+        }
         
         $success_count = 0;
         $error_count = 0;
+        $errors = [];
         
+        // Execute queries
         foreach ($queries as $query) {
-            if (!empty($query)) {
+            if (!empty($query) && strlen($query) > 5) {
                 if (mysqli_query($conn, $query)) {
                     $success_count++;
                 } else {
                     $error_count++;
+                    $errors[] = mysqli_error($conn);
                 }
             }
         }
         
-        $message = "Database import completed! Successful: {$success_count}, Errors: {$error_count}";
-        $messageType = $error_count > 0 ? 'warning' : 'success';
+        // Re-enable foreign key checks
+        mysqli_query($conn, "SET FOREIGN_KEY_CHECKS=1");
+        
+        if ($error_count > 0) {
+            $message = "Database import completed with errors! Successful: {$success_count}, Errors: {$error_count}. First error: " . (isset($errors[0]) ? $errors[0] : 'Unknown');
+            $messageType = 'warning';
+        } else {
+            $message = "Database imported successfully! {$success_count} queries executed.";
+            $messageType = 'success';
+        }
         
     } catch (Exception $e) {
         $message = "Error importing database: " . $e->getMessage();
@@ -721,6 +798,34 @@ document.getElementById('sql_file')?.addEventListener('change', function(e) {
         label.style.color = '#28a745';
     }
 });
+
+<?php if (!empty($message)): ?>
+// Show notification alert
+window.addEventListener('DOMContentLoaded', function() {
+    const alertBox = document.querySelector('.alert');
+    if (alertBox) {
+        alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Also show browser alert for import success
+        <?php if ($messageType === 'success' && isset($_POST['import_db'])): ?>
+        alert('✅ Database Import Successful!\n\n<?= addslashes($message) ?>');
+        <?php elseif ($messageType === 'success' && isset($_POST['export_db'])): ?>
+        alert('✅ Database Export Successful!\n\n<?= addslashes($message) ?>');
+        <?php elseif ($messageType === 'error'): ?>
+        alert('❌ Error!\n\n<?= addslashes($message) ?>');
+        <?php endif; ?>
+    }
+});
+<?php endif; ?>
+
+// Confirm before import
+document.querySelector('button[name="import_db"]')?.addEventListener('click', function(e) {
+    if (!confirm('⚠️ WARNING!\n\nThis will REPLACE all data in your current database!\n\nAre you sure you want to import?')) {
+        e.preventDefault();
+        return false;
+    }
+});
+
 </script>
 
 </body>
