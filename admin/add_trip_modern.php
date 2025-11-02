@@ -10,7 +10,7 @@
           
 <?php
 // Fetch data for dropdowns
-$companies = mysqli_query($conn, "SELECT * FROM tbl_company ORDER BY company_title ASC");
+$companies = mysqli_query($conn, "SELECT company_id, company_title, company_address FROM tbl_company ORDER BY company_title ASC");
 $cars = mysqli_query($conn, "SELECT * FROM tbl_car ORDER BY car_number ASC");
 $drivers = mysqli_query($conn, "SELECT * FROM tbl_driver ORDER BY driver_name ASC");
 $helpers = mysqli_query($conn, "SELECT * FROM tbl_helper ORDER BY helper_name ASC");
@@ -83,6 +83,33 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
             align-items: center;
             gap: 10px;
             font-weight: 600;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+        }
+        
+        .alert.hiding {
+            animation: slideOut 0.3s ease-out forwards;
         }
 
         .alert-success {
@@ -192,6 +219,40 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
 
         input.form-control {
             color: #2c3e50 !important;
+        }
+        
+        input[type="date"].form-control {
+            cursor: pointer;
+            position: relative;
+        }
+        
+        input[type="date"].form-control::-webkit-calendar-picker-indicator {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            cursor: pointer;
+            opacity: 0;
+        }
+        
+        input[type="datetime-local"].form-control {
+            cursor: pointer;
+            position: relative;
+        }
+        
+        input[type="datetime-local"].form-control::-webkit-calendar-picker-indicator {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            cursor: pointer;
+            opacity: 0;
         }
 
         input.form-control:disabled,
@@ -367,14 +428,14 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
         </div>
 
         <?php if ($show_success): ?>
-            <div class="alert alert-success">
+            <div class="alert alert-success" id="successAlert">
                 <i class="fas fa-check-circle"></i>
                 Trip created successfully with all dockets!
             </div>
         <?php endif; ?>
 
         <?php if ($show_error): ?>
-            <div class="alert alert-error">
+            <div class="alert alert-error" id="errorAlert">
                 <i class="fas fa-exclamation-circle"></i>
                 Error creating trip. Please try again.
             </div>
@@ -412,10 +473,10 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                                 <i class="fas fa-user-tie"></i>
                                 Select Driver <span class="required">*</span>
                             </label>
-                            <select name="driver_id" class="form-control" required onchange="getDriverPhone()" style="color: #000 !important; background: #fff !important;">
-                                <option value="" style="color: #000 !important;">Choose Driver</option>
+                            <select name="driver_id" id="driver_select" class="form-control" required style="color: #000 !important; background: #fff !important;">
+                                <option value="">Choose Driver</option>
                                 <?php while ($driver = mysqli_fetch_assoc($drivers)): ?>
-                                    <option value="<?= $driver['driver_id'] ?>" data-phone="<?= htmlspecialchars($driver['driver_phone'] ?? '') ?>" style="color: #000 !important;">
+                                    <option value="<?= $driver['driver_id'] ?>" data-phone="<?= htmlspecialchars($driver['driver_phone'] ?? '') ?>">
                                         <?= htmlspecialchars($driver['driver_name']) ?>
                                     </option>
                                 <?php endwhile; ?>
@@ -435,10 +496,10 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                                 <i class="fas fa-user"></i>
                                 Select Helper
                             </label>
-                            <select name="helper_id" class="form-control" onchange="getHelperPhone()" style="color: #000 !important; background: #fff !important;">
-                                <option value="" style="color: #000 !important;">Choose Helper (Optional)</option>
+                            <select name="helper_id" id="helper_select" class="form-control" style="color: #000 !important; background: #fff !important;">
+                                <option value="">Choose Helper (Optional)</option>
                                 <?php while ($helper = mysqli_fetch_assoc($helpers)): ?>
-                                    <option value="<?= $helper['helper_id'] ?>" data-phone="<?= htmlspecialchars($helper['helper_phone'] ?? '') ?>" style="color: #000 !important;">
+                                    <option value="<?= $helper['helper_id'] ?>" data-phone="<?= htmlspecialchars($helper['helper_phone'] ?? '') ?>">
                                         <?= htmlspecialchars($helper['helper_name']) ?>
                                     </option>
                                 <?php endwhile; ?>
@@ -455,10 +516,10 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
 
                         <div class="form-group">
                             <label>
-                                <i class="fas fa-clock"></i>
-                                Pickup Time <span class="required">*</span>
+                                <i class="fas fa-calendar-plus"></i>
+                                Pickup Date & Time <span class="required">*</span>
                             </label>
-                            <input type="time" name="pickup_time" class="form-control" required>
+                            <input type="datetime-local" name="pickup_datetime" class="form-control" required>
                         </div>
                     </div>
                 </div>
@@ -506,19 +567,57 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
     <script>
         let docketCount = 0;
 
-        function getDriverPhone() {
-            const select = document.querySelector('select[name="driver_id"]');
-            const option = select.options[select.selectedIndex];
-            const phone = option.getAttribute('data-phone');
-            document.getElementById('driver_phone').value = phone || '';
-        }
-
-        function getHelperPhone() {
-            const select = document.querySelector('select[name="helper_id"]');
-            const option = select.options[select.selectedIndex];
-            const phone = option.getAttribute('data-phone');
-            document.getElementById('helper_phone').value = phone || '';
-        }
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add first docket on page load
+            addDocket();
+            
+            // Auto-hide alerts after 10 seconds
+            const successAlert = document.getElementById('successAlert');
+            const errorAlert = document.getElementById('errorAlert');
+            
+            if (successAlert) {
+                setTimeout(function() {
+                    successAlert.classList.add('hiding');
+                    setTimeout(function() {
+                        successAlert.remove();
+                    }, 300); // Wait for animation to complete
+                }, 10000); // 10 seconds
+            }
+            
+            if (errorAlert) {
+                setTimeout(function() {
+                    errorAlert.classList.add('hiding');
+                    setTimeout(function() {
+                        errorAlert.remove();
+                    }, 300); // Wait for animation to complete
+                }, 10000); // 10 seconds
+            }
+            
+            // Setup driver phone auto-fill
+            const driverSelect = document.getElementById('driver_select');
+            const driverPhoneInput = document.getElementById('driver_phone');
+            
+            if (driverSelect && driverPhoneInput) {
+                driverSelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const phone = selectedOption.getAttribute('data-phone') || '';
+                    driverPhoneInput.value = phone;
+                });
+            }
+            
+            // Setup helper phone auto-fill
+            const helperSelect = document.getElementById('helper_select');
+            const helperPhoneInput = document.getElementById('helper_phone');
+            
+            if (helperSelect && helperPhoneInput) {
+                helperSelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const phone = selectedOption.getAttribute('data-phone') || '';
+                    helperPhoneInput.value = phone;
+                });
+            }
+        });
 
         function addDocket() {
             docketCount++;
@@ -559,19 +658,19 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             </div>
                             <div class="form-group">
                                 <label>Company <span class="required">*</span></label>
-                                <select name="dockets[${docketCount}][company_id]" class="form-control" required style="color: #000 !important; background: #fff !important;">
+                                <select name="dockets[${docketCount}][company_id]" class="form-control company-select" data-docket="${docketCount}" required style="color: #000 !important; background: #fff !important;">
                                     <option value="" style="color: #000 !important;">Choose Company</option>
                                     <?php 
                                     mysqli_data_seek($companies, 0);
                                     while ($company = mysqli_fetch_assoc($companies)): 
                                     ?>
-                                        <option value="<?= $company['company_id'] ?>" style="color: #000 !important;"><?= $company['company_title'] ?></option>
+                                        <option value="<?= $company['company_id'] ?>" data-address="<?= htmlspecialchars($company['company_address'] ?? '') ?>" style="color: #000 !important;"><?= $company['company_title'] ?></option>
                                     <?php endwhile; ?>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Pickup Location <span class="required">*</span></label>
-                                <textarea name="dockets[${docketCount}][pickup_location]" class="form-control" rows="2" required style="color: #000 !important;"></textarea>
+                                <label>Company Address (Pickup Location) <span class="required">*</span></label>
+                                <textarea name="dockets[${docketCount}][company_address]" class="form-control company-address-${docketCount}" rows="2" required style="color: #000 !important;"></textarea>
                             </div>
                         </div>
 
@@ -593,8 +692,8 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                                 <input type="email" name="dockets[${docketCount}][client_email]" class="form-control" style="color: #000 !important;">
                             </div>
                             <div class="form-group">
-                                <label>Delivery Address <span class="required">*</span></label>
-                                <textarea name="dockets[${docketCount}][delivery_location]" class="form-control" rows="2" required style="color: #000 !important;"></textarea>
+                                <label>Client Address (Delivery Location) <span class="required">*</span></label>
+                                <textarea name="dockets[${docketCount}][client_address]" class="form-control" rows="2" required style="color: #000 !important;"></textarea>
                             </div>
                         </div>
                     </div>
@@ -605,18 +704,35 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             <input type="number" name="dockets[${docketCount}][weight]" class="form-control" step="0.01" placeholder="0.00" style="color: #000 !important;">
                         </div>
                         <div class="form-group">
-                            <label>Boxes/Items</label>
-                            <input type="number" name="dockets[${docketCount}][boxes]" class="form-control" placeholder="0" style="color: #000 !important;">
+                            <label>Box/Items</label>
+                            <input type="number" name="dockets[${docketCount}][box]" class="form-control" placeholder="0" style="color: #000 !important;">
                         </div>
                         <div class="form-group">
-                            <label>Dimensions (cm)</label>
-                            <input type="text" name="dockets[${docketCount}][dimensions]" class="form-control" placeholder="L x W x H" style="color: #000 !important;">
+                            <label>Dimensions (L x W x H)</label>
+                            <input type="text" name="dockets[${docketCount}][dimensions]" class="form-control" placeholder="e.g., 10x20x30 cm" style="color: #000 !important;">
                         </div>
                     </div>
                 </div>
             `;
             
             container.insertAdjacentHTML('beforeend', docketHTML);
+            
+            // Setup company address auto-fill for the newly added docket
+            setupCompanyAddressAutoFill(docketCount);
+        }
+        
+        // Function to setup company address auto-fill
+        function setupCompanyAddressAutoFill(docketId) {
+            const companySelect = document.querySelector(`select[data-docket="${docketId}"]`);
+            const addressField = document.querySelector(`.company-address-${docketId}`);
+            
+            if (companySelect && addressField) {
+                companySelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const address = selectedOption.getAttribute('data-address') || '';
+                    addressField.value = address;
+                });
+            }
         }
 
         function removeDocket(id) {
@@ -624,11 +740,6 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                 document.getElementById(`docket-${id}`).remove();
             }
         }
-
-        // Add first docket on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            addDocket();
-        });
 
         // Form validation
         document.getElementById('tripForm').addEventListener('submit', function(e) {

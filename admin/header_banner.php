@@ -5,8 +5,8 @@
       <a id="menu_toggle"><i class="fa fa-bars"></i></a>
     </div>
     <div class="header-brand">
-      <i class="fa fa-truck header-truck-icon"></i>
-      <h1 class="header-title">Logistics CMS</h1>
+      <img src="images/logo.png" alt="NSFS Logo" class="header-logo">
+      <h1 class="header-title">NSFS CMS</h1>
     </div>
   </div>
   
@@ -45,8 +45,12 @@
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 280px;
+  right: 0;
   z-index: 1000;
+  transition: left 0.3s ease;
 }
 
 .header-left {
@@ -72,6 +76,15 @@
   display: flex;
   align-items: center;
   gap: 15px;
+}
+
+.header-logo {
+  width: 45px;
+  height: 45px;
+  object-fit: contain;
+  background: rgba(255,255,255,0.2);
+  padding: 8px;
+  border-radius: 10px;
 }
 
 .header-truck-icon {
@@ -279,6 +292,18 @@
   
   .btn-logout {
     padding: 6px 10px;
+  }
+}
+
+/* Body padding for sticky header */
+.right_col {
+  padding-top: 80px !important;
+}
+
+/* Responsive header positioning */
+@media (max-width: 992px) {
+  .modern-top-header {
+    left: 0;
   }
 }
 </style>

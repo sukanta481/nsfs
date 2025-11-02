@@ -1,7 +1,7 @@
 <div class="modern-sidebar" id="modernSidebar">
   <div class="sidebar-header">
     <div class="sidebar-brand">
-      <i class="fa fa-truck"></i>
+      <img src="images/logo.png" alt="NSFS Logo" class="brand-logo">
       <span class="brand-text">NSFS</span>
     </div>
     <button class="sidebar-close" id="sidebarClose">
@@ -107,13 +107,6 @@
       </li>
     </ul>
   </div>
-
-  <div class="sidebar-footer">
-    <a href="logout.php" class="logout-btn">
-      <i class="fa fa-sign-out"></i>
-      <span>Logout</span>
-    </a>
-  </div>
 </div>
 
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -170,6 +163,13 @@
   font-weight: 900;
   color: #fff;
   letter-spacing: 2px;
+}
+
+.brand-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
 }
 
 .sidebar-brand i {
@@ -307,6 +307,7 @@
   border-top: 1px solid rgba(255,255,255,0.15);
   background: rgba(0,0,0,0.25);
   margin-top: auto;
+  display: none;
 }
 
 .logout-btn {

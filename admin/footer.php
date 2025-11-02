@@ -1,12 +1,108 @@
 <!-- footer content -->
+<footer class="modern-footer">
+  <div class="footer-content">
+    <div class="footer-left">
+      <p>&copy; <?php echo date('Y'); ?> <strong>North Super Fast Service</strong>. All rights reserved.</p>
+    </div>
+    <div class="footer-center">
+      <p>Developed by <a href="#" target="_blank"><strong>Next Screen Infotech</strong></a></p>
+    </div>
+    <div class="footer-right">
+      <p>Version 2.0</p>
+    </div>
+  </div>
+</footer>
 
-        <!-- <footer>
-          <div class="copyright-info">
-            <p class="pull-right">North Super Fast Service by Next Screen Infotech</p>
-          </div>
-          <div class="clearfix"></div>
-        </footer> -->
-        <!-- /footer content -->
+<style>
+.modern-footer {
+  background: linear-gradient(135deg, #2c4a61 0%, #1e3a52 100%);
+  color: #fff;
+  padding: 20px 30px;
+  margin-left: 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  z-index: 10;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.footer-left, .footer-center, .footer-right {
+  flex: 1;
+  min-width: 200px;
+}
+
+.footer-left {
+  text-align: left;
+}
+
+.footer-center {
+  text-align: center;
+}
+
+.footer-right {
+  text-align: right;
+}
+
+.modern-footer p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.9);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.modern-footer strong {
+  color: #ffc107;
+  font-weight: 700;
+}
+
+.modern-footer a {
+  color: #ffc107;
+  text-decoration: none;
+  transition: all 0.3s;
+  font-weight: 700;
+}
+
+.modern-footer a:hover {
+  color: #fff;
+  text-decoration: none;
+  text-shadow: 0 0 10px rgba(255,193,7,0.5);
+}
+
+/* Responsive footer */
+@media (max-width: 992px) {
+  .modern-footer {
+    margin-left: 0;
+  }
+  
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .footer-left, .footer-center, .footer-right {
+    text-align: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .modern-footer {
+    padding: 15px 20px;
+  }
+  
+  .modern-footer p {
+    font-size: 0.85rem;
+  }
+}
+</style>
+<!-- /footer content -->
       </div>
       <!-- /page content -->
 
