@@ -1,12 +1,8 @@
 <?php
-session_start();
 require 'conn.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: login.php');
-    exit();
-}
+// Session is already started in top_header.php
+// No need to start it again
 
 $message = '';
 $messageType = '';
