@@ -27,11 +27,9 @@
           <i class="fa fa-chevron-down submenu-arrow"></i>
         </a>
         <ul class="submenu">
-          <li><a href="trip.php?type=list_trip&lp=ac">All Dockets</a></li>
           <li><a href="add_trip_modern.php">Create New Trip</a></li>
+          <li><a href="register.php?type=list_register&lp=ac">All Dockets</a></li>
           <li><a href="register.php?type=list_register&lp=cu">All Trips</a></li>
-          <li><a href="register.php?type=list_register&lp=ac">All Register</a></li>
-          <li><a href="register.php?type=add_register&lp=ac">Add Register</a></li>
         </ul>
       </li>
 
