@@ -437,7 +437,13 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
         <?php if ($show_error): ?>
             <div class="alert alert-error" id="errorAlert">
                 <i class="fas fa-exclamation-circle"></i>
-                Error creating trip. Please try again.
+                <?php 
+                if (isset($_GET['msg']) && $_GET['msg'] === 'duplicate' && isset($_GET['dockets'])) {
+                    echo 'Duplicate docket(s) found: <strong>' . htmlspecialchars($_GET['dockets']) . '</strong>. These dockets already exist in the system!';
+                } else {
+                    echo 'Error creating trip. Please try again.';
+                }
+                ?>
             </div>
         <?php endif; ?>
 
@@ -638,7 +644,10 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                     <div class="form-grid" style="margin-bottom: 20px;">
                         <div class="form-group">
                             <label>Docket Number <span class="required">*</span></label>
-                            <input type="text" name="dockets[${docketCount}][doc_no]" class="form-control" placeholder="Enter docket number" required style="color: #000 !important;">
+                            <input type="text" name="dockets[${docketCount}][doc_no]" class="form-control docket-number-input" data-docket-id="${docketCount}" placeholder="Enter docket number" required style="color: #000 !important;">
+                            <div class="duplicate-warning" id="duplicate-warning-${docketCount}" style="display:none; color:#e74c3c; font-size:0.85rem; margin-top:5px; font-weight:600;">
+                                <i class="fas fa-exclamation-triangle"></i> This docket number already exists!
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Service Type</label>
@@ -719,6 +728,58 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
             
             // Setup company address auto-fill for the newly added docket
             setupCompanyAddressAutoFill(docketCount);
+            
+            // Setup duplicate checking for the newly added docket
+            setupDuplicateCheck(docketCount);
+        }
+        
+        // Function to check for duplicate docket numbers
+        function setupDuplicateCheck(docketId) {
+            const docketInput = document.querySelector(`input[data-docket-id="${docketId}"]`);
+            const warningDiv = document.getElementById(`duplicate-warning-${docketId}`);
+            
+            if (docketInput && warningDiv) {
+                let checkTimeout;
+                
+                docketInput.addEventListener('input', function() {
+                    const docketNo = this.value.trim();
+                    
+                    // Clear previous timeout
+                    clearTimeout(checkTimeout);
+                    
+                    // Hide warning while typing
+                    warningDiv.style.display = 'none';
+                    this.style.borderColor = '#e0e6ed';
+                    
+                    // Check if empty
+                    if (!docketNo) {
+                        return;
+                    }
+                    
+                    // Debounce the API call (wait 500ms after user stops typing)
+                    checkTimeout = setTimeout(function() {
+                        fetch('check_duplicate_docket.php?doc_no=' + encodeURIComponent(docketNo))
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.exists) {
+                                    // Show warning
+                                    warningDiv.style.display = 'block';
+                                    warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> This docket already exists! (Status: ${data.status}, Created: ${data.created_at})`;
+                                    docketInput.style.borderColor = '#e74c3c';
+                                    docketInput.style.boxShadow = '0 0 0 3px rgba(231,76,60,0.1)';
+                                } else {
+                                    // Hide warning
+                                    warningDiv.style.display = 'none';
+                                    docketInput.style.borderColor = '#27ae60';
+                                    docketInput.style.boxShadow = '0 0 0 3px rgba(39,174,96,0.1)';
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error checking duplicate:', error);
+                            });
+                    }, 500);
+                });
+            }
         }
         
         // Function to setup company address auto-fill
@@ -747,6 +808,22 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
             if (dockets.length === 0) {
                 e.preventDefault();
                 alert('Please add at least one docket!');
+                return false;
+            }
+            
+            // Check for visible duplicate warnings
+            const duplicateWarnings = document.querySelectorAll('.duplicate-warning');
+            let hasDuplicates = false;
+            
+            duplicateWarnings.forEach(function(warning) {
+                if (warning.style.display !== 'none') {
+                    hasDuplicates = true;
+                }
+            });
+            
+            if (hasDuplicates) {
+                e.preventDefault();
+                alert('⚠️ Cannot save! Some docket numbers already exist in the system. Please check the warnings and use different docket numbers.');
                 return false;
             }
         });

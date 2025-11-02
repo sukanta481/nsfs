@@ -28,6 +28,30 @@ mysqli_begin_transaction($conn);
 
 try {
     $success_count = 0;
+    $duplicate_dockets = [];
+    
+    // First, check for duplicates
+    foreach ($dockets as $docket) {
+        $doc_no = mysqli_real_escape_string($conn, trim($docket['doc_no'] ?? ''));
+        if (empty($doc_no)) continue;
+        
+        // Check if docket already exists
+        $check_query = "SELECT doc_no FROM tbl_shipping_details WHERE doc_no = '$doc_no' LIMIT 1";
+        $check_result = mysqli_query($conn, $check_query);
+        
+        if ($check_result && mysqli_num_rows($check_result) > 0) {
+            $duplicate_dockets[] = $doc_no;
+        }
+    }
+    
+    // If duplicates found, rollback and show error
+    if (!empty($duplicate_dockets)) {
+        mysqli_rollback($conn);
+        $duplicate_list = implode(', ', $duplicate_dockets);
+        $_SESSION['error_msg'] = 'Duplicate docket(s) found: ' . $duplicate_list . '. These dockets already exist in the system!';
+        header('Location: add_trip_modern.php?msg=duplicate&dockets=' . urlencode($duplicate_list));
+        exit;
+    }
     
     // Insert each docket with the same trip_group_id
     foreach ($dockets as $docket) {
