@@ -9,9 +9,17 @@ require 'conn.php';
 // 5) Save to tbl_shipping_details if manual mode
 
 $office_id = intval($_POST['office_id'] ?? 0);
+$is_manual = intval($_POST['is_manual'] ?? 0);
+
+// Manual mode fields
+$car_number_manual = strtoupper(trim($_POST['car_number_manual'] ?? ''));
+$driver_name_manual = strtoupper(trim($_POST['driver_name_manual'] ?? ''));
+$driver_license = strtoupper(trim($_POST['driver_license'] ?? ''));
+
+// Auto mode fields
 $car_id = intval($_POST['car_id'] ?? 0);
 $driver_id = intval($_POST['driver_id'] ?? 0);
-$is_manual = intval($_POST['is_manual'] ?? 0);
+
 $doc_nos = $_POST['doc_no'] ?? [];
 $client_names = $_POST['client_name'] ?? [];
 $items = $_POST['item'] ?? [];
@@ -28,9 +36,20 @@ if (!$office_id) {
     exit;
 }
 
-if (!$car_id || !$driver_id) {
-    echo "<div class='alert alert-danger' style='font-size:1.2rem;padding:20px;'><i class='fa fa-exclamation-triangle'></i> Please select both Car and Driver!</div>";
-    exit;
+// Validation based on mode
+if ($is_manual) {
+    if (!$car_number_manual || !$driver_name_manual) {
+        echo "<div class='alert alert-danger' style='font-size:1.2rem;padding:20px;'><i class='fa fa-exclamation-triangle'></i> Please enter both Car Number and Driver Name!</div>";
+        exit;
+    }
+    // For manual mode, we'll use NULL for car_id and driver_id in manifest table
+    $car_id = NULL;
+    $driver_id = NULL;
+} else {
+    if (!$car_id || !$driver_id) {
+        echo "<div class='alert alert-danger' style='font-size:1.2rem;padding:20px;'><i class='fa fa-exclamation-triangle'></i> Please select both Car and Driver!</div>";
+        exit;
+    }
 }
 
 // Create tables if not exists
@@ -57,6 +76,20 @@ if ($check_cols && mysqli_num_rows($check_cols) == 0) {
 $check_cols2 = mysqli_query($conn, "SHOW COLUMNS FROM tbl_manifest LIKE 'driver_id'");
 if ($check_cols2 && mysqli_num_rows($check_cols2) == 0) {
     mysqli_query($conn, "ALTER TABLE tbl_manifest ADD COLUMN driver_id INT(11) DEFAULT NULL AFTER car_id");
+}
+
+// Add manual car/driver columns for manual mode
+$check_manual_car = mysqli_query($conn, "SHOW COLUMNS FROM tbl_manifest LIKE 'car_number_manual'");
+if ($check_manual_car && mysqli_num_rows($check_manual_car) == 0) {
+    mysqli_query($conn, "ALTER TABLE tbl_manifest ADD COLUMN car_number_manual VARCHAR(100) DEFAULT NULL AFTER driver_id");
+}
+$check_manual_driver = mysqli_query($conn, "SHOW COLUMNS FROM tbl_manifest LIKE 'driver_name_manual'");
+if ($check_manual_driver && mysqli_num_rows($check_manual_driver) == 0) {
+    mysqli_query($conn, "ALTER TABLE tbl_manifest ADD COLUMN driver_name_manual VARCHAR(255) DEFAULT NULL AFTER car_number_manual");
+}
+$check_license = mysqli_query($conn, "SHOW COLUMNS FROM tbl_manifest LIKE 'driver_license'");
+if ($check_license && mysqli_num_rows($check_license) == 0) {
+    mysqli_query($conn, "ALTER TABLE tbl_manifest ADD COLUMN driver_license VARCHAR(50) DEFAULT NULL AFTER driver_name_manual");
 }
 
 $create_details_sql = "CREATE TABLE IF NOT EXISTS `tbl_manifest_details` (
@@ -106,16 +139,16 @@ $total_pay_to = 0.00;
 $details_to_insert = [];
 $rows = max(count($doc_nos), count($rates));
 for ($i = 0; $i < $rows; $i++) {
-    $doc = trim($doc_nos[$i] ?? '');
+    $doc = strtoupper(trim($doc_nos[$i] ?? ''));
     if ($doc === '') continue; // skip empty row
-    $client = trim($client_names[$i] ?? '');
-    $item = trim($items[$i] ?? '');
-    $addr = trim($client_addresses[$i] ?? '');
+    $client = strtoupper(trim($client_names[$i] ?? ''));
+    $item = strtoupper(trim($items[$i] ?? ''));
+    $addr = strtoupper(trim($client_addresses[$i] ?? ''));
     $box = intval($boxes[$i] ?? 0);
     $weight = floatval($weights[$i] ?? 0);
     $rate = floatval($rates[$i] ?? 0);
     $amount = ($amounts[$i] !== '') ? floatval($amounts[$i]) : ($rate * max(1, $box));
-    $eway = trim($eway_bills[$i] ?? '');
+    $eway = strtoupper(trim($eway_bills[$i] ?? ''));
     $pay = floatval($pay_tos[$i] ?? 0);
 
     $gross_total += $amount;
@@ -141,8 +174,17 @@ $net_total = $gross_total - $total_pay_to;
 mysqli_begin_transaction($conn);
 try {
     $created_at = date('Y-m-d H:i:s');
-    $stmt = mysqli_prepare($conn, "INSERT INTO tbl_manifest (manifest_no, office_id, car_id, driver_id, created_at, total_gross, total_pay_to, net_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    mysqli_stmt_bind_param($stmt, 'siiisddd', $manifest_no, $office_id, $car_id, $driver_id, $created_at, $gross_total, $total_pay_to, $net_total);
+    
+    if ($is_manual) {
+        // Manual mode - save manual car/driver/license
+        $stmt = mysqli_prepare($conn, "INSERT INTO tbl_manifest (manifest_no, office_id, car_id, driver_id, car_number_manual, driver_name_manual, driver_license, created_at, total_gross, total_pay_to, net_total) VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)");
+        mysqli_stmt_bind_param($stmt, 'sissssddd', $manifest_no, $office_id, $car_number_manual, $driver_name_manual, $driver_license, $created_at, $gross_total, $total_pay_to, $net_total);
+    } else {
+        // Auto mode - save car_id and driver_id
+        $stmt = mysqli_prepare($conn, "INSERT INTO tbl_manifest (manifest_no, office_id, car_id, driver_id, driver_license, created_at, total_gross, total_pay_to, net_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        mysqli_stmt_bind_param($stmt, 'siiissddd', $manifest_no, $office_id, $car_id, $driver_id, $driver_license, $created_at, $gross_total, $total_pay_to, $net_total);
+    }
+    
     if (!mysqli_stmt_execute($stmt)) {
         throw new Exception('Failed to insert manifest: '.mysqli_stmt_error($stmt));
     }
@@ -202,6 +244,12 @@ try {
                 if (in_array('delivery_status', $columns)) {
                     $fields[] = 'delivery_status';
                     $values[] = mysqli_real_escape_string($conn, 'pending');
+                }
+                
+                // Only include driver_license if column exists and value is provided
+                if (in_array('driver_license', $columns) && $driver_license !== '') {
+                    $fields[] = 'driver_license';
+                    $values[] = mysqli_real_escape_string($conn, $driver_license);
                 }
                 
                 $ins_ship = "INSERT INTO tbl_shipping_details (".implode(', ', $fields).") VALUES ('".implode("','", $values)."')";

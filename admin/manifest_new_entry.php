@@ -19,11 +19,11 @@ if (!$cars) {
 }
 
 // Get drivers for dropdown
-$drivers_query = "SELECT driver_id, driver_name FROM tbl_driver WHERE active_status=1 ORDER BY driver_name ASC";
+$drivers_query = "SELECT driver_id, driver_name, driver_license FROM tbl_driver WHERE active_status=1 ORDER BY driver_name ASC";
 $drivers = mysqli_query($conn, $drivers_query);
 if (!$drivers) {
     echo "<!-- Driver Query Error: " . mysqli_error($conn) . " -->";
-    $drivers = mysqli_query($conn, "SELECT driver_id, driver_name FROM tbl_driver ORDER BY driver_name ASC"); // fallback without filter
+    $drivers = mysqli_query($conn, "SELECT driver_id, driver_name, driver_license FROM tbl_driver ORDER BY driver_name ASC"); // fallback without filter
 }
 
 // Debug info
@@ -46,45 +46,58 @@ $driver_count = $drivers ? mysqli_num_rows($drivers) : 0;
   <form id="manifest_new_form" autocomplete="off">
     <input type="hidden" name="office_id" value="<?= $office_id ?>">
     
-    <!-- Car & Driver Dropdowns + Manual Input Checkbox -->
+    <!-- Manual Input Checkbox FIRST, then Car, Driver, License -->
     <div style="background:#f5f7fa;padding:25px;border-radius:12px;margin-bottom:25px;border:2px solid #e0e0e0;">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;align-items:end;">
+      <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:20px;align-items:end;">
         
-        <!-- Car Dropdown -->
+        <!-- Manual Input Checkbox - FIRST -->
         <div>
-          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.1rem;">
-            <i class="fa fa-car" style="color:#2196f3;"></i> Select Car
+          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.05rem;">
+            <i class="fa fa-edit" style="color:#9c27b0;"></i> Input Mode
           </label>
-          <select name="car_id" id="car_select" class="form-control" style="height:45px;font-size:1.1rem;font-weight:600;">
+          <div style="background:white;padding:10px 15px;border-radius:8px;border:2px solid #e0e0e0;height:45px;display:flex;align-items:center;">
+            <input type="checkbox" id="manual_input_checkbox" style="width:16px;height:16px;margin-right:8px;cursor:pointer;">
+            <label for="manual_input_checkbox" style="margin:0;font-size:0.95rem;font-weight:700;color:#9c27b0;cursor:pointer;white-space:nowrap;">
+              Manual
+            </label>
+          </div>
+        </div>
+
+        <!-- Car Number (Dropdown or Manual Input) -->
+        <div>
+          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.05rem;">
+            <i class="fa fa-car" style="color:#2196f3;"></i> Car Number
+          </label>
+          <select name="car_id" id="car_select" class="form-control" style="height:45px;font-size:1.05rem;font-weight:600;">
             <option value="">-- Select Car --</option>
             <?php while($car = mysqli_fetch_assoc($cars)): ?>
               <option value="<?= $car['car_id'] ?>"><?= htmlspecialchars($car['car_number']) ?></option>
             <?php endwhile; ?>
           </select>
+          <input type="text" name="car_number_manual" id="car_number_manual" class="form-control" style="height:45px;font-size:1.05rem;font-weight:600;display:none;text-transform:uppercase;" placeholder="Enter Car Number">
         </div>
 
-        <!-- Driver Dropdown -->
+        <!-- Driver Name (Dropdown or Manual Input) -->
         <div>
-          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.1rem;">
-            <i class="fa fa-user" style="color:#ff9800;"></i> Select Driver
+          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.05rem;">
+            <i class="fa fa-user" style="color:#ff9800;"></i> Driver Name
           </label>
-          <select name="driver_id" id="driver_select" class="form-control" style="height:45px;font-size:1.1rem;font-weight:600;">
+          <select name="driver_id" id="driver_select" class="form-control" style="height:45px;font-size:1.05rem;font-weight:600;">
             <option value="">-- Select Driver --</option>
             <?php while($driver = mysqli_fetch_assoc($drivers)): ?>
-              <option value="<?= $driver['driver_id'] ?>"><?= htmlspecialchars($driver['driver_name']) ?></option>
+              <option value="<?= $driver['driver_id'] ?>" data-license="<?= htmlspecialchars($driver['driver_license'] ?? '') ?>"><?= htmlspecialchars($driver['driver_name']) ?></option>
             <?php endwhile; ?>
           </select>
+          <input type="text" name="driver_name_manual" id="driver_name_manual" class="form-control" style="height:45px;font-size:1.05rem;font-weight:600;display:none;text-transform:uppercase;" placeholder="Enter Driver Name">
         </div>
 
-        <!-- Manual Input Checkbox -->
+        <!-- Driver License (Auto-filled or Manual Input) -->
         <div>
-          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.1rem;">
-            <i class="fa fa-edit" style="color:#9c27b0;"></i> Input Mode
+          <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;font-size:1.05rem;">
+            <i class="fa fa-id-card" style="color:#4caf50;"></i> Driving License
           </label>
-          <div style="background:white;padding:12px 20px;border-radius:8px;border:2px solid #e0e0e0;height:45px;display:flex;align-items:center;">
-            <input type="checkbox" id="manual_input_checkbox" style="width:22px;height:22px;margin-right:12px;cursor:pointer;">
-            <label for="manual_input_checkbox" style="margin:0;font-size:1.1rem;font-weight:700;color:#9c27b0;cursor:pointer;">
-              Manual Input
+          <input type="text" name="driver_license" id="driver_license" class="form-control" style="height:45px;font-size:1.05rem;font-weight:600;text-transform:uppercase;" placeholder="License Number" readonly>
+        </div>
             </label>
           </div>
         </div>
@@ -162,11 +175,12 @@ $driver_count = $drivers ? mysqli_num_rows($drivers) : 0;
 </div>
 
 <script>
-$(function() {
+// Use immediately-invoked function instead of $(function) since this is loaded via AJAX
+(function() {
   var isManualMode = false;
 
   // Handle Enter key to act like Tab (form navigation)
-  $('#manifest_new_form').on('keydown', 'input, select, textarea', function(e) {
+  $(document).on('keydown', '#manifest_new_form input, #manifest_new_form select, #manifest_new_form textarea', function(e) {
     // Check if Enter key was pressed (keyCode 13)
     if (e.keyCode === 13 || e.which === 13) {
       // Prevent default form submission
@@ -202,22 +216,51 @@ $(function() {
     }
   });
 
-  // Manual Input Checkbox Toggle
-  $('#manual_input_checkbox').on('change', function() {
+  // Driver License Auto-Populate (use event delegation)
+  $(document).on('change', '#driver_select', function() {
+    var selectedOption = $(this).find('option:selected');
+    var license = selectedOption.data('license') || '';
+    $('#driver_license').val(license);
+  });
+
+  // Manual Input Checkbox Toggle (use event delegation)
+  $(document).on('change', '#manual_input_checkbox', function() {
+    console.log('Checkbox changed!', $(this).is(':checked'));
     isManualMode = $(this).is(':checked');
     
     if (isManualMode) {
-      // Enable all fields for manual input
+      console.log('Enabling manual mode...');
+      // Hide dropdowns, show manual text inputs
+      $('#car_select').hide();
+      $('#car_number_manual').show().focus();
+      $('#driver_select').hide();
+      $('#driver_name_manual').show();
+      $('#driver_license').prop('readonly', false).css('background', '#fff');
+      
+      // Enable all docket fields for manual input
       $('.client-field, .box-input').prop('readonly', false).css('background', '#fff');
       $('.docket-no').attr('placeholder', 'Enter manually').css('background', '#fffacd');
-      alert('✓ Manual Input Mode: You can now enter all details manually');
+      
+      alert('✓ Manual Input Mode: You can now enter car, driver, license, and all docket details manually');
     } else {
-      // Disable fields, back to auto-fetch mode
+      console.log('Disabling manual mode...');
+      // Show dropdowns, hide manual text inputs
+      $('#car_select').show();
+      $('#car_number_manual').hide().val('');
+      $('#driver_select').show();
+      $('#driver_name_manual').hide().val('');
+      $('#driver_license').prop('readonly', true).css('background', '#f5f5f5').val('');
+      
+      // Disable docket fields, back to auto-fetch mode
       $('.client-field, .box-input').prop('readonly', true).css('background', '#f5f5f5');
       $('.docket-no').attr('placeholder', 'Auto-fetch').css('background', '#fff');
-      alert('✓ Auto-Fetch Mode: Docket details will be fetched automatically');
+      
+      alert('✓ Auto-Fetch Mode: Select car/driver from dropdowns, docket details will be fetched automatically');
     }
   });
+  
+  // Test if checkbox exists on page load
+  console.log('Manual checkbox found:', $('#manual_input_checkbox').length);
 
   // Helper: recalc totals
   function recalcTotals() {
@@ -291,22 +334,46 @@ $(function() {
     recalcTotals();
   });
 
-  // Save manifest form
-  $('#manifest_new_form').on('submit', function(e) {
+  // Save manifest form (use event delegation)
+  $(document).on('submit', '#manifest_new_form', function(e) {
     e.preventDefault();
     
-    // Validate car and driver
-    var carId = $('#car_select').val();
-    var driverId = $('#driver_select').val();
-    
-    if (!carId || !driverId) {
-      alert('⚠️ Please select both Car and Driver before saving!');
-      return;
+    // Check if manual mode
+    if (isManualMode) {
+      // Validate manual inputs
+      var carNumberManual = $('#car_number_manual').val().trim();
+      var driverNameManual = $('#driver_name_manual').val().trim();
+      var driverLicense = $('#driver_license').val().trim();
+      
+      if (!carNumberManual || !driverNameManual) {
+        alert('⚠️ Please enter both Car Number and Driver Name!');
+        return;
+      }
+      
+      // Add manual mode flag and data to form
+      var formData = $(this).serialize();
+      formData += '&is_manual=1';
+      formData += '&car_number_manual=' + encodeURIComponent(carNumberManual.toUpperCase());
+      formData += '&driver_name_manual=' + encodeURIComponent(driverNameManual.toUpperCase());
+      formData += '&driver_license=' + encodeURIComponent(driverLicense.toUpperCase());
+      
+      saveManifest(formData);
+    } else {
+      // Auto mode - validate dropdowns
+      var carId = $('#car_select').val();
+      var driverId = $('#driver_select').val();
+      
+      if (!carId || !driverId) {
+        alert('⚠️ Please select both Car and Driver before saving!');
+        return;
+      }
+      
+      saveManifest($(this).serialize());
     }
-
+  });
+  
+  function saveManifest(formData) {
     $('#manifest_save_result').html('<div class="alert alert-info" style="font-size:1.2rem;"><i class="fa fa-spinner fa-spin"></i> Saving manifest...</div>');
-    
-    var formData = $(this).serialize() + '&is_manual=' + (isManualMode ? '1' : '0');
     
     $.post('manifest_save.php', formData, function(resp) {
       $('#manifest_save_result').html(resp);
@@ -316,6 +383,14 @@ $(function() {
           $('#manifest_new_form')[0].reset();
           $('#manual_input_checkbox').prop('checked', false);
           isManualMode = false;
+          
+          // Reset to auto mode
+          $('#car_select').show();
+          $('#car_number_manual').hide();
+          $('#driver_select').show();
+          $('#driver_name_manual').hide();
+          $('#driver_license').val('').prop('readonly', true).css('background', '#f5f5f5');
+          
           $('.client-field, .box-input').prop('readonly', true).css('background', '#f5f5f5');
           $('.docket-no').css('background', '#fff');
           $('#manifest_gross').text('0.00');
@@ -326,12 +401,16 @@ $(function() {
       // Scroll to message
       $('html,body').animate({scrollTop: $('#manifest_save_result').offset().top-80}, 400);
     });
-  });
+  }
 
   // Initial setup
   $('.client-field, .box-input').prop('readonly', true).css('background', '#f5f5f5');
   recalcTotals();
-});
+  
+  // Test if checkbox exists on page load
+  console.log('Manual checkbox found:', $('#manual_input_checkbox').length);
+  console.log('isManualMode initialized:', isManualMode);
+})(); // Close immediately-invoked function expression
 </script>
 
 <style>
