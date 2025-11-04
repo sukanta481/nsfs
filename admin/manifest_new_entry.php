@@ -165,6 +165,43 @@ $driver_count = $drivers ? mysqli_num_rows($drivers) : 0;
 $(function() {
   var isManualMode = false;
 
+  // Handle Enter key to act like Tab (form navigation)
+  $('#manifest_new_form').on('keydown', 'input, select, textarea', function(e) {
+    // Check if Enter key was pressed (keyCode 13)
+    if (e.keyCode === 13 || e.which === 13) {
+      // Prevent default form submission
+      e.preventDefault();
+      
+      // Get all focusable elements in the form (visible and not readonly/disabled)
+      var focusableElements = $('#manifest_new_form').find('input:visible:not([readonly]):not([disabled]), select:visible:not([disabled]), textarea:visible:not([readonly]):not([disabled])');
+      
+      // Find current element index
+      var currentIndex = focusableElements.index(this);
+      
+      // Move to next element
+      if (currentIndex > -1 && currentIndex < focusableElements.length - 1) {
+        var nextElement = focusableElements.eq(currentIndex + 1);
+        nextElement.focus();
+        
+        // Select text if it's an input field for easier editing
+        if (nextElement.is('input[type="text"], input[type="number"]')) {
+          nextElement.select();
+        }
+      }
+      
+      return false;
+    }
+  });
+  
+  // Allow Enter key to work normally ONLY on Save button
+  $(document).on('keypress', 'button[type="submit"]', function(e) {
+    if (e.keyCode === 13 || e.which === 13) {
+      e.stopPropagation(); // Prevent the form handler from catching it
+      $(this).click();
+      return true;
+    }
+  });
+
   // Manual Input Checkbox Toggle
   $('#manual_input_checkbox').on('change', function() {
     isManualMode = $(this).is(':checked');
