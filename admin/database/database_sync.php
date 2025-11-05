@@ -1,4 +1,10 @@
 <?php
+// Enable error reporting for debugging (disable on production after testing)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../error_log');
+
 // Start session first
 session_name('pro');
 if (session_status() == PHP_SESSION_NONE) {
@@ -36,8 +42,27 @@ if (isset($_POST['export_db'])) {
             mkdir(__DIR__ . '/backups', 0755, true);
         }
         
-        // Get database credentials
-        $db_host = $env['DB_HOST'] ?? 'localhost';
+        // Get database credentials from the connection
+        $db_host = mysqli_get_host_info($conn);
+        $db_host = (strpos($db_host, 'via TCP/IP') !== false) ? 'localhost' : $db_host;
+        
+        // Parse .env file for credentials
+        $env_path = __DIR__ . '/../../.env';
+        if (!file_exists($env_path)) {
+            $env_path = __DIR__ . '/../.env';
+        }
+        $env = [];
+        if (file_exists($env_path)) {
+            $lines = file($env_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos(trim($line), '#') === 0) continue;
+                if (strpos($line, '=') !== false) {
+                    list($name, $value) = explode('=', $line, 2);
+                    $env[trim($name)] = trim($value);
+                }
+            }
+        }
+        
         $db_user = $env['DB_USER'] ?? 'root';
         $db_pass = $env['DB_PASS'] ?? '';
         $db_name = $env['DB_NAME'] ?? 'nsfs';
