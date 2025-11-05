@@ -176,7 +176,10 @@ require 'top_header.php';
                           <a href="register.php?type=view_register&id=<?= $row['docket_id'] ?>" class="action-btn btn-view" title="View">
                             <i class="fa fa-eye"></i>
                           </a>
-                          <a href="register.php?type=edit_register&id=<?= $row['docket_id'] ?>" class="action-btn btn-edit" title="Edit">
+                          <a href="download_docket.php?docket_id=<?= $row['docket_id'] ?>" class="action-btn btn-download" title="Download PDF" target="_blank">
+                            <i class="fa fa-download"></i>
+                          </a>
+                          <a href="edit_register_new.php?docket_id=<?= $row['docket_id'] ?>" class="action-btn btn-edit" title="Edit">
                             <i class="fa fa-edit"></i>
                           </a>
                           <a href="javascript:void(0)" onclick="confirmDelete(<?= $row['docket_id'] ?>)" class="action-btn btn-delete" title="Delete">
@@ -698,6 +701,17 @@ require 'top_header.php';
 
 .btn-view:hover {
   background: #2980b9;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.btn-download {
+  background: #27ae60;
+  color: #fff;
+}
+
+.btn-download:hover {
+  background: #229954;
   color: #fff;
   transform: scale(1.1);
 }

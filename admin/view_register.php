@@ -1,6 +1,8 @@
 <?php
-require 'top_header.php';
-require 'conn.php';
+// Don't include top_header if already included (check if $conn exists)
+if (!isset($conn)) {
+    require 'conn.php';
+}
 require_once 'DocketDetailsManager.php';
 
 $docket_id = intval($_REQUEST['id'] ?? $_REQUEST['docket_id'] ?? 0);
@@ -33,23 +35,17 @@ if($history_result) {
 $tracking_url = "http://" . $_SERVER['HTTP_HOST'] . "/nsfs/track.php?doc_no=" . urlencode($data['doc_no']);
 ?>
 
-<body class="nav-md">
-  <div class="container body">
-    <div class="main_container">
-      <?php require 'left_panel.php';?>
-      <?php require 'header_banner.php';?>
-      
-      <div class="right_col" role="main">
-        <div class="view-docket-container">
-          
-          <!-- Back Button -->
-          <div class="back-button-section">
-            <a href="register.php?type=list_register&lp=ac" class="btn-back">
-              <i class="fa fa-arrow-left"></i> Back to List
-            </a>
-          </div>
+<!-- View Docket Content -->
+<div class="view-docket-container">
+  
+  <!-- Back Button -->
+  <div class="back-button-section">
+    <a href="register.php?type=list_register&lp=ac" class="btn-back">
+      <i class="fa fa-arrow-left"></i> Back to List
+    </a>
+  </div>
 
-          <div class="docket-view-grid">
+  <div class="docket-view-grid">
             <!-- Left Column - Docket Details -->
             <div class="left-column">
               
@@ -316,12 +312,6 @@ $tracking_url = "http://" . $_SERVER['HTTP_HOST'] . "/nsfs/track.php?doc_no=" . 
           </div>
 
         </div>
-      </div>
-      
-      <?php require 'footer.php';?>
-    </div>
-  </div>
-</body>
 
 <!-- Include QR Code Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
