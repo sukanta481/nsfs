@@ -129,23 +129,31 @@ if($car_id > 0) {
     }
 }
 
-// Auto-sync driver details if driver_id is provided
+// Auto-sync driver details if driver_id is provided (from tbl_staff)
 $driver_name = 'N/A';
 $driver_license = 'N/A';
 if($driver_id > 0) {
-    $driver_query = mysqli_query($conn, "SELECT driver_name, driver_license FROM tbl_driver WHERE driver_id = $driver_id");
+    $driver_query = mysqli_query($conn, "SELECT staff_name, driving_license, staff_phone FROM tbl_staff WHERE staff_id = $driver_id AND staff_role = 'Driver'");
     if($driver_data = mysqli_fetch_assoc($driver_query)) {
-        $driver_name = mysqli_real_escape_string($conn, $driver_data['driver_name']);
-        $driver_license = mysqli_real_escape_string($conn, $driver_data['driver_license']);
+        $driver_name = mysqli_real_escape_string($conn, $driver_data['staff_name']);
+        $driver_license = mysqli_real_escape_string($conn, $driver_data['driving_license']);
+        // Update driver_phone if it's in the POST data
+        if(empty($driver_phone) && !empty($driver_data['staff_phone'])) {
+            $driver_phone = mysqli_real_escape_string($conn, $driver_data['staff_phone']);
+        }
     }
 }
 
-// Auto-sync helper details if helper_id is provided
+// Auto-sync helper details if helper_id is provided (from tbl_staff)
 $helper_name = 'N/A';
 if($helper_id > 0) {
-    $helper_query = mysqli_query($conn, "SELECT helper_name FROM tbl_helper WHERE helper_id = $helper_id");
+    $helper_query = mysqli_query($conn, "SELECT staff_name, staff_phone FROM tbl_staff WHERE staff_id = $helper_id AND staff_role = 'Helper'");
     if($helper_data = mysqli_fetch_assoc($helper_query)) {
-        $helper_name = mysqli_real_escape_string($conn, $helper_data['helper_name']);
+        $helper_name = mysqli_real_escape_string($conn, $helper_data['staff_name']);
+        // Update helper_phone if it's in the POST data
+        if(empty($helper_phone) && !empty($helper_data['staff_phone'])) {
+            $helper_phone = mysqli_real_escape_string($conn, $helper_data['staff_phone']);
+        }
     }
 }
 

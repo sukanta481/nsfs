@@ -21,8 +21,8 @@ $office = mysqli_fetch_assoc($office_result);
 // Fetch active cars
 $cars_result = mysqli_query($conn, "SELECT car_id, car_number FROM tbl_car WHERE active_status = 1 ORDER BY car_number ASC");
 
-// Fetch active drivers
-$drivers_result = mysqli_query($conn, "SELECT driver_id, driver_name, driver_license FROM tbl_driver WHERE active_status = 1 ORDER BY driver_name ASC");
+// Fetch active drivers from tbl_staff
+$drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_license FROM tbl_staff WHERE staff_role = 'Driver' AND active_status = 1 ORDER BY staff_name ASC");
 ?>
 
 <div class="x_panel" style="border-radius: 20px; background: white; padding: 35px; box-shadow: 0 6px 25px rgba(0,0,0,0.1);">
@@ -66,9 +66,9 @@ $drivers_result = mysqli_query($conn, "SELECT driver_id, driver_name, driver_lic
           </label>
           <select name="driver_id" id="driverSelect" class="form-control" required style="height: 45px; font-size: 1.05rem; font-weight: 600;">
             <option value="">-- Select Driver --</option>
-            <?php while($driver = mysqli_fetch_assoc($drivers_result)): ?>
-              <option value="<?= $driver['driver_id'] ?>" data-license="<?= htmlspecialchars($driver['driver_license'] ?? '') ?>">
-                <?= htmlspecialchars($driver['driver_name']) ?>
+            <?php while ($driver = mysqli_fetch_assoc($drivers_result)): ?>
+              <option value="<?= $driver['staff_id'] ?>" data-license="<?= htmlspecialchars($driver['driving_license'] ?? '') ?>">
+                <?= htmlspecialchars($driver['staff_name']) ?>
               </option>
             <?php endwhile; ?>
           </select>

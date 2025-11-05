@@ -190,25 +190,25 @@ class DocketDetailsManager {
             $synced['car_model'] = $data['car_model'] ?? 'N/A';
         }
         
-        // Auto-sync Driver data
+        // Auto-sync Driver data from tbl_staff (staff_role = 'Driver')
         if (!empty($data['driver_id'])) {
             $driver = $this->getDriverDetails($data['driver_id']);
             $synced['driver_id'] = $data['driver_id'];
-            $synced['driver_name'] = $driver['driver_name'] ?? 'N/A';
-            $synced['driver_phone'] = $driver['driver_number'] ?? 'N/A';
-            $synced['driver_license'] = $driver['driver_license'] ?? 'N/A';
+            $synced['driver_name'] = $driver['staff_name'] ?? 'N/A';
+            $synced['driver_phone'] = $driver['staff_phone'] ?? 'N/A';
+            $synced['driver_license'] = $driver['driving_license'] ?? 'N/A';
         } else {
             $synced['driver_name'] = $data['driver_name'] ?? 'N/A';
             $synced['driver_phone'] = $data['driver_phone'] ?? 'N/A';
             $synced['driver_license'] = $data['driver_license'] ?? 'N/A';
         }
         
-        // Auto-sync Helper data
+        // Auto-sync Helper data from tbl_staff (staff_role = 'Helper')
         if (!empty($data['helper_id'])) {
             $helper = $this->getHelperDetails($data['helper_id']);
             $synced['helper_id'] = $data['helper_id'];
-            $synced['helper_name'] = $helper['helper_name'] ?? 'N/A';
-            $synced['helper_phone'] = $helper['helper_number'] ?? 'N/A';
+            $synced['helper_name'] = $helper['staff_name'] ?? 'N/A';
+            $synced['helper_phone'] = $helper['staff_phone'] ?? 'N/A';
         } else {
             $synced['helper_name'] = $data['helper_name'] ?? 'N/A';
             $synced['helper_phone'] = $data['helper_phone'] ?? 'N/A';
@@ -273,19 +273,27 @@ class DocketDetailsManager {
     }
     
     /**
-     * Get driver details from tbl_driver
+     * Get driver details from tbl_staff (staff_role = 'Driver')
      */
     private function getDriverDetails($driver_id) {
-        $sql = "SELECT * FROM tbl_driver WHERE driver_id = " . intval($driver_id);
+        $sql = "SELECT staff_id, staff_name, staff_phone, driving_license 
+                FROM tbl_staff 
+                WHERE staff_id = " . intval($driver_id) . " 
+                AND staff_role = 'Driver' 
+                LIMIT 1";
         $result = mysqli_query($this->conn, $sql);
         return $result ? mysqli_fetch_assoc($result) : null;
     }
     
     /**
-     * Get helper details from tbl_helper
+     * Get helper details from tbl_staff (staff_role = 'Helper')
      */
     private function getHelperDetails($helper_id) {
-        $sql = "SELECT * FROM tbl_helper WHERE helper_id = " . intval($helper_id);
+        $sql = "SELECT staff_id, staff_name, staff_phone 
+                FROM tbl_staff 
+                WHERE staff_id = " . intval($helper_id) . " 
+                AND staff_role = 'Helper' 
+                LIMIT 1";
         $result = mysqli_query($this->conn, $sql);
         return $result ? mysqli_fetch_assoc($result) : null;
     }

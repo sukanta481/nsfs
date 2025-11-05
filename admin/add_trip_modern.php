@@ -12,8 +12,8 @@
 // Fetch data for dropdowns
 $companies = mysqli_query($conn, "SELECT company_id, company_title, company_address FROM tbl_company ORDER BY company_title ASC");
 $cars = mysqli_query($conn, "SELECT * FROM tbl_car ORDER BY car_number ASC");
-$drivers = mysqli_query($conn, "SELECT * FROM tbl_driver ORDER BY driver_name ASC");
-$helpers = mysqli_query($conn, "SELECT * FROM tbl_helper ORDER BY helper_name ASC");
+$drivers = mysqli_query($conn, "SELECT staff_id, staff_name, staff_phone, driving_license FROM tbl_staff WHERE staff_role = 'Driver' AND active_status = 1 ORDER BY staff_name ASC");
+$helpers = mysqli_query($conn, "SELECT staff_id, staff_name, staff_phone FROM tbl_staff WHERE staff_role = 'Helper' AND active_status = 1 ORDER BY staff_name ASC");
 $offices = mysqli_query($conn, "SELECT * FROM tbl_offices ORDER BY office_name ASC");
 
 // Get Barasat office as default
@@ -529,8 +529,10 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             <select name="driver_id" id="driver_select" class="form-control" required style="color: #000 !important; background: #fff !important;">
                                 <option value="">Choose Driver</option>
                                 <?php while ($driver = mysqli_fetch_assoc($drivers)): ?>
-                                    <option value="<?= $driver['driver_id'] ?>" data-phone="<?= htmlspecialchars($driver['driver_number'] ?? '') ?>">
-                                        <?= htmlspecialchars($driver['driver_name']) ?>
+                                    <option value="<?= $driver['staff_id'] ?>" 
+                                            data-phone="<?= htmlspecialchars($driver['staff_phone'] ?? '') ?>"
+                                            data-license="<?= htmlspecialchars($driver['driving_license'] ?? '') ?>">
+                                        <?= htmlspecialchars($driver['staff_name']) ?>
                                     </option>
                                 <?php endwhile; ?>
                             </select>
@@ -552,8 +554,8 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             <select name="helper_id" id="helper_select" class="form-control" style="color: #000 !important; background: #fff !important;">
                                 <option value="">Choose Helper (Optional)</option>
                                 <?php while ($helper = mysqli_fetch_assoc($helpers)): ?>
-                                    <option value="<?= $helper['helper_id'] ?>" data-phone="<?= htmlspecialchars($helper['helper_number'] ?? '') ?>">
-                                        <?= htmlspecialchars($helper['helper_name']) ?>
+                                    <option value="<?= $helper['staff_id'] ?>" data-phone="<?= htmlspecialchars($helper['staff_phone'] ?? '') ?>">
+                                        <?= htmlspecialchars($helper['staff_name']) ?>
                                     </option>
                                 <?php endwhile; ?>
                             </select>

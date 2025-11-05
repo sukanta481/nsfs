@@ -100,10 +100,10 @@ try {
             // Car data (will auto-sync from tbl_car)
             'car_id' => $car_id,
             
-            // Driver data (will auto-sync from tbl_driver)
+            // Driver data (will auto-sync from tbl_staff WHERE staff_role = 'Driver')
             'driver_id' => $driver_id,
             
-            // Helper data (will auto-sync from tbl_helper if provided)
+            // Helper data (will auto-sync from tbl_staff WHERE staff_role = 'Helper' if provided)
             'helper_id' => ($helper_id > 0) ? $helper_id : null,
             
             // Package information
@@ -129,7 +129,7 @@ try {
         // Commit transaction
         mysqli_commit($conn);
         
-        $_SESSION['success_msg'] = "Trip created successfully with $success_count docket(s) in docket_details table! All details auto-synced from car, driver, helper, and company tables.";
+        $_SESSION['success_msg'] = "Trip created successfully with $success_count docket(s) in docket_details table! All details auto-synced from car, staff (drivers & helpers), and company tables.";
         header('Location: add_trip_modern.php?msg=success');
         exit;
     } else {

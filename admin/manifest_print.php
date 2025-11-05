@@ -7,11 +7,11 @@ if (!$manifest_id) {
 }
 
 // -- Get Manifest info with Office details --
-$manifest_sql = "SELECT m.*, o.*, c.car_number, d.driver_name
+$manifest_sql = "SELECT m.*, o.*, c.car_number, s.staff_name as driver_name
     FROM tbl_manifest m 
     JOIN tbl_offices o ON m.office_id = o.office_id 
     LEFT JOIN tbl_car c ON m.car_id = c.car_id
-    LEFT JOIN tbl_driver d ON m.driver_id = d.driver_id
+    LEFT JOIN tbl_staff s ON m.driver_id = s.staff_id AND s.staff_role = 'Driver'
     WHERE m.manifest_id = $manifest_id";
 $result = mysqli_query($conn, $manifest_sql);
 
