@@ -5,28 +5,21 @@
  * Safe for production - won't delete user data
  */
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-session_name('pro');
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Define permission functions
+// Define permission functions early
 if (!function_exists('hasPermission')) {
     function hasPermission($permission) { return true; }
 }
 if (!function_exists('isSuperAdmin')) {
     function isSuperAdmin() { return true; }
 }
-
-// Authentication
-if (!isset($_SESSION['admin_id']) && !isset($_SESSION['user_id'])) {
-    die("Access denied. Please <a href='../login_new.php'>login</a> first.");
+if (!function_exists('requirePermission')) {
+    function requirePermission($permission) { return true; }
+}
+if (!function_exists('getUserPermissions')) {
+    function getUserPermissions() { return ['*']; }
 }
 
-require __DIR__ . '/../conn.php';
+require __DIR__ . '/../top_header.php';
 
 $message = '';
 $messageType = '';
@@ -252,43 +245,47 @@ if (isset($_GET['download'])) {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Schema Sync (Structure Only) | NSFS Admin</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header {
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .header h1 { color: #2c3e50; display: flex; align-items: center; gap: 10px; }
-        .header p { color: #7f8c8d; margin-top: 5px; }
-        .alert {
+<body class="nav-md">
+<div class="container body">
+<div class="main_container">
+<?php require __DIR__ . '/../left_panel.php'; ?>
+<?php require __DIR__ . '/../header_banner.php'; ?>
+
+<!-- page content -->
+<div class="right_col" role="main">
+    <div class="">
+        <div class="page-title">
+            <div class="title_left">
+                <h3><i class="fa fa-database"></i> Database Schema Sync</h3>
+            </div>
+        </div>
+        <div class="clearfix"></div>
+
+        <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                
+                <div class="x_panel">
+                    <div class="x_title">
+                        <h2><i class="fa fa-table"></i> Schema Sync (Structure Only)</h2>
+                        <div class="clearfix"></div>
+                    </div>
+                    <div class="x_content">
+
+<style>
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
             padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            margin: 20px 0;
+            border-radius: 5px;
         }
-        .alert-success { background: #d4edda; color: #155724; }
-        .alert-error { background: #f8d7da; color: #721c24; }
-        .alert-warning { background: #fff3cd; color: #856404; }
-        .alert-info { background: #d1ecf1; color: #0c5460; }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -340,20 +337,6 @@ if (isset($_GET['download'])) {
             border-radius: 8px;
             margin-bottom: 10px;
         }
-        .info-box {
-            background: #e7f3ff;
-            border-left: 4px solid #2196F3;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-        }
-        .warning-box {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-        }
         .differences {
             background: white;
             border-radius: 10px;
@@ -370,10 +353,6 @@ if (isset($_GET['download'])) {
         .diff-new { border-color: #28a745; background: #d4edda; }
         .diff-missing { border-color: #dc3545; background: #f8d7da; }
         .diff-modified { border-color: #ffc107; background: #fff3cd; }
-        table { width: 100%; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        th, td { padding: 12px; text-align: left; }
-        th { background: #11998e; color: white; }
-        tr:nth-child(even) { background: #f8f9fa; }
         .btn-small {
             padding: 6px 12px;
             border-radius: 5px;
@@ -384,12 +363,9 @@ if (isset($_GET['download'])) {
             background: #28a745;
         }
     </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1><i class="fa fa-database"></i> Database Schema Sync (Structure Only)</h1>
-            <p><strong>Safe for Production:</strong> Syncs only table structures, preserves all data</p>
+
+        <div class="alert alert-info">
+            <strong><i class="fa fa-info-circle"></i> Safe for Production:</strong> Syncs only table structures, preserves all data
         </div>
 
         <div class="info-box">
@@ -506,6 +482,18 @@ if (isset($_GET['download'])) {
             </table>
         </div>
         <?php endif; ?>
+
+                    </div>
+                </div>
+                
+            </div>
+        </div>
     </div>
+</div>
+
+<?php require __DIR__ . '/../footer.php'; ?>
+</div>
+</div>
 </body>
 </html>
+
