@@ -49,8 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
                 
                 if (mysqli_query($conn, $insert_query)) {
                     $success = "User created successfully!";
-                    // Clear form
-                    $_POST = array();
+                    // Redirect to users list page after success
+                    header("Location: users.php?success=User created successfully");
+                    exit;
                 } else {
                     $error = "Error creating user: " . mysqli_error($conn);
                 }
@@ -326,7 +327,7 @@ require 'top_header.php';
                   <i class="fas fa-user"></i>
                   <input type="text" name="username" id="username" class="form-control with-icon" 
                          placeholder="Enter username" required 
-                         value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>">
+                         value="<?php echo (!empty($error) && isset($_POST['username'])) ? htmlspecialchars($_POST['username']) : ''; ?>">
                 </div>
               </div>
 
@@ -338,7 +339,7 @@ require 'top_header.php';
                   <i class="fas fa-envelope"></i>
                   <input type="email" name="email" id="email" class="form-control with-icon" 
                          placeholder="Enter email address" required 
-                         value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
+                         value="<?php echo (!empty($error) && isset($_POST['email'])) ? htmlspecialchars($_POST['email']) : ''; ?>">
                 </div>
               </div>
             </div>
@@ -351,7 +352,7 @@ require 'top_header.php';
                 <i class="fas fa-id-card"></i>
                 <input type="text" name="full_name" id="full_name" class="form-control with-icon" 
                        placeholder="Enter full name" required 
-                       value="<?php echo isset($_POST['full_name']) ? htmlspecialchars($_POST['full_name']) : ''; ?>">
+                       value="<?php echo (!empty($error) && isset($_POST['full_name'])) ? htmlspecialchars($_POST['full_name']) : ''; ?>">
               </div>
             </div>
 
@@ -402,7 +403,7 @@ require 'top_header.php';
                     <option value="">-- Select Role --</option>
                     <?php while ($role = mysqli_fetch_assoc($roles_result)): ?>
                       <option value="<?php echo $role['role_id']; ?>" 
-                              <?php echo (isset($_POST['role_id']) && $_POST['role_id'] == $role['role_id']) ? 'selected' : ''; ?>>
+                              <?php echo (!empty($error) && isset($_POST['role_id']) && $_POST['role_id'] == $role['role_id']) ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($role['role_name']); ?>
                       </option>
                     <?php endwhile; ?>
@@ -423,7 +424,7 @@ require 'top_header.php';
                       while ($staff = mysqli_fetch_assoc($staff_result)): 
                     ?>
                       <option value="<?php echo $staff['staff_id']; ?>" 
-                              <?php echo (isset($_POST['staff_id']) && $_POST['staff_id'] == $staff['staff_id']) ? 'selected' : ''; ?>>
+                              <?php echo (!empty($error) && isset($_POST['staff_id']) && $_POST['staff_id'] == $staff['staff_id']) ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($staff['staff_name']); ?>
                       </option>
                     <?php 
@@ -438,7 +439,7 @@ require 'top_header.php';
             <div class="form-group">
               <div class="checkbox-group">
                 <input type="checkbox" name="active_status" id="active_status" value="1" 
-                       <?php echo (!isset($_POST['submit']) || (isset($_POST['active_status']) && $_POST['active_status'])) ? 'checked' : ''; ?>>
+                       <?php echo (empty($error) || (isset($_POST['active_status']) && $_POST['active_status'])) ? 'checked' : ''; ?>>
                 <label for="active_status">
                   <i class="fas fa-check-circle"></i> Active (User can login)
                 </label>

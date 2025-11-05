@@ -3,6 +3,12 @@ require 'check_auth.php';
 requirePermission('user_view');
 require 'conn.php';
 
+// Check for success message
+$success_message = '';
+if (isset($_GET['success'])) {
+    $success_message = htmlspecialchars($_GET['success']);
+}
+
 // Get all users with their roles
 $users_query = "SELECT u.*, r.role_name, s.staff_name 
                 FROM tbl_users u 
@@ -25,6 +31,15 @@ require 'top_header.php';
       
       <!-- page content -->
       <div class="right_col" role="main" style="background: #f8fafc; min-height:100vh;">
+        
+        <?php if (!empty($success_message)): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin: 20px 0; border-radius: 10px; border-left: 4px solid #28a745;">
+          <i class="fa fa-check-circle"></i> <strong>Success!</strong> <?php echo $success_message; ?>
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <?php endif; ?>
         
         <!-- Header -->
         <div style="background: white; padding: 25px 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 25px;">
