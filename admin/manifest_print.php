@@ -70,12 +70,12 @@ while($row = mysqli_fetch_assoc($res_data)) {
   <title>Manifest Print</title>
   <style>
     @page {
-      size: A4 landscape;
-      margin: 10mm 5mm;
+      size: A4 portrait;
+      margin: 10mm 8mm;
     }
     body { 
       font-family: 'Calibri', Arial, sans-serif; 
-      font-size: 15px; 
+      font-size: 12px; 
       color: #222; 
       margin: 0; 
       background: #fff;
@@ -83,35 +83,35 @@ while($row = mysqli_fetch_assoc($res_data)) {
       print-color-adjust: exact;
     }
     .header { 
-      border: 1.8px solid #111; 
-      margin-bottom: 5px; 
-      padding: 12px 16px 6px 16px; 
+      border: 1.5px solid #111; 
+      margin-bottom: 4px; 
+      padding: 8px 12px 4px 12px; 
       display: flex; 
       align-items: flex-start;
       page-break-inside: avoid;
     }
-    .header img { width: 200px; margin-right: 18px; }
+    .header img { width: 140px; margin-right: 12px; }
     .company-meta { flex:1; }
-    .company-meta .company-name { font-size: 27px; font-weight: bold; margin-bottom: 6px; }
-    .company-meta .meta { margin-bottom: 3px; }
-    .company-meta .bold { font-weight: 600; }
+    .company-meta .company-name { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+    .company-meta .meta { margin-bottom: 2px; font-size: 11px; }
+    .company-meta .bold { font-weight: 600; font-size: 12px; }
     .manifest-row { 
-      border: 1.6px solid #111; 
+      border: 1.5px solid #111; 
       margin-bottom: 2px; 
-      padding: 6px 14px; 
+      padding: 5px 10px; 
       display: flex; 
       justify-content: space-between; 
       background: #fafbfe;
       page-break-inside: avoid;
     }
-    .manifest-row .info { font-size: 15.7px; }
-    .manifest-row .info strong { font-size: 15.9px; margin-right: 6px;}
+    .manifest-row .info { font-size: 11px; line-height: 1.4; }
+    .manifest-row .info strong { font-size: 11.5px; margin-right: 4px;}
     .manifest-title { 
       text-align: center; 
-      font-size: 17.2px; 
+      font-size: 14px; 
       font-weight: 600; 
       letter-spacing:1px; 
-      margin: 7px 0 6px 0;
+      margin: 4px 0 3px 0;
       page-break-before: avoid;
       page-break-after: avoid;
     }
@@ -123,65 +123,70 @@ while($row = mysqli_fetch_assoc($res_data)) {
       table-layout: fixed;
     }
     th, td { 
-      border: 1.2px solid #222; 
-      padding: 4.5px 8px; 
-      font-size: 14.3px;
+      border: 1px solid #222; 
+      padding: 3px 4px; 
+      font-size: 10px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
     th { 
       background: #f3f7fa; 
-      font-size: 14.5px;
+      font-size: 10.5px;
       white-space: nowrap;
+      font-weight: 700;
     }
     .noprint { margin: 16px 5px 0 0; }
     
-    /* Column widths */
-    table th:nth-child(1) { width: 4%; }  /* SL.NO */
-    table th:nth-child(2) { width: 10%; } /* DOCKET NO */
-    table th:nth-child(3) { width: 15%; } /* CONSIGNEE */
-    table th:nth-child(4) { width: 10%; } /* ITEM */
-    table th:nth-child(5) { width: 20%; } /* ADDRESS */
-    table th:nth-child(6) { width: 5%; }  /* BOX */
-    table th:nth-child(7) { width: 7%; }  /* WEIGHT */
-    table th:nth-child(8) { width: 7%; }  /* RATE */
-    table th:nth-child(9) { width: 8%; }  /* AMOUNT */
-    table th:nth-child(10) { width: 7%; } /* E-WAY BILL */
-    table th:nth-child(11) { width: 7%; } /* PAY TO */
+    /* Column widths optimized for portrait */
+    table th:nth-child(1) { width: 4%; }   /* SL.NO */
+    table th:nth-child(2) { width: 11%; }  /* DOCKET NO */
+    table th:nth-child(3) { width: 14%; }  /* CONSIGNEE */
+    table th:nth-child(4) { width: 12%; }  /* ITEM */
+    table th:nth-child(5) { width: 18%; }  /* ADDRESS */
+    table th:nth-child(6) { width: 5%; }   /* BOX */
+    table th:nth-child(7) { width: 6%; }   /* WEIGHT */
+    table th:nth-child(8) { width: 6%; }   /* RATE */
+    table th:nth-child(9) { width: 8%; }   /* AMOUNT */
+    table th:nth-child(10) { width: 8%; }  /* E-WAY BILL */
+    table th:nth-child(11) { width: 8%; }  /* PAY TO */
     
     @media print {
       .noprint { display: none; }
-      body { margin: 0; }
+      body { margin: 0; font-size: 10px; }
       table { page-break-inside: auto; }
       tr { page-break-inside: avoid; page-break-after: auto; }
-      th, td { font-size: 13px; border: 1.2px solid #222 !important; }
+      th, td { font-size: 9px; padding: 2px 3px; border: 1px solid #222 !important; }
       thead { display: table-header-group; }
       tfoot { display: table-footer-group; }
+      .header img { width: 120px; }
+      .company-meta .company-name { font-size: 16px; }
+      .company-meta .meta { font-size: 10px; }
     }
     
     .manifest-footer-table {
       width: 100%;
-      margin-top: 20px;
+      margin-top: 15px;
       background: #fff;
       page-break-inside: avoid;
     }
 .manifest-footer-table table {
   width: 100%;
-  font-size: 16px;
+  font-size: 12px;
   border: 0;
   border-collapse: collapse;
 }
 .manifest-footer-table td {
   border: 0;
-  padding: 12px 4px 0 4px;
+  padding: 10px 4px 0 4px;
   width: 33%;
 }
 @media print {
   .manifest-footer-table {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    position: relative;
+    margin-top: 10px;
+  }
+  .manifest-footer-table table {
+    font-size: 11px;
   }
 }
 
@@ -265,7 +270,7 @@ while($row = mysqli_fetch_assoc($res_data)) {
   </tbody>
 </table>
 
-<div style="height:42px"></div>
+<div style="height:25px"></div>
 <div class="manifest-footer-table">
   <table>
     <tr>
@@ -289,13 +294,28 @@ function downloadPDF() {
   const { jsPDF } = window.jspdf;
   html2canvas(document.body, {scale:2}).then(function(canvas) {
     const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('l','pt','a4');
+    const pdf = new jsPDF('p','pt','a4'); // 'p' for portrait
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     // Draw image, scale to fit width, keep ratio
-    const imgWidth = pageWidth - 30, imgHeight = canvas.height * imgWidth / canvas.width;
-    pdf.addImage(imgData, 'PNG', 15, 15, imgWidth, imgHeight);
-    pdf.save("manifest.pdf");
+    const imgWidth = pageWidth - 30;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    
+    // Handle multiple pages if content is too long
+    let heightLeft = imgHeight;
+    let position = 15;
+    
+    pdf.addImage(imgData, 'PNG', 15, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    
+    while (heightLeft >= 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 15, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+    
+    pdf.save("manifest_<?= $manifest['manifest_no'] ?>.pdf");
   });
 }
 </script>
