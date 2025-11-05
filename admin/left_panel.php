@@ -98,6 +98,22 @@ if (file_exists('check_auth.php')) {
       </li>
       <?php endif; ?>
 
+      <!-- Database Management -->
+      <?php if (isSuperAdmin()): ?>
+      <li class="menu-item has-submenu">
+        <a href="javascript:void(0)" class="menu-link">
+          <i class="fa fa-database"></i>
+          <span>Database Manager</span>
+          <i class="fa fa-chevron-down submenu-arrow"></i>
+        </a>
+        <ul class="submenu">
+          <li><a href="database/schema_sync.php"><i class="fa fa-table"></i> Schema Sync</a></li>
+          <li><a href="database/selective_data_sync.php"><i class="fa fa-filter"></i> Selective Data Sync</a></li>
+          <li><a href="database/database_sync.php"><i class="fa fa-archive"></i> Full Backup/Restore</a></li>
+        </ul>
+      </li>
+      <?php endif; ?>
+
       <!-- Settings -->
       <?php if (hasPermission('settings_view')): ?>
       <li class="menu-item has-submenu">
@@ -109,9 +125,6 @@ if (file_exists('check_auth.php')) {
         <ul class="submenu">
           <li><a href="delay_reason.php?type=list_delay_reason&lp=ac">Delay Reasons</a></li>
           <li><a href="contacts.php?type=edit_contact&contact_id=1&lp=ac">Contact Settings</a></li>
-          <?php if (isSuperAdmin()): ?>
-          <li><a href="database/database_sync.php">Database Sync</a></li>
-          <?php endif; ?>
           <li><a href="changepassword.php?lp=ad">Change Password</a></li>
         </ul>
       </li>
