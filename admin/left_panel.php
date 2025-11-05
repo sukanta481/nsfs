@@ -51,8 +51,7 @@
         <ul class="submenu">
           <li><a href="car_crud.php">Cars</a></li>
           <li><a href="driver_crud.php">Drivers</a></li>
-          <li><a href="helper.php?type=list_helper&lp=ac">All Helpers</a></li>
-          <li><a href="helper.php?type=add_helper&lp=ac">Add Helper</a></li>
+          <li><a href="staff_crud.php">Staff</a></li>
         </ul>
       </li>
 
