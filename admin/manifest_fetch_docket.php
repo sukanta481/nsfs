@@ -11,7 +11,7 @@ $row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT
     rate,
     eway_bill,
     pay_to
-FROM tbl_shipping_details 
+FROM docket_details 
 WHERE doc_no='".mysqli_real_escape_string($conn, $docket_no)."' 
 LIMIT 1"));
 if ($row) {
