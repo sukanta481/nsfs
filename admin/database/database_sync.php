@@ -283,10 +283,28 @@ if (isset($_GET['deleted'])) {
     $messageType = 'success';
 }
 
-// Define hasPermission function locally to avoid errors in included files
+// Define permission functions locally to avoid errors in included files
 if (!function_exists('hasPermission')) {
     function hasPermission($permission) {
         return true; // Grant all permissions for database sync page
+    }
+}
+
+if (!function_exists('isSuperAdmin')) {
+    function isSuperAdmin() {
+        return true; // Grant super admin for database sync page
+    }
+}
+
+if (!function_exists('requirePermission')) {
+    function requirePermission($permission) {
+        return true; // Grant all permissions for database sync page
+    }
+}
+
+if (!function_exists('getUserPermissions')) {
+    function getUserPermissions() {
+        return ['*']; // Grant all permissions for database sync page
     }
 }
 ?>
