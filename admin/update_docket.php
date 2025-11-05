@@ -110,10 +110,22 @@ $company_name = $company_data ? mysqli_real_escape_string($conn, $company_data['
 $car_number = 'N/A';
 $car_model = 'N/A';
 if($car_id > 0) {
-    $car_query = mysqli_query($conn, "SELECT car_number, car_model FROM tbl_car WHERE car_id = $car_id");
-    if($car_data = mysqli_fetch_assoc($car_query)) {
-        $car_number = mysqli_real_escape_string($conn, $car_data['car_number']);
-        $car_model = mysqli_real_escape_string($conn, $car_data['car_model']);
+    // Check if car_model column exists
+    $check_columns = mysqli_query($conn, "SHOW COLUMNS FROM tbl_car LIKE 'car_model'");
+    $has_car_model = mysqli_num_rows($check_columns) > 0;
+    
+    if($has_car_model) {
+        $car_query = mysqli_query($conn, "SELECT car_number, car_model FROM tbl_car WHERE car_id = $car_id");
+        if($car_data = mysqli_fetch_assoc($car_query)) {
+            $car_number = mysqli_real_escape_string($conn, $car_data['car_number']);
+            $car_model = mysqli_real_escape_string($conn, $car_data['car_model']);
+        }
+    } else {
+        // If car_model doesn't exist, just get car_number
+        $car_query = mysqli_query($conn, "SELECT car_number FROM tbl_car WHERE car_id = $car_id");
+        if($car_data = mysqli_fetch_assoc($car_query)) {
+            $car_number = mysqli_real_escape_string($conn, $car_data['car_number']);
+        }
     }
 }
 
@@ -137,7 +149,12 @@ if($helper_id > 0) {
     }
 }
 
-// Build UPDATE query
+// Build UPDATE query - check if car_model column exists in docket_details
+$check_docket_columns = mysqli_query($conn, "SHOW COLUMNS FROM docket_details LIKE 'car_model'");
+$has_docket_car_model = mysqli_num_rows($check_docket_columns) > 0;
+
+$car_model_sql = $has_docket_car_model ? "car_model = '$car_model'," : "";
+
 $update_sql = "UPDATE docket_details SET 
     service_type = '$service_type',
     doc_type = '$doc_type',
@@ -162,7 +179,7 @@ $update_sql = "UPDATE docket_details SET
     rented_car = $rented_car,
     car_id = " . ($car_id > 0 ? $car_id : "NULL") . ",
     car_number = '$car_number',
-    car_model = '$car_model',
+    $car_model_sql
     
     driver_id = " . ($driver_id > 0 ? $driver_id : "NULL") . ",
     driver_name = '$driver_name',
