@@ -1,6 +1,32 @@
 <?php
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_name('pro');
+    session_start();
+}
+
+// Check if user is logged in
+if(!isset($_SESSION['aid']) && !isset($_SESSION['admin'])) {
+    header('Location: ../login.php');
+    exit;
+}
+
 require 'conn.php';
-require_once 'DocketDetailsManager.php';
+
+// Check database connection
+if(!$conn || mysqli_connect_errno()) {
+    die("Database connection failed: " . mysqli_connect_error());
+}
+
+// Check if DocketDetailsManager exists, if not, continue without it
+if(file_exists('DocketDetailsManager.php')) {
+    require_once 'DocketDetailsManager.php';
+}
 
 if($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: register.php?type=list_register&lp=ac');
@@ -168,8 +194,11 @@ if(mysqli_query($conn, $update_sql)) {
     header('Location: register.php?type=list_register&lp=ac&success=1');
     exit;
 } else {
-    // Error - redirect back to edit with error message
+    // Error - log and redirect back to edit with error message
     $error = mysqli_error($conn);
+    error_log("Docket Update Error: " . $error);
+    error_log("SQL: " . $update_sql);
+    
     header('Location: edit_register_new.php?docket_id=' . $docket_id . '&error=' . urlencode('Update failed: ' . $error));
     exit;
 }
