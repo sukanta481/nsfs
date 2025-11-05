@@ -1,4 +1,6 @@
 <?php 
+require 'check_auth.php';
+requirePermission('docket_view');
 require 'top_header.php'; 
 
 // Get the type parameter from URL

@@ -1,4 +1,6 @@
 <?php
+require 'check_auth.php';
+requirePermission('manifest_view');
 require 'top_header.php';
 ?>
 <body class="nav-md">

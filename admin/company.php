@@ -1,4 +1,8 @@
-<?php require 'top_header.php'; ?>
+<?php 
+require 'check_auth.php';
+requirePermission('client_view');
+require 'top_header.php'; 
+?>
 <body class="nav-md">
 
   <div class="container body">

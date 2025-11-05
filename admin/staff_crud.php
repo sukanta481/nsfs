@@ -1,4 +1,6 @@
 <?php
+require 'check_auth.php';
+requirePermission('staff_view');
 require 'top_header.php';
 
 // Handle Add/Update/Delete operations

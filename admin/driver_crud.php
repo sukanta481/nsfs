@@ -12,61 +12,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'];
         
         if ($action === 'add') {
-            $car_number = strtoupper(mysqli_real_escape_string($conn, $_POST['car_number']));
-            $car_details = strtoupper(mysqli_real_escape_string($conn, $_POST['car_details']));
+            $driver_name = strtoupper(mysqli_real_escape_string($conn, $_POST['driver_name']));
+            $alise = strtoupper(mysqli_real_escape_string($conn, $_POST['alise']));
+            $driver_number = strtoupper(mysqli_real_escape_string($conn, $_POST['driver_number']));
+            $driver_license = strtoupper(mysqli_real_escape_string($conn, $_POST['driver_license']));
             $active_status = isset($_POST['active_status']) ? 1 : 0;
             
-            $query = "INSERT INTO tbl_car (car_number, car_details, active_status) 
-                      VALUES ('$car_number', '$car_details', $active_status)";
+            $query = "INSERT INTO tbl_driver (driver_name, alise, driver_number, driver_license, active_status) 
+                      VALUES ('$driver_name', '$alise', '$driver_number', '$driver_license', $active_status)";
             
             if (mysqli_query($conn, $query)) {
-                $message = "Car added successfully!";
+                $message = "Driver added successfully!";
                 $messageType = 'success';
             } else {
-                $message = "Error adding car: " . mysqli_error($conn);
+                $message = "Error adding driver: " . mysqli_error($conn);
                 $messageType = 'error';
             }
         }
         
         elseif ($action === 'update') {
-            $car_id = intval($_POST['car_id']);
-            $car_number = strtoupper(mysqli_real_escape_string($conn, $_POST['car_number']));
-            $car_details = strtoupper(mysqli_real_escape_string($conn, $_POST['car_details']));
+            $driver_id = intval($_POST['driver_id']);
+            $driver_name = strtoupper(mysqli_real_escape_string($conn, $_POST['driver_name']));
+            $alise = strtoupper(mysqli_real_escape_string($conn, $_POST['alise']));
+            $driver_number = strtoupper(mysqli_real_escape_string($conn, $_POST['driver_number']));
+            $driver_license = strtoupper(mysqli_real_escape_string($conn, $_POST['driver_license']));
             $active_status = isset($_POST['active_status']) ? 1 : 0;
             
-            $query = "UPDATE tbl_car SET 
-                      car_number='$car_number', 
-                      car_details='$car_details', 
+            $query = "UPDATE tbl_driver SET 
+                      driver_name='$driver_name', 
+                      alise='$alise', 
+                      driver_number='$driver_number', 
+                      driver_license='$driver_license', 
                       active_status=$active_status 
-                      WHERE car_id=$car_id";
+                      WHERE driver_id=$driver_id";
             
             if (mysqli_query($conn, $query)) {
-                $message = "Car updated successfully!";
+                $message = "Driver updated successfully!";
                 $messageType = 'success';
             } else {
-                $message = "Error updating car: " . mysqli_error($conn);
+                $message = "Error updating driver: " . mysqli_error($conn);
                 $messageType = 'error';
             }
         }
         
         elseif ($action === 'delete') {
-            $car_id = intval($_POST['car_id']);
-            $query = "DELETE FROM tbl_car WHERE car_id=$car_id";
+            $driver_id = intval($_POST['driver_id']);
+            $query = "DELETE FROM tbl_driver WHERE driver_id=$driver_id";
             
             if (mysqli_query($conn, $query)) {
-                $message = "Car deleted successfully!";
+                $message = "Driver deleted successfully!";
                 $messageType = 'success';
             } else {
-                $message = "Error deleting car: " . mysqli_error($conn);
+                $message = "Error deleting driver: " . mysqli_error($conn);
                 $messageType = 'error';
             }
         }
     }
 }
 
-// Fetch all cars
-$cars_query = "SELECT * FROM tbl_car ORDER BY car_id DESC";
-$cars_result = mysqli_query($conn, $cars_query);
+// Fetch all drivers
+$drivers_query = "SELECT * FROM tbl_driver ORDER BY driver_id DESC";
+$drivers_result = mysqli_query($conn, $drivers_query);
 ?>
 
 <body class="nav-md">
@@ -76,11 +82,11 @@ $cars_result = mysqli_query($conn, $cars_query);
 <?php require 'header_banner.php'; ?>
 
 <div class="right_col" role="main">
-    <div class="car-crud-container">
+    <div class="driver-crud-container">
         <!-- Page Header -->
         <div class="page-header">
-            <h1><i class="fa fa-car"></i> Car Management</h1>
-            <p>Add, edit, and manage all your fleet vehicles</p>
+            <h1><i class="fa fa-user-tie"></i> Driver Management</h1>
+            <p>Add, edit, and manage all your drivers</p>
         </div>
 
         <?php if (!empty($message)): ?>
@@ -90,26 +96,36 @@ $cars_result = mysqli_query($conn, $cars_query);
         </div>
         <?php endif; ?>
 
-        <!-- Add Car Form -->
+        <!-- Add Driver Form -->
         <div class="card">
             <div class="card-header">
                 <i class="fa fa-plus-circle"></i>
-                <span id="formTitle">Add New Car</span>
+                <span id="formTitle">Add New Driver</span>
             </div>
             <div class="card-body">
-                <form id="carForm" method="POST">
+                <form id="driverForm" method="POST">
                     <input type="hidden" name="action" id="formAction" value="add">
-                    <input type="hidden" name="car_id" id="car_id" value="">
+                    <input type="hidden" name="driver_id" id="driver_id" value="">
                     
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Car Number <span class="required">*</span></label>
-                            <input type="text" name="car_number" id="car_number" class="form-control" required placeholder="e.g., WB-12-AB-1234">
+                            <label>Driver Name <span class="required">*</span></label>
+                            <input type="text" name="driver_name" id="driver_name" class="form-control" required>
                         </div>
                         
                         <div class="form-group">
-                            <label>Car Details <span class="required">*</span></label>
-                            <input type="text" name="car_details" id="car_details" class="form-control" required placeholder="e.g., Tata Ace / Blue / 2020">
+                            <label>Alias/Nickname</label>
+                            <input type="text" name="alise" id="alise" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Contact Number <span class="required">*</span></label>
+                            <input type="text" name="driver_number" id="driver_number" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Driving License Number <span class="required">*</span></label>
+                            <input type="text" name="driver_license" id="driver_license" class="form-control" required>
                         </div>
                         
                         <div class="form-group">
@@ -122,7 +138,7 @@ $cars_result = mysqli_query($conn, $cars_query);
                     
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fa fa-save"></i> <span id="submitBtnText">Add Car</span>
+                            <i class="fa fa-save"></i> <span id="submitBtnText">Add Driver</span>
                         </button>
                         <button type="button" class="btn btn-secondary" id="cancelBtn" style="display:none;">
                             <i class="fa fa-times"></i> Cancel
@@ -132,11 +148,11 @@ $cars_result = mysqli_query($conn, $cars_query);
             </div>
         </div>
 
-        <!-- Cars List -->
+        <!-- Drivers List -->
         <div class="card">
             <div class="card-header">
                 <i class="fa fa-list"></i>
-                <span>All Cars (<?= mysqli_num_rows($cars_result) ?>)</span>
+                <span>All Drivers (<?= mysqli_num_rows($drivers_result) ?>)</span>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -144,41 +160,52 @@ $cars_result = mysqli_query($conn, $cars_query);
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Car Number</th>
-                                <th>Car Details</th>
+                                <th>Driver Name</th>
+                                <th>Alias</th>
+                                <th>Contact Number</th>
+                                <th>License Number</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (mysqli_num_rows($cars_result) > 0): ?>
-                                <?php while ($car = mysqli_fetch_assoc($cars_result)): ?>
+                            <?php if (mysqli_num_rows($drivers_result) > 0): ?>
+                                <?php while ($driver = mysqli_fetch_assoc($drivers_result)): ?>
                                 <tr>
-                                    <td><?= $car['car_id'] ?></td>
-                                    <td><strong><?= htmlspecialchars($car['car_number']) ?></strong></td>
-                                    <td><?= htmlspecialchars($car['car_details']) ?></td>
+                                    <td><?= $driver['driver_id'] ?></td>
+                                    <td><strong><?= htmlspecialchars($driver['driver_name']) ?></strong></td>
+                                    <td><?= htmlspecialchars($driver['alise']) ?></td>
+                                    <td><?= htmlspecialchars($driver['driver_number']) ?></td>
+                                    <td><?= htmlspecialchars($driver['driver_license'] ?? '-') ?></td>
                                     <td>
-                                        <?php if ($car['active_status'] == 1): ?>
+                                        <?php if ($driver['active_status'] == 1): ?>
                                             <span class="badge badge-success">Active</span>
                                         <?php else: ?>
                                             <span class="badge badge-secondary">Inactive</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
-                                        <div class="actions">
-                                            <button class="btn-action btn-edit" onclick='editCar(<?= json_encode($car, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
-                                                <i class="fa fa-edit"></i> Edit
-                                            </button>
-                                            <button class="btn-action btn-delete" onclick="deleteCar(<?= $car['car_id'] ?>, '<?= htmlspecialchars($car['car_number'], ENT_QUOTES) ?>')">
-                                                <i class="fa fa-trash"></i> Delete
-                                            </button>
-                                        </div>
+                                    <td class="actions">
+                                        <button class="btn-action btn-edit" 
+                                                onclick="editDriver({
+                                                    driver_id: '<?= $driver['driver_id'] ?>',
+                                                    driver_name: '<?= addslashes(htmlspecialchars($driver['driver_name'])) ?>',
+                                                    alise: '<?= addslashes(htmlspecialchars($driver['alise'] ?? '')) ?>',
+                                                    driver_number: '<?= addslashes(htmlspecialchars($driver['driver_number'] ?? '')) ?>',
+                                                    driver_license: '<?= addslashes(htmlspecialchars($driver['driver_license'] ?? '')) ?>',
+                                                    active_status: '<?= $driver['active_status'] ?>'
+                                                }); return false;">
+                                            <i class="fa fa-edit"></i> Edit
+                                        </button>
+                                        <button class="btn-action btn-delete" 
+                                                onclick="deleteDriver('<?= $driver['driver_id'] ?>', '<?= addslashes(htmlspecialchars($driver['driver_name'])) ?>'); return false;">
+                                            <i class="fa fa-trash"></i> Delete
+                                        </button>
                                     </td>
                                 </tr>
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="5" class="text-center">No cars found. Add your first car above!</td>
+                                    <td colspan="7" class="text-center">No drivers found. Add your first driver above!</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -196,7 +223,7 @@ $cars_result = mysqli_query($conn, $cars_query);
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-.car-crud-container {
+.driver-crud-container {
     font-family: 'Inter', sans-serif;
     padding: 0 35px 60px 35px;
     min-height: calc(100vh - 160px);
@@ -214,10 +241,6 @@ $cars_result = mysqli_query($conn, $cars_query);
     display: flex;
     align-items: center;
     gap: 12px;
-}
-
-.page-header h1 .fa-car {
-    color: #667eea;
 }
 
 .page-header p {
@@ -504,7 +527,7 @@ input[type="date"].form-control::-webkit-calendar-picker-indicator {
 }
 
 @media (max-width: 768px) {
-    .car-crud-container {
+    .driver-crud-container {
         padding: 0 15px 40px 15px;
     }
     
@@ -532,29 +555,31 @@ setTimeout(function() {
     }
 }, 5000);
 
-// Edit car function
-function editCar(car) {
-    console.log('Edit function called with:', car);
-    document.getElementById('formTitle').textContent = 'Edit Car';
+// Edit driver function
+function editDriver(driver) {
+    console.log('Edit function called with:', driver);
+    document.getElementById('formTitle').textContent = 'Edit Driver';
     document.getElementById('formAction').value = 'update';
-    document.getElementById('car_id').value = car.car_id;
-    document.getElementById('car_number').value = car.car_number;
-    document.getElementById('car_details').value = car.car_details || '';
-    document.getElementById('active_status').checked = car.active_status == 1;
-    document.getElementById('submitBtnText').textContent = 'Update Car';
+    document.getElementById('driver_id').value = driver.driver_id;
+    document.getElementById('driver_name').value = driver.driver_name;
+    document.getElementById('alise').value = driver.alise || '';
+    document.getElementById('driver_number').value = driver.driver_number || '';
+    document.getElementById('driver_license').value = driver.driver_license || '';
+    document.getElementById('active_status').checked = driver.active_status == 1;
+    document.getElementById('submitBtnText').textContent = 'Update Driver';
     document.getElementById('cancelBtn').style.display = 'inline-flex';
     
     // Scroll to form
-    document.getElementById('carForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('driverForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// Delete car function
-function deleteCar(id, carNumber) {
-    console.log('Delete function called for:', id, carNumber);
-    if (confirm('Are you sure you want to delete car "' + carNumber + '"?\n\nThis action cannot be undone.')) {
+// Delete driver function
+function deleteDriver(id, name) {
+    console.log('Delete function called for:', id, name);
+    if (confirm('Are you sure you want to delete driver "' + name + '"?\n\nThis action cannot be undone.')) {
         var form = document.createElement('form');
         form.method = 'POST';
-        form.innerHTML = '<input type="hidden" name="action" value="delete"><input type="hidden" name="car_id" value="' + id + '">';
+        form.innerHTML = '<input type="hidden" name="action" value="delete"><input type="hidden" name="driver_id" value="' + id + '">';
         document.body.appendChild(form);
         form.submit();
     }
@@ -562,11 +587,11 @@ function deleteCar(id, carNumber) {
 
 // Cancel edit
 document.getElementById('cancelBtn').addEventListener('click', function() {
-    document.getElementById('carForm').reset();
-    document.getElementById('formTitle').textContent = 'Add New Car';
+    document.getElementById('driverForm').reset();
+    document.getElementById('formTitle').textContent = 'Add New Driver';
     document.getElementById('formAction').value = 'add';
-    document.getElementById('car_id').value = '';
-    document.getElementById('submitBtnText').textContent = 'Add Car';
+    document.getElementById('driver_id').value = '';
+    document.getElementById('submitBtnText').textContent = 'Add Driver';
     document.getElementById('active_status').checked = true;
     this.style.display = 'none';
 });

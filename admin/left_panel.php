@@ -1,3 +1,9 @@
+<?php
+// Get user permissions for menu visibility
+if (file_exists('check_auth.php')) {
+    require_once 'check_auth.php';
+}
+?>
 <div class="modern-sidebar" id="modernSidebar">
   <div class="sidebar-header">
     <div class="sidebar-brand">
@@ -12,14 +18,17 @@
   <div class="sidebar-menu">
     <ul class="menu-list">
       <!-- Dashboard -->
+      <?php if (hasPermission('dashboard_view')): ?>
       <li class="menu-item">
         <a href="../admin/index.php" class="menu-link">
           <i class="fa fa-tachometer"></i>
           <span>Dashboard</span>
         </a>
       </li>
+      <?php endif; ?>
 
       <!-- Dockets Management -->
+      <?php if (hasPermission('docket_view') || hasPermission('docket_create')): ?>
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-file-text"></i>
@@ -27,21 +36,29 @@
           <i class="fa fa-chevron-down submenu-arrow"></i>
         </a>
         <ul class="submenu">
+          <?php if (hasPermission('docket_create')): ?>
           <li><a href="add_trip_modern.php">Create New Trip</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('docket_view')): ?>
           <li><a href="register.php?type=list_register&lp=ac">All Dockets</a></li>
           <li><a href="trip.php?type=list_trips">All Trips</a></li>
+          <?php endif; ?>
         </ul>
       </li>
+      <?php endif; ?>
 
       <!-- Manifest -->
+      <?php if (hasPermission('manifest_view')): ?>
       <li class="menu-item">
         <a href="manifest.php" class="menu-link">
           <i class="fa fa-clipboard"></i>
           <span>Manifest</span>
         </a>
       </li>
+      <?php endif; ?>
 
       <!-- Fleet Management -->
+      <?php if (hasPermission('vehicle_view') || hasPermission('staff_view')): ?>
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-truck"></i>
@@ -49,13 +66,19 @@
           <i class="fa fa-chevron-down submenu-arrow"></i>
         </a>
         <ul class="submenu">
+          <?php if (hasPermission('vehicle_view')): ?>
           <li><a href="car_crud.php">Cars</a></li>
           <li><a href="driver_crud.php">Drivers</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('staff_view')): ?>
           <li><a href="staff_crud.php">Staff</a></li>
+          <?php endif; ?>
         </ul>
       </li>
+      <?php endif; ?>
 
       <!-- Companies -->
+      <?php if (hasPermission('client_view')): ?>
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-building"></i>
@@ -64,12 +87,16 @@
         </a>
         <ul class="submenu">
           <li><a href="company.php?type=list_company&lp=ac">All Consignors</a></li>
+          <?php if (hasPermission('client_create')): ?>
           <li><a href="company.php?type=add_company&lp=ac">Add Consignor</a></li>
+          <?php endif; ?>
           <li><a href="offices.php">Offices</a></li>
         </ul>
       </li>
+      <?php endif; ?>
 
       <!-- Settings -->
+      <?php if (hasPermission('settings_view')): ?>
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-cog"></i>
@@ -79,12 +106,16 @@
         <ul class="submenu">
           <li><a href="delay_reason.php?type=list_delay_reason&lp=ac">Delay Reasons</a></li>
           <li><a href="contacts.php?type=edit_contact&contact_id=1&lp=ac">Contact Settings</a></li>
+          <?php if (isSuperAdmin()): ?>
           <li><a href="database/database_sync.php">Database Sync</a></li>
+          <?php endif; ?>
           <li><a href="changepassword.php?lp=ad">Change Password</a></li>
         </ul>
       </li>
+      <?php endif; ?>
 
       <!-- User Management -->
+      <?php if (hasPermission('user_view') || hasPermission('role_view')): ?>
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-users-cog"></i>
@@ -92,13 +123,21 @@
           <i class="fa fa-chevron-down submenu-arrow"></i>
         </a>
         <ul class="submenu">
+          <?php if (hasPermission('user_view')): ?>
           <li><a href="users.php">All Users</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('user_create')): ?>
           <li><a href="add_user.php">Add New User</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('role_view') || hasPermission('role_manage')): ?>
           <li><a href="roles.php">Roles & Permissions</a></li>
+          <?php endif; ?>
         </ul>
       </li>
+      <?php endif; ?>
 
       <!-- Website Management -->
+      <?php if (hasPermission('settings_view')): ?>
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-globe"></i>
@@ -115,6 +154,7 @@
           <li><a href="social.php?type=edit_social&lp=ac">Social Links</a></li>
         </ul>
       </li>
+      <?php endif; ?>
     </ul>
   </div>
 </div>
