@@ -43,6 +43,9 @@ if (file_exists('check_auth.php')) {
           <li><a href="register.php?type=list_register&lp=ac">All Dockets</a></li>
           <li><a href="trip.php?type=list_trips">All Trips</a></li>
           <?php endif; ?>
+          <?php if (hasPermission('docket_status_update')): ?>
+          <li><a href="delivery_status.php">📦 Update Status</a></li>
+          <?php endif; ?>
         </ul>
       </li>
       <?php endif; ?>

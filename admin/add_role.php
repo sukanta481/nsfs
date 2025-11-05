@@ -409,7 +409,7 @@ textarea.form-control {
 
                   <div class="permissions-grid">
                     <?php foreach ($permissions as $perm): ?>
-                      <div class="permission-item" onclick="togglePermission(<?php echo $perm['permission_id']; ?>)">
+                      <div class="permission-item" onclick="togglePermission(<?php echo $perm['permission_id']; ?>, event)">
                         <input type="checkbox" 
                                name="permissions[]" 
                                value="<?php echo $perm['permission_id']; ?>" 
@@ -446,8 +446,13 @@ textarea.form-control {
   </div>
 
 <script>
-// Toggle permission checkbox
-function togglePermission(permId) {
+// Toggle permission checkbox when clicking on the container (but not the checkbox itself)
+function togglePermission(permId, event) {
+    // Check if the click was on the checkbox or label
+    if (event && (event.target.type === 'checkbox' || event.target.tagName === 'LABEL')) {
+        return; // Let the browser handle it naturally
+    }
+    
     const checkbox = document.getElementById('perm_' + permId);
     checkbox.checked = !checkbox.checked;
     updateCount();
