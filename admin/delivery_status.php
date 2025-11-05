@@ -5,28 +5,17 @@ require 'conn.php';
 
 // Handle status update
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
-    $register_id = intval($_POST['register_id']);
+    $docket_id = intval($_POST['docket_id']);
     $new_status = mysqli_real_escape_string($conn, $_POST['status']);
     $remarks = mysqli_real_escape_string($conn, trim($_POST['remarks']));
     $updated_by = $_SESSION['user_id'] ?? $_SESSION['admin_id'];
     
-    // Update status
-    $update_query = "UPDATE tbl_register SET 
-                     status = '$new_status',
-                     updated_at = NOW()
-                     WHERE register_id = $register_id";
+    // Update status in docket_details
+    $update_query = "UPDATE docket_details SET 
+                     status = '$new_status'
+                     WHERE docket_id = $docket_id";
     
     if (mysqli_query($conn, $update_query)) {
-        // Try to log the status change (if history table exists)
-        $log_query = "INSERT INTO tbl_status_history (register_id, old_status, new_status, remarks, updated_by, updated_at) 
-                      VALUES ($register_id, 
-                             (SELECT status FROM tbl_register WHERE register_id = $register_id), 
-                             '$new_status', 
-                             '$remarks', 
-                             $updated_by, 
-                             NOW())";
-        @mysqli_query($conn, $log_query); // Don't fail if history table doesn't exist
-        
         header("Location: delivery_status.php?success=Status updated successfully for Docket!");
         exit;
     } else {
@@ -43,30 +32,32 @@ $date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
 // Build query
 $where = [];
 if (!empty($search)) {
-    $where[] = "(r.docket_no LIKE '%$search%' OR c.company_title LIKE '%$search%' OR r.consignee_name LIKE '%$search%')";
+    $where[] = "(d.doc_no LIKE '%$search%' OR d.company_name LIKE '%$search%' OR d.client_name LIKE '%$search%')";
 }
 if (!empty($status_filter)) {
-    $where[] = "r.status = '$status_filter'";
+    $where[] = "d.status = '$status_filter'";
 }
 if (!empty($date_from)) {
-    $where[] = "DATE(r.created_at) >= '$date_from'";
+    $where[] = "DATE(d.pickup_datetime) >= '$date_from'";
 }
 if (!empty($date_to)) {
-    $where[] = "DATE(r.created_at) <= '$date_to'";
+    $where[] = "DATE(d.pickup_datetime) <= '$date_to'";
 }
 
 $where_clause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
-// Get dockets
-$query = "SELECT r.*, c.company_title, c.company_address, o.office_name
-          FROM tbl_register r
-          LEFT JOIN tbl_company c ON r.company_id = c.company_id
-          LEFT JOIN tbl_offices o ON r.office_id = o.office_id
+// Get dockets from tbl_docket_details
+$query = "SELECT d.* 
+          FROM docket_details d
           $where_clause
-          ORDER BY r.created_at DESC
+          ORDER BY d.pickup_datetime DESC
           LIMIT 100";
 
 $result = mysqli_query($conn, $query);
+
+if (!$result) {
+    die("Database Error in main query: " . mysqli_error($conn) . "<br>Query: " . $query);
+}
 
 // Get status counts
 $counts_query = "SELECT 
@@ -76,9 +67,14 @@ $counts_query = "SELECT
                  SUM(CASE WHEN status = 'Out for Delivery' THEN 1 ELSE 0 END) as out_for_delivery,
                  SUM(CASE WHEN status = 'Delivered' THEN 1 ELSE 0 END) as delivered,
                  SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as failed
-                 FROM tbl_register r
+                 FROM docket_details d
                  $where_clause";
 $counts_result = mysqli_query($conn, $counts_query);
+
+if (!$counts_result) {
+    die("Database Error in counts query: " . mysqli_error($conn) . "<br>Query: " . $counts_query);
+}
+
 $counts = mysqli_fetch_assoc($counts_result);
 
 require 'top_header.php';
@@ -563,7 +559,7 @@ body {
                 <div class="docket-header">
                   <div class="docket-number">
                     <i class="fas fa-file-alt"></i>
-                    <?php echo htmlspecialchars($row['docket_no']); ?>
+                    <?php echo htmlspecialchars($row['doc_no'] ?? 'N/A'); ?>
                   </div>
                   <span class="status-badge <?php echo strtolower(str_replace(' ', '-', $row['status'] ?? 'pending')); ?>">
                     <?php echo htmlspecialchars($row['status'] ?? 'Pending'); ?>
@@ -574,9 +570,9 @@ body {
                   <div class="detail-item">
                     <div class="detail-label">
                       <i class="fas fa-building detail-icon"></i>
-                      Client Name
+                      Consignor Name
                     </div>
-                    <div class="detail-value"><?php echo htmlspecialchars($row['company_title'] ?? 'N/A'); ?></div>
+                    <div class="detail-value"><?php echo htmlspecialchars($row['company_name'] ?? 'N/A'); ?></div>
                   </div>
                   
                   <div class="detail-item">
@@ -584,7 +580,7 @@ body {
                       <i class="fas fa-user detail-icon"></i>
                       Consignee
                     </div>
-                    <div class="detail-value"><?php echo htmlspecialchars($row['consignee_name'] ?? 'N/A'); ?></div>
+                    <div class="detail-value"><?php echo htmlspecialchars($row['client_name'] ?? 'N/A'); ?></div>
                   </div>
                   
                   <div class="detail-item">
@@ -601,12 +597,12 @@ body {
                       Date
                     </div>
                     <div class="detail-value">
-                      <?php echo date('d M Y', strtotime($row['created_at'])); ?>
+                      <?php echo !empty($row['pickup_datetime']) ? date('d M Y', strtotime($row['pickup_datetime'])) : 'N/A'; ?>
                     </div>
                   </div>
                 </div>
                 
-                <button class="update-button" onclick="openStatusModal(<?php echo $row['register_id']; ?>, '<?php echo htmlspecialchars($row['docket_no']); ?>', '<?php echo htmlspecialchars($row['status'] ?? 'Pending'); ?>')">
+                <button class="update-button" onclick="openStatusModal(<?php echo $row['docket_id']; ?>, '<?php echo htmlspecialchars($row['doc_no'] ?? 'N/A'); ?>', '<?php echo htmlspecialchars($row['status'] ?? 'Pending'); ?>')">
                   <i class="fas fa-edit"></i>
                   Update Status
                 </button>
@@ -640,7 +636,7 @@ body {
     </p>
     
     <form method="POST" action="" id="statusForm">
-      <input type="hidden" name="register_id" id="modalRegisterId">
+      <input type="hidden" name="docket_id" id="modalDocketId">
       
       <div style="margin-bottom: 25px;">
         <label style="display: block; font-weight: 700; color: #34495e; margin-bottom: 12px; font-size: 16px;">
@@ -676,8 +672,8 @@ body {
 </div>
 
 <script>
-function openStatusModal(registerId, docketNo, currentStatus) {
-    document.getElementById('modalRegisterId').value = registerId;
+function openStatusModal(docketId, docketNo, currentStatus) {
+    document.getElementById('modalDocketId').value = docketId;
     document.getElementById('modalDocketNo').textContent = docketNo;
     document.getElementById('statusModal').style.display = 'flex';
 }

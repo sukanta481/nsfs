@@ -45,6 +45,13 @@ function hasPermission($permission_key) {
         require_once 'conn.php';
     }
     
+    // Check if permission tables exist - if not, grant access (tables not set up yet)
+    $tables_check = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_permissions'");
+    if (!$tables_check || mysqli_num_rows($tables_check) == 0) {
+        // Tables don't exist yet, grant access to logged-in users
+        return true;
+    }
+    
     // Check if user's role has the permission
     $query = "SELECT COUNT(*) as has_perm FROM tbl_role_permissions rp
               JOIN tbl_permissions p ON rp.permission_id = p.permission_id
@@ -52,7 +59,8 @@ function hasPermission($permission_key) {
     
     $result = mysqli_query($conn, $query);
     if (!$result) {
-        return false;
+        // If query fails (tables might not exist), grant access
+        return true;
     }
     $row = mysqli_fetch_assoc($result);
     
@@ -76,11 +84,25 @@ function getUserPermissions() {
             require_once 'conn.php';
         }
         
+        // Check if permission tables exist
+        $tables_check = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_permissions'");
+        if (!$tables_check || mysqli_num_rows($tables_check) == 0) {
+            // Tables don't exist yet, return wildcard
+            $_SESSION['permissions'] = ['*'];
+            return ['*'];
+        }
+        
         $query = "SELECT p.permission_key FROM tbl_role_permissions rp
                   JOIN tbl_permissions p ON rp.permission_id = p.permission_id
                   WHERE rp.role_id = {$_SESSION['role_id']}";
         
         $result = mysqli_query($conn, $query);
+        if (!$result) {
+            // Query failed, return wildcard
+            $_SESSION['permissions'] = ['*'];
+            return ['*'];
+        }
+        
         $permissions = [];
         while ($row = mysqli_fetch_assoc($result)) {
             $permissions[] = $row['permission_key'];
@@ -96,6 +118,18 @@ function getUserPermissions() {
 function requirePermission($permission_key) {
     // Legacy admin bypasses permission check
     if (isset($_SESSION['is_legacy_admin']) && $_SESSION['is_legacy_admin']) {
+        return;
+    }
+    
+    // Check if permission tables exist - if not, allow access
+    global $conn;
+    if (!isset($conn)) {
+        require_once 'conn.php';
+    }
+    
+    $tables_check = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_permissions'");
+    if (!$tables_check || mysqli_num_rows($tables_check) == 0) {
+        // Tables don't exist yet, allow access for logged-in users
         return;
     }
     

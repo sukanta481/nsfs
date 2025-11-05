@@ -1,7 +1,22 @@
 <?php
+// Start session first
+session_name('pro');
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Load the authentication and permission functions
+require __DIR__ . '/../check_auth.php';
+
+// Check authentication
+if (!isset($_SESSION['admin_id']) && !isset($_SESSION['user_id'])) {
+    header('Location: ../login_new.php');
+    exit();
+}
+
 require __DIR__ . '/../conn.php';
 
-// Session is already started in top_header.php
+// Session is already started
 // Check for session messages
 $message = '';
 $messageType = '';
@@ -270,14 +285,35 @@ if (isset($_GET['deleted'])) {
     $message = "Backup file deleted successfully!";
     $messageType = 'success';
 }
-
-require 'top_header.php';
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Database Sync | NSFS Admin</title>
+  
+  <!-- Bootstrap -->
+  <link href="../css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+  <!-- Custom Theme Style -->
+  <link href="../css/custom.css" rel="stylesheet">
+  
+  <style>
+  body {
+    background: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  </style>
+</head>
+
 <body class="nav-md">
 <div class="container body">
 <div class="main_container">
-<?php require 'left_panel.php'; ?>
-<?php require 'header_banner.php'; ?>
+<?php require __DIR__ . '/../left_panel.php'; ?>
+<?php require __DIR__ . '/../header_banner.php'; ?>
 
 <div class="right_col" role="main">
     <div class="sync-container">
@@ -415,7 +451,7 @@ require 'top_header.php';
     </div>
 </div>
 
-<?php require 'footer.php'; ?>
+<?php require __DIR__ . '/../footer.php'; ?>
 </div>
 </div>
 
