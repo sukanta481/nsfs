@@ -26,16 +26,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
         $query = "SELECT u.*, r.role_name 
                   FROM tbl_users u
                   LEFT JOIN tbl_roles r ON u.role_id = r.role_id
-                  WHERE u.username = '$username' AND u.active_status = 1
+                  WHERE u.username = '$username'
                   LIMIT 1";
         
         $result = mysqli_query($conn, $query);
         
-        if (mysqli_num_rows($result) == 1) {
+        if (!$result) {
+            $error = "Database error: " . mysqli_error($conn);
+        } elseif (mysqli_num_rows($result) == 0) {
+            $error = "User not found. Please run <a href='create_super_admin.php' style='color:#fff;text-decoration:underline;'>create_super_admin.php</a> first to create your account.";
+        } else {
             $user = mysqli_fetch_assoc($result);
             
+            // Check if user is active
+            if ($user['active_status'] != 1) {
+                $error = "Your account is inactive. Please contact the administrator.";
+            }
             // Verify password
-            if (password_verify($password, $user['password'])) {
+            elseif (password_verify($password, $user['password'])) {
                 // Password is correct - create session
                 $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['username'] = $user['username'];
@@ -56,10 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
                 header('Location: index.php');
                 exit;
             } else {
-                $error = "Invalid username or password";
+                $error = "Invalid password. Please check your password and try again.";
             }
-        } else {
-            $error = "Invalid username or password";
         }
     }
 }
@@ -162,13 +168,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
             transform: translateY(-50%);
             color: #667eea;
             cursor: pointer;
-            transition: color 0.3s;
-            z-index: 10;
-            font-size: 18px;
+            transition: all 0.3s;
+            z-index: 100;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 5px;
         }
         
         .toggle-password:hover {
             color: #764ba2;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .toggle-password i {
+            position: static !important;
+            transform: none !important;
         }
         
         .form-control {
@@ -295,7 +313,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
                         <i class="fas fa-lock"></i>
                         <input type="password" name="password" id="password" class="form-control with-toggle" 
                                placeholder="Enter your password" required>
-                        <i class="fas fa-eye toggle-password" id="togglePassword" title="Show password"></i>
+                        <span class="toggle-password" id="togglePassword" title="Show password">
+                            <i class="fas fa-eye"></i>
+                        </span>
                     </div>
                 </div>
                 
@@ -321,8 +341,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
             passwordInput.setAttribute('type', type);
             
             // Toggle the icon
-            this.classList.toggle('fa-eye');
-            this.classList.toggle('fa-eye-slash');
+            const icon = this.querySelector('i');
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
             
             // Update title
             this.setAttribute('title', type === 'password' ? 'Show password' : 'Hide password');
