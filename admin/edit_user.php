@@ -1,62 +1,101 @@
 <?php
 require 'check_auth.php';
-requirePermission('user_create');
+requirePermission('user_edit');
 require 'conn.php';
 
 $error = '';
 $success = '';
+$user_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+if ($user_id == 0) {
+    header("Location: users.php?error=Invalid user ID");
+    exit;
+}
+
+// Fetch user details
+$user_query = "SELECT u.*, r.role_name 
+               FROM tbl_users u 
+               LEFT JOIN tbl_roles r ON u.role_id = r.role_id 
+               WHERE u.user_id = $user_id";
+$user_result = mysqli_query($conn, $user_query);
+
+if (mysqli_num_rows($user_result) == 0) {
+    header("Location: users.php?error=User not found");
+    exit;
+}
+
+$user = mysqli_fetch_assoc($user_result);
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
     $username = mysqli_real_escape_string($conn, trim($_POST['username']));
     $email = mysqli_real_escape_string($conn, trim($_POST['email']));
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
     $full_name = mysqli_real_escape_string($conn, trim($_POST['full_name']));
     $role_id = intval($_POST['role_id']);
     $staff_id = !empty($_POST['staff_id']) ? intval($_POST['staff_id']) : NULL;
     $active_status = isset($_POST['active_status']) ? 1 : 0;
+    $change_password = !empty($_POST['new_password']);
     
     // Validation
-    if (empty($username) || empty($email) || empty($password) || empty($full_name) || empty($role_id)) {
+    if (empty($username) || empty($email) || empty($full_name) || empty($role_id)) {
         $error = "Please fill in all required fields";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Please enter a valid email address";
-    } elseif (strlen($password) < 6) {
-        $error = "Password must be at least 6 characters long";
-    } elseif ($password !== $confirm_password) {
-        $error = "Passwords do not match";
     } else {
-        // Check if username already exists
-        $check_username = mysqli_query($conn, "SELECT user_id FROM tbl_users WHERE username='$username'");
+        // Check if username exists for other users
+        $check_username = mysqli_query($conn, "SELECT user_id FROM tbl_users WHERE username='$username' AND user_id != $user_id");
         if (mysqli_num_rows($check_username) > 0) {
             $error = "Username already exists. Please choose a different username.";
         } else {
-            // Check if email already exists
-            $check_email = mysqli_query($conn, "SELECT user_id FROM tbl_users WHERE email='$email'");
+            // Check if email exists for other users
+            $check_email = mysqli_query($conn, "SELECT user_id FROM tbl_users WHERE email='$email' AND user_id != $user_id");
             if (mysqli_num_rows($check_email) > 0) {
                 $error = "Email already exists. Please use a different email address.";
             } else {
-                // Hash password
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                
-                // Insert user
+                // Build update query
                 $staff_id_value = $staff_id ? $staff_id : 'NULL';
-                $insert_query = "INSERT INTO tbl_users 
-                                (username, email, password, full_name, role_id, staff_id, active_status, created_at) 
-                                VALUES 
-                                ('$username', '$email', '$hashed_password', '$full_name', $role_id, $staff_id_value, $active_status, NOW())";
+                $update_query = "UPDATE tbl_users SET 
+                                username = '$username',
+                                email = '$email',
+                                full_name = '$full_name',
+                                role_id = $role_id,
+                                staff_id = $staff_id_value,
+                                active_status = $active_status,
+                                updated_at = NOW()";
                 
-                if (mysqli_query($conn, $insert_query)) {
-                    $success = "User created successfully!";
-                    // Redirect to users list page after success
-                    header("Location: users.php?success=User created successfully");
-                    exit;
-                } else {
-                    $error = "Error creating user: " . mysqli_error($conn);
+                // Add password update if provided
+                if ($change_password) {
+                    $new_password = $_POST['new_password'];
+                    $confirm_password = $_POST['confirm_password'];
+                    
+                    if (strlen($new_password) < 6) {
+                        $error = "Password must be at least 6 characters long";
+                    } elseif ($new_password !== $confirm_password) {
+                        $error = "Passwords do not match";
+                    } else {
+                        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                        $update_query .= ", password = '$hashed_password'";
+                    }
+                }
+                
+                if (empty($error)) {
+                    $update_query .= " WHERE user_id = $user_id";
+                    
+                    if (mysqli_query($conn, $update_query)) {
+                        header("Location: users.php?success=User updated successfully");
+                        exit;
+                    } else {
+                        $error = "Error updating user: " . mysqli_error($conn);
+                    }
                 }
             }
         }
+    }
+    
+    // Refresh user data if there was an error
+    if (!empty($error)) {
+        $user_result = mysqli_query($conn, $user_query);
+        $user = mysqli_fetch_assoc($user_result);
     }
 }
 
@@ -273,13 +312,27 @@ require 'top_header.php';
 .strength-strong { background: #28a745; width: 100%; }
 
 .info-box {
-    background: #e7f3ff;
-    border-left: 4px solid #2196F3;
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
     padding: 15px;
     border-radius: 5px;
     margin-bottom: 20px;
     font-size: 14px;
-    color: #0c5460;
+    color: #856404;
+}
+
+.password-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 2px dashed #dee2e6;
+}
+
+.password-section h3 {
+    margin: 0 0 15px 0;
+    color: #495057;
+    font-size: 16px;
 }
 </style>
 
@@ -293,8 +346,8 @@ require 'top_header.php';
         <div class="user-form-container">
           
           <div class="form-header">
-            <h2><i class="fas fa-user-plus"></i> Add New User</h2>
-            <p>Create a new user account with role and permissions</p>
+            <h2><i class="fas fa-user-edit"></i> Edit User</h2>
+            <p>Update user account details, role, and permissions</p>
           </div>
 
           <?php if (!empty($error)): ?>
@@ -311,11 +364,6 @@ require 'top_header.php';
             </div>
           <?php endif; ?>
 
-          <div class="info-box">
-            <i class="fas fa-info-circle"></i>
-            <strong>Note:</strong> Password must be at least 6 characters long. User will be able to change their password after first login.
-          </div>
-
           <form method="POST" action="" id="userForm">
             
             <div class="form-row">
@@ -327,7 +375,7 @@ require 'top_header.php';
                   <i class="fas fa-user"></i>
                   <input type="text" name="username" id="username" class="form-control with-icon" 
                          placeholder="Enter username" required autocomplete="off"
-                         value="<?php echo (!empty($error) && isset($_POST['username'])) ? htmlspecialchars($_POST['username']) : ''; ?>">
+                         value="<?php echo htmlspecialchars($user['username']); ?>">
                 </div>
               </div>
 
@@ -339,7 +387,7 @@ require 'top_header.php';
                   <i class="fas fa-envelope"></i>
                   <input type="email" name="email" id="email" class="form-control with-icon" 
                          placeholder="Enter email address" required autocomplete="off"
-                         value="<?php echo (!empty($error) && isset($_POST['email'])) ? htmlspecialchars($_POST['email']) : ''; ?>">
+                         value="<?php echo htmlspecialchars($user['email']); ?>">
                 </div>
               </div>
             </div>
@@ -352,42 +400,50 @@ require 'top_header.php';
                 <i class="fas fa-id-card"></i>
                 <input type="text" name="full_name" id="full_name" class="form-control with-icon" 
                        placeholder="Enter full name" required autocomplete="off"
-                       value="<?php echo (!empty($error) && isset($_POST['full_name'])) ? htmlspecialchars($_POST['full_name']) : ''; ?>">
+                       value="<?php echo htmlspecialchars($user['full_name']); ?>">
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label for="password">
-                  <i class="fas fa-lock"></i> Password <span class="required">*</span>
-                </label>
-                <div class="input-wrapper">
-                  <i class="fas fa-lock"></i>
-                  <input type="password" name="password" id="password" class="form-control with-icon" 
-                         placeholder="Enter password" required minlength="6" autocomplete="new-password">
-                  <span class="toggle-password" onclick="togglePassword('password', this)">
-                    <i class="fas fa-eye"></i>
-                  </span>
-                </div>
-                <div class="password-strength">
-                  <div class="strength-bar">
-                    <div class="strength-bar-fill" id="strengthBar"></div>
-                  </div>
-                  <span id="strengthText"></span>
-                </div>
+            <div class="password-section">
+              <h3><i class="fas fa-key"></i> Change Password (Optional)</h3>
+              <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                Leave password fields empty if you don't want to change the password.
               </div>
 
-              <div class="form-group">
-                <label for="confirm_password">
-                  <i class="fas fa-lock"></i> Confirm Password <span class="required">*</span>
-                </label>
-                <div class="input-wrapper">
-                  <i class="fas fa-lock"></i>
-                  <input type="password" name="confirm_password" id="confirm_password" class="form-control with-icon" 
-                         placeholder="Re-enter password" required minlength="6" autocomplete="new-password">
-                  <span class="toggle-password" onclick="togglePassword('confirm_password', this)">
-                    <i class="fas fa-eye"></i>
-                  </span>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="new_password">
+                    <i class="fas fa-lock"></i> New Password
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="new_password" id="new_password" class="form-control with-icon" 
+                           placeholder="Enter new password (optional)" minlength="6" autocomplete="new-password">
+                    <span class="toggle-password" onclick="togglePassword('new_password', this)">
+                      <i class="fas fa-eye"></i>
+                    </span>
+                  </div>
+                  <div class="password-strength">
+                    <div class="strength-bar">
+                      <div class="strength-bar-fill" id="strengthBar"></div>
+                    </div>
+                    <span id="strengthText"></span>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="confirm_password">
+                    <i class="fas fa-lock"></i> Confirm New Password
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="confirm_password" id="confirm_password" class="form-control with-icon" 
+                           placeholder="Re-enter new password" minlength="6" autocomplete="new-password">
+                    <span class="toggle-password" onclick="togglePassword('confirm_password', this)">
+                      <i class="fas fa-eye"></i>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -403,7 +459,7 @@ require 'top_header.php';
                     <option value="">-- Select Role --</option>
                     <?php while ($role = mysqli_fetch_assoc($roles_result)): ?>
                       <option value="<?php echo $role['role_id']; ?>" 
-                              <?php echo (!empty($error) && isset($_POST['role_id']) && $_POST['role_id'] == $role['role_id']) ? 'selected' : ''; ?>>
+                              <?php echo ($user['role_id'] == $role['role_id']) ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($role['role_name']); ?>
                       </option>
                     <?php endwhile; ?>
@@ -424,7 +480,7 @@ require 'top_header.php';
                       while ($staff = mysqli_fetch_assoc($staff_result)): 
                     ?>
                       <option value="<?php echo $staff['staff_id']; ?>" 
-                              <?php echo (!empty($error) && isset($_POST['staff_id']) && $_POST['staff_id'] == $staff['staff_id']) ? 'selected' : ''; ?>>
+                              <?php echo ($user['staff_id'] == $staff['staff_id']) ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($staff['staff_name']); ?>
                       </option>
                     <?php 
@@ -439,7 +495,7 @@ require 'top_header.php';
             <div class="form-group">
               <div class="checkbox-group">
                 <input type="checkbox" name="active_status" id="active_status" value="1" 
-                       <?php echo (empty($error) || (isset($_POST['active_status']) && $_POST['active_status'])) ? 'checked' : ''; ?>>
+                       <?php echo ($user['active_status'] == 1) ? 'checked' : ''; ?>>
                 <label for="active_status">
                   <i class="fas fa-check-circle"></i> Active (User can login)
                 </label>
@@ -448,7 +504,7 @@ require 'top_header.php';
 
             <div class="btn-group">
               <button type="submit" name="submit" class="btn btn-primary">
-                <i class="fas fa-save"></i> Create User
+                <i class="fas fa-save"></i> Update User
               </button>
               <a href="users.php" class="btn btn-secondary">
                 <i class="fas fa-times"></i> Cancel
@@ -482,10 +538,16 @@ function togglePassword(fieldId, icon) {
 }
 
 // Password strength checker
-document.getElementById('password').addEventListener('input', function() {
+document.getElementById('new_password').addEventListener('input', function() {
     const password = this.value;
     const strengthBar = document.getElementById('strengthBar');
     const strengthText = document.getElementById('strengthText');
+    
+    if (password.length === 0) {
+        strengthBar.className = 'strength-bar-fill';
+        strengthText.textContent = '';
+        return;
+    }
     
     let strength = 0;
     
@@ -514,19 +576,22 @@ document.getElementById('password').addEventListener('input', function() {
 
 // Form validation
 document.getElementById('userForm').addEventListener('submit', function(e) {
-    const password = document.getElementById('password').value;
+    const newPassword = document.getElementById('new_password').value;
     const confirmPassword = document.getElementById('confirm_password').value;
     
-    if (password !== confirmPassword) {
-        e.preventDefault();
-        alert('Passwords do not match!');
-        return false;
-    }
-    
-    if (password.length < 6) {
-        e.preventDefault();
-        alert('Password must be at least 6 characters long!');
-        return false;
+    // Only validate if user is trying to change password
+    if (newPassword || confirmPassword) {
+        if (newPassword !== confirmPassword) {
+            e.preventDefault();
+            alert('Passwords do not match!');
+            return false;
+        }
+        
+        if (newPassword.length < 6) {
+            e.preventDefault();
+            alert('Password must be at least 6 characters long!');
+            return false;
+        }
     }
 });
 </script>
