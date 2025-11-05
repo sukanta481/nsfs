@@ -52,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $staff_email = mysqli_real_escape_string($conn, $_POST['staff_email']);
             $staff_phone = mysqli_real_escape_string($conn, $_POST['staff_phone']);
             $staff_role = mysqli_real_escape_string($conn, $_POST['staff_role']);
+            $driving_license = ($staff_role === 'Driver') ? strtoupper(mysqli_real_escape_string($conn, $_POST['driving_license'])) : 'N/A';
             $branch_office = mysqli_real_escape_string($conn, $_POST['branch_office']);
             $date_of_joining = mysqli_real_escape_string($conn, $_POST['date_of_joining']);
             $address = mysqli_real_escape_string($conn, $_POST['address']);
@@ -60,25 +61,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $salary = mysqli_real_escape_string($conn, $_POST['salary']);
             $active_status = isset($_POST['active_status']) ? 1 : 0;
             
-            // Generate unique staff ID
-            $staff_unique_id = generateStaffId($conn, $office_id);
-            
-            $query = "INSERT INTO tbl_staff (
-                        staff_unique_id, staff_name, staff_email, staff_phone, staff_role, 
-                        office_id, branch_office, date_of_joining, address, 
-                        emergency_contact, emergency_contact_name, salary, active_status
-                      ) VALUES (
-                        '$staff_unique_id', '$staff_name', '$staff_email', '$staff_phone', '$staff_role',
-                        $office_id, '$branch_office', " . ($date_of_joining ? "'$date_of_joining'" : "NULL") . ", '$address',
-                        '$emergency_contact', '$emergency_contact_name', " . ($salary ? "'$salary'" : "NULL") . ", $active_status
-                      )";
-            
-            if (mysqli_query($conn, $query)) {
-                $message = "Staff added successfully! Staff ID: <strong>$staff_unique_id</strong>";
-                $messageType = 'success';
-            } else {
-                $message = "Error adding staff: " . mysqli_error($conn);
+            // Validate driving license for drivers
+            if ($staff_role === 'Driver' && empty($driving_license)) {
+                $message = "Driving license is required for Driver role!";
                 $messageType = 'error';
+            } else {
+                // Generate unique staff ID
+                $staff_unique_id = generateStaffId($conn, $office_id);
+                
+                $query = "INSERT INTO tbl_staff (
+                            staff_unique_id, staff_name, staff_email, staff_phone, staff_role, driving_license,
+                            office_id, branch_office, date_of_joining, address, 
+                            emergency_contact, emergency_contact_name, salary, active_status
+                          ) VALUES (
+                            '$staff_unique_id', '$staff_name', '$staff_email', '$staff_phone', '$staff_role', '$driving_license',
+                            $office_id, '$branch_office', " . ($date_of_joining ? "'$date_of_joining'" : "NULL") . ", '$address',
+                            '$emergency_contact', '$emergency_contact_name', " . ($salary ? "'$salary'" : "NULL") . ", $active_status
+                          )";
+                
+                if (mysqli_query($conn, $query)) {
+                    $message = "Staff added successfully! Staff ID: <strong>$staff_unique_id</strong>";
+                    $messageType = 'success';
+                } else {
+                    $message = "Error adding staff: " . mysqli_error($conn);
+                    $messageType = 'error';
+                }
             }
         }
         
@@ -88,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $staff_email = mysqli_real_escape_string($conn, $_POST['staff_email']);
             $staff_phone = mysqli_real_escape_string($conn, $_POST['staff_phone']);
             $staff_role = mysqli_real_escape_string($conn, $_POST['staff_role']);
+            $driving_license = ($staff_role === 'Driver') ? strtoupper(mysqli_real_escape_string($conn, $_POST['driving_license'])) : 'N/A';
             $office_id = intval($_POST['office_id']);
             $branch_office = mysqli_real_escape_string($conn, $_POST['branch_office']);
             $date_of_joining = mysqli_real_escape_string($conn, $_POST['date_of_joining']);
@@ -97,27 +105,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $salary = mysqli_real_escape_string($conn, $_POST['salary']);
             $active_status = isset($_POST['active_status']) ? 1 : 0;
             
-            $query = "UPDATE tbl_staff SET 
-                      staff_name='$staff_name', 
-                      staff_email='$staff_email', 
-                      staff_phone='$staff_phone', 
-                      staff_role='$staff_role',
-                      office_id=$office_id,
-                      branch_office='$branch_office',
-                      date_of_joining=" . ($date_of_joining ? "'$date_of_joining'" : "NULL") . ",
-                      address='$address',
-                      emergency_contact='$emergency_contact',
-                      emergency_contact_name='$emergency_contact_name',
-                      salary=" . ($salary ? "'$salary'" : "NULL") . ",
-                      active_status=$active_status 
-                      WHERE staff_id=$staff_id";
-            
-            if (mysqli_query($conn, $query)) {
-                $message = "Staff updated successfully!";
-                $messageType = 'success';
-            } else {
-                $message = "Error updating staff: " . mysqli_error($conn);
+            // Validate driving license for drivers
+            if ($staff_role === 'Driver' && empty($driving_license)) {
+                $message = "Driving license is required for Driver role!";
                 $messageType = 'error';
+            } else {
+                $query = "UPDATE tbl_staff SET 
+                          staff_name='$staff_name', 
+                          staff_email='$staff_email', 
+                          staff_phone='$staff_phone', 
+                          staff_role='$staff_role',
+                          driving_license='$driving_license',
+                          office_id=$office_id,
+                          branch_office='$branch_office',
+                          date_of_joining=" . ($date_of_joining ? "'$date_of_joining'" : "NULL") . ",
+                          address='$address',
+                          emergency_contact='$emergency_contact',
+                          emergency_contact_name='$emergency_contact_name',
+                          salary=" . ($salary ? "'$salary'" : "NULL") . ",
+                          active_status=$active_status 
+                          WHERE staff_id=$staff_id";
+                
+                if (mysqli_query($conn, $query)) {
+                    $message = "Staff updated successfully!";
+                    $messageType = 'success';
+                } else {
+                    $message = "Error updating staff: " . mysqli_error($conn);
+                    $messageType = 'error';
+                }
             }
         }
         
@@ -220,12 +235,17 @@ $staff_roles = [
                         
                         <div class="form-group">
                             <label>Staff Role <span class="required">*</span></label>
-                            <select name="staff_role" id="staff_role" class="form-control" required>
+                            <select name="staff_role" id="staff_role" class="form-control" required onchange="toggleLicenseField()">
                                 <option value="">-- Select Role --</option>
                                 <?php foreach ($staff_roles as $role): ?>
                                     <option value="<?= $role ?>"><?= $role ?></option>
                                 <?php endforeach; ?>
                             </select>
+                        </div>
+                        
+                        <div class="form-group" id="license_field" style="display:none;">
+                            <label>Driving License <span class="required">*</span></label>
+                            <input type="text" name="driving_license" id="driving_license" class="form-control" placeholder="Enter license number">
                         </div>
                     </div>
 
@@ -312,7 +332,6 @@ $staff_roles = [
                                 <th>Role</th>
                                 <th>Phone</th>
                                 <th>Office</th>
-                                <th>Salary</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -326,7 +345,6 @@ $staff_roles = [
                                     <td><span class="role-badge"><?= htmlspecialchars($staff['staff_role']) ?></span></td>
                                     <td><?= htmlspecialchars($staff['staff_phone']) ?></td>
                                     <td><?= htmlspecialchars($staff['branch_office'] ?: 'N/A') ?></td>
-                                    <td><?= $staff['salary'] ? '₹' . number_format($staff['salary'], 2) : 'N/A' ?></td>
                                     <td>
                                         <?php if ($staff['active_status'] == 1): ?>
                                             <span class="badge badge-success">Active</span>
@@ -336,11 +354,14 @@ $staff_roles = [
                                     </td>
                                     <td>
                                         <div class="actions">
-                                            <button class="btn-action btn-edit" onclick='editStaff(<?= json_encode($staff, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
-                                                <i class="fa fa-edit"></i> Edit
+                                            <button class="btn-action btn-view" onclick='viewStaff(<?= json_encode($staff, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' title="View Details">
+                                                <i class="fa fa-eye"></i>
                                             </button>
-                                            <button class="btn-action btn-delete" onclick="deleteStaff(<?= $staff['staff_id'] ?>, '<?= htmlspecialchars($staff['staff_name'], ENT_QUOTES) ?>')">
-                                                <i class="fa fa-trash"></i> Delete
+                                            <button class="btn-action btn-edit" onclick='editStaff(<?= json_encode($staff, JSON_HEX_APOS | JSON_HEX_QUOT) ?>)' title="Edit">
+                                                <i class="fa fa-edit"></i>
+                                            </button>
+                                            <button class="btn-action btn-delete" onclick="deleteStaff(<?= $staff['staff_id'] ?>, '<?= htmlspecialchars($staff['staff_name'], ENT_QUOTES) ?>')" title="Delete">
+                                                <i class="fa fa-trash"></i>
                                             </button>
                                         </div>
                                     </td>
@@ -348,13 +369,99 @@ $staff_roles = [
                                 <?php endwhile; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="8" class="text-center">No staff members found. Add your first staff member above!</td>
+                                    <td colspan="7" class="text-center">No staff members found. Add your first staff member above!</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Staff Details Modal -->
+<div id="viewStaffModal" class="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2><i class="fa fa-user-circle"></i> Staff Details</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <h3><i class="fa fa-info-circle"></i> Basic Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Staff ID:</span>
+                        <span class="detail-value" id="view_staff_id"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Full Name:</span>
+                        <span class="detail-value" id="view_name"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value" id="view_email"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Phone:</span>
+                        <span class="detail-value" id="view_phone"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Role:</span>
+                        <span class="detail-value" id="view_role"></span>
+                    </div>
+                    <div class="detail-row" id="view_license_row" style="display:none;">
+                        <span class="detail-label">Driving License:</span>
+                        <span class="detail-value" id="view_license"></span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3><i class="fa fa-building"></i> Office & Employment</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Branch Office:</span>
+                        <span class="detail-value" id="view_office"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Date of Joining:</span>
+                        <span class="detail-value" id="view_joining_date"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Monthly Salary:</span>
+                        <span class="detail-value" id="view_salary"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value" id="view_status"></span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3><i class="fa fa-map-marker"></i> Contact Information</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Address:</span>
+                        <span class="detail-value" id="view_address"></span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3><i class="fa fa-phone"></i> Emergency Contact</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">Contact Name:</span>
+                        <span class="detail-value" id="view_emergency_name"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Contact Number:</span>
+                        <span class="detail-value" id="view_emergency_phone"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">
+                <i class="fa fa-times"></i> Close
+            </button>
         </div>
     </div>
 </div>
@@ -682,7 +789,7 @@ textarea.form-control {
 }
 
 .btn-action {
-    padding: 8px 16px;
+    padding: 8px 12px;
     border-radius: 6px;
     border: none;
     cursor: pointer;
@@ -692,6 +799,16 @@ textarea.form-control {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+}
+
+.btn-view {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: #fff;
+}
+
+.btn-view:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(79,172,254,0.4);
 }
 
 .btn-edit {
@@ -718,6 +835,149 @@ textarea.form-control {
     text-align: center;
 }
 
+/* Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    padding: 25px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-close {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    background: rgba(255,255,255,0.3);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 30px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 25px;
+}
+
+.detail-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px solid #e0e6ed;
+}
+
+.detail-section h3 {
+    color: #667eea;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e6ed;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #e0e6ed;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #495057;
+    flex: 0 0 40%;
+}
+
+.detail-value {
+    color: #2c3e50;
+    font-weight: 500;
+    flex: 1;
+    text-align: right;
+}
+
+.modal-footer {
+    padding: 20px 30px;
+    background: #f8f9fa;
+    border-top: 2px solid #e0e6ed;
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    border-radius: 0 0 16px 16px;
+}
+
 @media (max-width: 768px) {
     .staff-crud-container {
         padding: 0 15px 40px 15px;
@@ -733,6 +993,15 @@ textarea.form-control {
     
     .actions {
         flex-direction: column;
+    }
+    
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        width: 95%;
+        max-height: 95vh;
     }
 }
 </style>
@@ -760,6 +1029,62 @@ function updateBranchName() {
     }
 }
 
+// Toggle driving license field based on role
+function toggleLicenseField() {
+    var roleSelect = document.getElementById('staff_role');
+    var licenseField = document.getElementById('license_field');
+    var licenseInput = document.getElementById('driving_license');
+    
+    if (roleSelect.value === 'Driver') {
+        licenseField.style.display = 'flex';
+        licenseInput.required = true;
+    } else {
+        licenseField.style.display = 'none';
+        licenseInput.required = false;
+        licenseInput.value = '';
+    }
+}
+
+// View staff details
+function viewStaff(staff) {
+    console.log('View staff:', staff);
+    
+    // Populate modal with staff details
+    document.getElementById('view_staff_id').textContent = staff.staff_unique_id || 'N/A';
+    document.getElementById('view_name').textContent = staff.staff_name || 'N/A';
+    document.getElementById('view_email').textContent = staff.staff_email || 'N/A';
+    document.getElementById('view_phone').textContent = staff.staff_phone || 'N/A';
+    document.getElementById('view_role').innerHTML = '<span class="role-badge">' + (staff.staff_role || 'N/A') + '</span>';
+    
+    // Show/hide license field based on role
+    if (staff.staff_role === 'Driver' && staff.driving_license && staff.driving_license !== 'N/A') {
+        document.getElementById('view_license_row').style.display = 'flex';
+        document.getElementById('view_license').textContent = staff.driving_license;
+    } else {
+        document.getElementById('view_license_row').style.display = 'none';
+    }
+    
+    document.getElementById('view_office').textContent = staff.branch_office || 'N/A';
+    document.getElementById('view_joining_date').textContent = staff.date_of_joining || 'N/A';
+    document.getElementById('view_salary').textContent = staff.salary ? '₹' + parseFloat(staff.salary).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : 'N/A';
+    document.getElementById('view_status').innerHTML = staff.active_status == 1 ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-secondary">Inactive</span>';
+    document.getElementById('view_address').textContent = staff.address || 'N/A';
+    document.getElementById('view_emergency_name').textContent = staff.emergency_contact_name || 'N/A';
+    document.getElementById('view_emergency_phone').textContent = staff.emergency_contact || 'N/A';
+    
+    // Show modal
+    document.getElementById('viewStaffModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// Close modal
+function closeModal(event) {
+    if (!event || event.target.classList.contains('modal-overlay') || event.target.classList.contains('modal-close') || event.target.closest('.modal-close')) {
+        document.getElementById('viewStaffModal').classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+}
+
 // Edit staff function
 function editStaff(staff) {
     console.log('Edit function called with:', staff);
@@ -770,6 +1095,13 @@ function editStaff(staff) {
     document.getElementById('staff_email').value = staff.staff_email || '';
     document.getElementById('staff_phone').value = staff.staff_phone || '';
     document.getElementById('staff_role').value = staff.staff_role || '';
+    
+    // Toggle license field and set value
+    toggleLicenseField();
+    if (staff.staff_role === 'Driver') {
+        document.getElementById('driving_license').value = staff.driving_license || '';
+    }
+    
     document.getElementById('office_id').value = staff.office_id || '';
     document.getElementById('branch_office').value = staff.branch_office || '';
     document.getElementById('date_of_joining').value = staff.date_of_joining || '';
@@ -805,7 +1137,16 @@ document.getElementById('cancelBtn').addEventListener('click', function() {
     document.getElementById('staff_id').value = '';
     document.getElementById('submitBtnText').textContent = 'Add Staff Member';
     document.getElementById('active_status').checked = true;
+    document.getElementById('license_field').style.display = 'none';
+    document.getElementById('driving_license').required = false;
     this.style.display = 'none';
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeModal(event);
+    }
 });
 </script>
 
