@@ -3,7 +3,7 @@ require 'top_header.php';
 require 'conn.php';
 require_once 'DocketDetailsManager.php';
 
-$docket_id = intval($_REQUEST['docket_id'] ?? 0);
+$docket_id = intval($_REQUEST['id'] ?? $_REQUEST['docket_id'] ?? 0);
 
 // Fetch docket details
 $manager = new DocketDetailsManager($conn);

@@ -2,7 +2,7 @@
 require 'top_header.php';
 require 'conn.php';
 
-$docket_id = intval($_REQUEST['docket_id'] ?? 0);
+$docket_id = intval($_REQUEST['id'] ?? $_REQUEST['docket_id'] ?? 0);
 
 // Fetch existing docket entry from docket_details table
 $sql = "SELECT * FROM docket_details WHERE docket_id = $docket_id";

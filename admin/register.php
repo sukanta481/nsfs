@@ -37,8 +37,23 @@ $lp = $_GET['lp'] ?? 'ac';
 					require 'list_register_new.php';
 				}elseif(isset($type) && ($type=='add_register')){
 					require 'add_register.php';
+				}elseif(isset($type) && ($type=='view_register')){
+					require 'view_register.php';
 				}elseif(isset($type) && ($type=='edit_register')){
 					require 'edit_register.php';
+				}elseif(isset($type) && ($type=='delete_register')){
+					$id = intval($_GET['id'] ?? 0);
+					if($id > 0) {
+						$delete_sql = "DELETE FROM docket_details WHERE docket_id = $id";
+						if(mysqli_query($conn, $delete_sql)) {
+							echo "<script>alert('Docket deleted successfully!'); window.location.href='register.php?type=list_register';</script>";
+						} else {
+							echo "<script>alert('Error deleting docket: " . mysqli_error($conn) . "'); window.location.href='register.php?type=list_register';</script>";
+						}
+					} else {
+						echo "<script>alert('Invalid docket ID!'); window.location.href='register.php?type=list_register';</script>";
+					}
+					exit;
 				}
 				// ---- NEW: TEST CRUD PAGE ----
 				elseif(isset($type) && ($type=='crud_register')){
