@@ -28,13 +28,21 @@ include 'functions/thumb_function.php';
 // Add all public pages that do NOT require login
 $public_pages = [
     'login.php',
+    'login_new.php',
     'signup.php',
     'forgot_password.php',
-    'reset_password.php'
+    'reset_password.php',
+    'create_super_admin.php',
+    'setup_user_management.php'
 ];
 $current_page = basename($PHP_SELF);
 
-if (!isset($_SESSION['admin']) || empty($_SESSION['admin'])) {
+// Check both old and new login systems
+$is_logged_in = (isset($_SESSION['admin']) && !empty($_SESSION['admin'])) || 
+                (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) ||
+                (isset($_SESSION['admin_id']) && !empty($_SESSION['admin_id']));
+
+if (!$is_logged_in) {
     if (!in_array($current_page, $public_pages)) {
         // Store redirect origin if not set
         if (!isset($_SESSION['redirect_origin'])) {
@@ -43,7 +51,8 @@ if (!isset($_SESSION['admin']) || empty($_SESSION['admin'])) {
                 'get' => $_GET
             ];
         }
-        header("Location: login.php");
+        // Redirect to new login page
+        header("Location: login_new.php");
         exit;
     }
 }

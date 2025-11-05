@@ -154,6 +154,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
             color: #999;
         }
         
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .toggle-password:hover {
+            color: #667eea;
+        }
+        
         .form-control {
             width: 100%;
             padding: 12px 15px 12px 45px;
@@ -161,6 +175,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
             border-radius: 10px;
             font-size: 15px;
             transition: all 0.3s;
+        }
+        
+        .form-control.with-toggle {
+            padding-right: 45px;
         }
         
         .form-control:focus {
@@ -272,8 +290,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
                     <label for="password"><i class="fas fa-lock"></i> Password</label>
                     <div class="input-group">
                         <i class="fas fa-lock"></i>
-                        <input type="password" name="password" id="password" class="form-control" 
+                        <input type="password" name="password" id="password" class="form-control with-toggle" 
                                placeholder="Enter your password" required>
+                        <i class="fas fa-eye toggle-password" id="togglePassword" title="Show password"></i>
                     </div>
                 </div>
                 
@@ -287,5 +306,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
             </div>
         </div>
     </div>
+    
+    <script>
+        // Toggle password visibility
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        
+        togglePassword.addEventListener('click', function() {
+            // Toggle the type attribute
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Toggle the icon
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+            
+            // Update title
+            this.setAttribute('title', type === 'password' ? 'Show password' : 'Hide password');
+        });
+    </script>
 </body>
 </html>
