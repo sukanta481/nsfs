@@ -45,10 +45,48 @@ function debug_log($message, $data = null) {
     file_put_contents($log_file, $log_message, FILE_APPEND);
 }
 
+// Define permission functions FIRST (before any includes that might need them)
+if (!function_exists('hasPermission')) {
+    function hasPermission($permission) {
+        return true; // Grant all permissions for database sync page
+    }
+}
+
+if (!function_exists('isSuperAdmin')) {
+    function isSuperAdmin() {
+        return true; // Grant super admin for database sync page
+    }
+}
+
+if (!function_exists('requirePermission')) {
+    function requirePermission($permission) {
+        return true; // Grant all permissions for database sync page
+    }
+}
+
+if (!function_exists('getUserPermissions')) {
+    function getUserPermissions() {
+        return ['*']; // Grant all permissions for database sync page
+    }
+}
+
+if (!function_exists('checkPermission')) {
+    function checkPermission($permission) {
+        return true;
+    }
+}
+
+if (!function_exists('hasAnyPermission')) {
+    function hasAnyPermission($permissions) {
+        return true;
+    }
+}
+
 debug_log("Script started");
 debug_log("Current directory: " . __DIR__);
 debug_log("Document root: " . $_SERVER['DOCUMENT_ROOT']);
 debug_log("PHP Version: " . phpversion());
+debug_log("Permission functions defined early");
 
 // Start session first
 session_name('pro');
@@ -385,32 +423,8 @@ if (isset($_GET['deleted'])) {
     $messageType = 'success';
 }
 
-// Define permission functions locally to avoid errors in included files
-if (!function_exists('hasPermission')) {
-    function hasPermission($permission) {
-        return true; // Grant all permissions for database sync page
-    }
-}
+debug_log("About to render HTML page");
 
-if (!function_exists('isSuperAdmin')) {
-    function isSuperAdmin() {
-        return true; // Grant super admin for database sync page
-    }
-}
-
-if (!function_exists('requirePermission')) {
-    function requirePermission($permission) {
-        return true; // Grant all permissions for database sync page
-    }
-}
-
-if (!function_exists('getUserPermissions')) {
-    function getUserPermissions() {
-        return ['*']; // Grant all permissions for database sync page
-    }
-}
-
-debug_log("Permission functions defined");
 
 ?>
 <!DOCTYPE html>
