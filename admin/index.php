@@ -25,37 +25,34 @@ require 'top_header.php';
           return $row['c'] ?? 0;
         }
         // 1. Total Docket
-        $total_docket = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details");
+        $total_docket = fetch_count("SELECT COUNT(*) as c FROM docket_details");
 
-        // 2. NON-DRS (Registered, status='Pickup', branch_office is NULL/empty)
-        $non_drs = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details WHERE status='Picked Up' AND (branch_office IS NULL OR branch_office='' OR branch_office=0)");
+        // 2. NON-DRS (Registered, status='Picked Up')
+        $non_drs = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Picked Up'");
 
-        // 3. DRS (status='Pickup', branch_office not NULL/empty)
-        $drs = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details WHERE status='Picked Up' AND branch_office IS NOT NULL AND branch_office<>'' AND branch_office<>0");
+        // 3. In Transit
+        $intransit = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='In Transit'");
 
-        // 4. In Transit
-        $intransit = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details WHERE status='In Transit'");
+        // 4. Out For Delivery
+        $out_for_delivery = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Out for Delivery'");
 
-        // 5. Out For Delivery
-        $out_for_delivery = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details WHERE status='Out for Delivery'");
+        // 5. Delivered
+        $delivered = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Delivered'");
 
-        // 6. Delivered
-        $delivered = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details WHERE status='Delivered'");
+        // 6. Delayed
+        $delayed = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Delayed'");
 
-        // 7. Delayed
-        $delayed = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details WHERE status='Delayed'");
+        // 7. Pending POD (Delivered but proof_of_delivery empty)
+        $pending_pod = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Delivered' AND (proof_of_delivery IS NULL OR proof_of_delivery='')");
 
-        // 8. Pending POD (Delivered but proof_of_delivery empty)
-        $pending_pod = fetch_count("SELECT COUNT(*) as c FROM tbl_shipping_details WHERE status='Delivered' AND (proof_of_delivery IS NULL OR proof_of_delivery='')");
-
-        // 9. Manifest Count from tbl_manifest
+        // 8. Manifest Count from tbl_manifest
         $manifest_count = fetch_count("SELECT COUNT(*) as c FROM tbl_manifest");
         ?>
         
         <!-- Stats Cards Grid -->
         <div class="stats-grid">
           <!-- Total Dockets Card -->
-          <a href="trip.php?type=list_trip" class="stat-card stat-card-dark">
+          <a href="register.php?type=list_register" class="stat-card stat-card-dark">
             <div class="stat-icon"><i class="fa fa-th-list"></i></div>
             <div class="stat-content">
               <div class="stat-label">TOTAL DOCKETS</div>
@@ -64,16 +61,16 @@ require 'top_header.php';
           </a>
           
           <!-- Pending Card -->
-          <a href="trip.php?type=list_trip&status=Picked%20Up" class="stat-card stat-card-warning">
+          <a href="register.php?type=list_register&status=Picked%20Up" class="stat-card stat-card-warning">
             <div class="stat-icon"><i class="fa fa-clock-o"></i></div>
             <div class="stat-content">
-              <div class="stat-label">PENDING</div>
+              <div class="stat-label">PICKED UP</div>
               <div class="stat-value"><?= $non_drs ?></div>
             </div>
           </a>
           
           <!-- In Transit Card -->
-          <a href="trip.php?type=list_trip&status=In%20Transit" class="stat-card stat-card-info">
+          <a href="register.php?type=list_register&status=In%20Transit" class="stat-card stat-card-info">
             <div class="stat-icon"><i class="fa fa-truck"></i></div>
             <div class="stat-content">
               <div class="stat-label">IN TRANSIT</div>
@@ -82,7 +79,7 @@ require 'top_header.php';
           </a>
           
           <!-- Delivered Card -->
-          <a href="trip.php?type=list_trip&status=Delivered" class="stat-card stat-card-success">
+          <a href="register.php?type=list_register&status=Delivered" class="stat-card stat-card-success">
             <div class="stat-icon"><i class="fa fa-check-circle"></i></div>
             <div class="stat-content">
               <div class="stat-label">DELIVERED</div>
@@ -139,32 +136,11 @@ require 'top_header.php';
               </thead>
               <tbody id="docketsTableBody">
                 <?php
-                // First check if tables exist
-                $tables_exist = false;
-                $check_consignor = @mysqli_query($conn, "SHOW TABLES LIKE 'tbl_consignor'");
-                $check_client = @mysqli_query($conn, "SHOW TABLES LIKE 'tbl_client'");
-                $check_company = @mysqli_query($conn, "SHOW TABLES LIKE 'tbl_company'");
-                
-                // Try different table combinations
-                if($check_company && mysqli_num_rows($check_company) > 0) {
-                  // Use tbl_company (consignors)
-                  $sql = "SELECT sd.*, c.company_title as consignor_name, sd.client_name 
-                          FROM tbl_shipping_details sd
-                          LEFT JOIN tbl_company c ON sd.company_id = c.company_id
-                          ORDER BY sd.shipping_details_id DESC LIMIT 20";
-                  $tables_exist = true;
-                } else if($check_consignor && mysqli_num_rows($check_consignor) > 0 && $check_client && mysqli_num_rows($check_client) > 0) {
-                  $sql = "SELECT sd.*, c.consignor_name, cl.client_name 
-                          FROM tbl_shipping_details sd
-                          LEFT JOIN tbl_consignor c ON sd.consignor_id = c.consignor_id
-                          LEFT JOIN tbl_client cl ON sd.client_id = cl.client_id
-                          ORDER BY sd.shipping_details_id DESC LIMIT 20";
-                  $tables_exist = true;
-                } else {
-                  // If tables don't exist, just get shipping details
-                  $sql = "SELECT * FROM tbl_shipping_details ORDER BY shipping_details_id DESC LIMIT 20";
-                  $tables_exist = false;
-                }
+                // Use docket_details table with LEFT JOIN to tbl_offices
+                $sql = "SELECT dd.*, o.office_name 
+                        FROM docket_details dd
+                        LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
+                        ORDER BY dd.docket_id DESC LIMIT 20";
                 
                 $result = mysqli_query($conn, $sql);
                 
@@ -184,21 +160,12 @@ require 'top_header.php';
                     }
                     $created_date = date('M d, Y g:i A', strtotime($row['created_at'] ?? date('Y-m-d H:i:s')));
                     
-                    // Get sender and receiver based on table availability
-                    $sender_name = 'N/A';
-                    $receiver_name = 'N/A';
-                    
-                    if($tables_exist) {
-                      $sender_name = $row['consignor_name'] ?? 'N/A';
-                      $receiver_name = $row['client_name'] ?? 'N/A';
-                    } else {
-                      // Fallback to direct fields if they exist
-                      $sender_name = $row['sender_name'] ?? $row['consignor_name'] ?? 'N/A';
-                      $receiver_name = $row['receiver_name'] ?? $row['client_name'] ?? 'N/A';
-                    }
+                    // Get sender and receiver from docket_details columns
+                    $sender_name = $row['company_name'] ?? 'N/A';
+                    $receiver_name = $row['client_name'] ?? 'N/A';
                     ?>
                     <tr>
-                      <td><strong><?= htmlspecialchars($row['doc_no'] ?? $row['shipping_details_id']) ?></strong></td>
+                      <td><strong><?= htmlspecialchars($row['doc_no'] ?? $row['docket_id']) ?></strong></td>
                       <td><?= htmlspecialchars($sender_name) ?></td>
                       <td><?= htmlspecialchars($receiver_name) ?></td>
                       <td><?= htmlspecialchars($row['service_type'] ?? 'Standard') ?></td>
@@ -206,13 +173,13 @@ require 'top_header.php';
                       <td><?= $created_date ?></td>
                       <td>
                         <div class="action-buttons">
-                          <a href="trip.php?type=view_trip&id=<?= $row['shipping_details_id'] ?>" class="action-btn btn-view" title="View">
+                          <a href="register.php?type=view_register&id=<?= $row['docket_id'] ?>" class="action-btn btn-view" title="View">
                             <i class="fa fa-eye"></i>
                           </a>
-                          <a href="trip.php?type=edit_trip&id=<?= $row['shipping_details_id'] ?>" class="action-btn btn-edit" title="Edit">
+                          <a href="register.php?type=edit_register&id=<?= $row['docket_id'] ?>" class="action-btn btn-edit" title="Edit">
                             <i class="fa fa-edit"></i>
                           </a>
-                          <a href="javascript:void(0)" onclick="confirmDelete(<?= $row['shipping_details_id'] ?>)" class="action-btn btn-delete" title="Delete">
+                          <a href="javascript:void(0)" onclick="confirmDelete(<?= $row['docket_id'] ?>)" class="action-btn btn-delete" title="Delete">
                             <i class="fa fa-trash"></i>
                           </a>
                         </div>
@@ -266,7 +233,7 @@ require 'top_header.php';
   
   function confirmDelete(id) {
     if(confirm('Are you sure you want to delete this docket?')) {
-      window.location.href = 'trip.php?type=delete_trip&id=' + id;
+      window.location.href = 'register.php?type=delete_register&id=' + id;
     }
   }
   </script>
