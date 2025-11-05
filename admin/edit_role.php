@@ -93,6 +93,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
 $permissions_query = "SELECT * FROM tbl_permissions ORDER BY module, permission_name";
 $permissions_result = mysqli_query($conn, $permissions_query);
 
+if (!$permissions_result) {
+    die("Database Error: " . mysqli_error($conn) . "<br>Query: " . $permissions_query);
+}
+
 // Group permissions by module
 $grouped_permissions = [];
 while ($perm = mysqli_fetch_assoc($permissions_result)) {
