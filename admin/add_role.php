@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
 }
 
 // Fetch all permissions grouped by module
-$permissions_query = "SELECT * FROM tbl_permissions ORDER BY module, permission_name";
+$permissions_query = "SELECT * FROM tbl_permissions ORDER BY module_name, permission_name";
 $permissions_result = mysqli_query($conn, $permissions_query);
 
 if (!$permissions_result) {
@@ -66,7 +66,7 @@ if (!$permissions_result) {
 // Group permissions by module
 $grouped_permissions = [];
 while ($perm = mysqli_fetch_assoc($permissions_result)) {
-    $grouped_permissions[$perm['module']][] = $perm;
+    $grouped_permissions[$perm['module_name']][] = $perm;
 }
 
 require 'top_header.php';
