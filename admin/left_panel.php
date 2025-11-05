@@ -84,6 +84,20 @@
         </ul>
       </li>
 
+      <!-- User Management -->
+      <li class="menu-item has-submenu">
+        <a href="javascript:void(0)" class="menu-link">
+          <i class="fa fa-users-cog"></i>
+          <span>User Management</span>
+          <i class="fa fa-chevron-down submenu-arrow"></i>
+        </a>
+        <ul class="submenu">
+          <li><a href="users.php">All Users</a></li>
+          <li><a href="add_user.php">Add New User</a></li>
+          <li><a href="roles.php">Roles & Permissions</a></li>
+        </ul>
+      </li>
+
       <!-- Website Management -->
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">

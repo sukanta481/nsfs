@@ -11,15 +11,16 @@
   </div>
   
   <div class="header-right">
-    <a href="register.php?type=add_register" class="header-action-btn btn-users">
-      <i class="fa fa-users"></i> Manage Users
+    <a href="users.php" class="header-action-btn btn-users">
+      <i class="fa fa-users-cog"></i> Manage Users
     </a>
     <a href="add_trip_modern.php" class="header-action-btn btn-new-docket">
       <i class="fa fa-plus"></i> New Trip
     </a>
     <div class="header-dropdown">
       <a href="javascript:;" class="header-action-btn btn-admin dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-        <i class="fa fa-user-circle"></i> System Administrator
+        <i class="fa fa-user-circle"></i> 
+        <?php echo isset($_SESSION['full_name']) ? htmlspecialchars($_SESSION['full_name']) : 'System Administrator'; ?>
         <span class="fa fa-angle-down"></span>
       </a>
       <ul class="dropdown-menu dropdown-usermenu animated fadeInDown pull-right">
