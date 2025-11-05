@@ -9,6 +9,12 @@ if (isset($_GET['success'])) {
     $success_message = htmlspecialchars($_GET['success']);
 }
 
+// Check for error message
+$error_message = '';
+if (isset($_GET['error'])) {
+    $error_message = htmlspecialchars($_GET['error']);
+}
+
 // Get all users with their roles
 $users_query = "SELECT u.*, r.role_name, s.staff_name 
                 FROM tbl_users u 
@@ -35,6 +41,15 @@ require 'top_header.php';
         <?php if (!empty($success_message)): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert" style="margin: 20px 0; border-radius: 10px; border-left: 4px solid #28a745;">
           <i class="fa fa-check-circle"></i> <strong>Success!</strong> <?php echo $success_message; ?>
+          <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <?php endif; ?>
+        
+        <?php if (!empty($error_message)): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert" style="margin: 20px 0; border-radius: 10px; border-left: 4px solid #dc3545;">
+          <i class="fa fa-exclamation-circle"></i> <strong>Error!</strong> <?php echo $error_message; ?>
           <button type="button" class="close" data-dismiss="alert" aria-label="Close">
             <span aria-hidden="true">&times;</span>
           </button>
@@ -179,10 +194,10 @@ require 'top_header.php';
                       <?php endif; ?>
                       
                       <?php if (hasPermission('user_delete') && $user['user_id'] != $_SESSION['user_id']): ?>
-                      <a href="user_delete.php?id=<?= $user['user_id'] ?>" 
+                      <a href="delete_user.php?user_id=<?= $user['user_id'] ?>" 
                          class="btn btn-sm btn-danger" 
                          title="Delete User"
-                         onclick="return confirm('Are you sure you want to delete this user?')"
+                         onclick="return confirm('Are you sure you want to delete user \'<?= htmlspecialchars($user['username']) ?>\'? This action cannot be undone.')"
                          style="padding: 6px 12px;">
                         <i class="fa fa-trash"></i>
                       </a>
