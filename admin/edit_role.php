@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
             // Update role
             $update_role = "UPDATE tbl_roles SET 
                            role_name = '$role_name',
-                           description = '$description'
+                           role_description = '$description'
                            WHERE role_id = $role_id";
             
             if (mysqli_query($conn, $update_role)) {
@@ -418,7 +418,7 @@ textarea.form-control {
                 <i class="fas fa-align-left"></i> Description
               </label>
               <textarea name="description" id="description" class="form-control" 
-                        placeholder="Describe what this role can do..."><?php echo htmlspecialchars($role['description']); ?></textarea>
+                        placeholder="Describe what this role can do..."><?php echo htmlspecialchars($role['role_description']); ?></textarea>
             </div>
 
             <div class="permissions-section">

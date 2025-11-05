@@ -378,7 +378,7 @@ require 'top_header.php';
                   </div>
 
                   <p class="role-description">
-                    <?php echo !empty($role['description']) ? htmlspecialchars($role['description']) : 'No description provided'; ?>
+                    <?php echo !empty($role['role_description']) ? htmlspecialchars($role['role_description']) : 'No description provided'; ?>
                   </p>
 
                   <div class="role-stats">

@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
             $error = "Role name already exists. Please choose a different name.";
         } else {
             // Insert role
-            $insert_role = "INSERT INTO tbl_roles (role_name, description, created_at) 
+            $insert_role = "INSERT INTO tbl_roles (role_name, role_description, created_at) 
                            VALUES ('$role_name', '$description', NOW())";
             
             if (mysqli_query($conn, $insert_role)) {
