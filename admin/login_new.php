@@ -53,9 +53,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
                 $_SESSION['role_name'] = $user['role_name'];
                 $_SESSION['staff_id'] = $user['staff_id'];
                 
+                // Set legacy session variables for compatibility with old system
+                $_SESSION['admin'] = $user['username'];
+                $_SESSION['admin_id'] = $user['user_id'];
+                $_SESSION['adminname'] = $user['full_name'];
+                
                 // Clear legacy admin flag
                 unset($_SESSION['is_legacy_admin']);
-                unset($_SESSION['admin_id']);
                 
                 // Update last login
                 mysqli_query($conn, "UPDATE tbl_users SET last_login = NOW() WHERE user_id = " . $user['user_id']);
