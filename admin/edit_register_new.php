@@ -33,8 +33,8 @@ if (!$data) {
 // Fetch dropdowns data
 $companies = mysqli_query($conn, "SELECT * FROM tbl_company ORDER BY company_title ASC");
 $cars = mysqli_query($conn, "SELECT * FROM tbl_car ORDER BY car_number ASC");
-$drivers = mysqli_query($conn, "SELECT * FROM tbl_driver ORDER BY driver_name ASC");
-$helpers = mysqli_query($conn, "SELECT * FROM tbl_helper ORDER BY helper_name ASC");
+$drivers = mysqli_query($conn, "SELECT staff_id, staff_name, staff_phone, driving_license FROM tbl_staff WHERE staff_role = 'Driver' AND active_status = 1 ORDER BY staff_name ASC");
+$helpers = mysqli_query($conn, "SELECT staff_id, staff_name, staff_phone FROM tbl_staff WHERE staff_role = 'Helper' AND active_status = 1 ORDER BY staff_name ASC");
 $offices = mysqli_query($conn, "SELECT * FROM tbl_offices ORDER BY office_name ASC");
 ?>
 
@@ -288,11 +288,11 @@ $offices = mysqli_query($conn, "SELECT * FROM tbl_offices ORDER BY office_name A
                       <?php 
                       mysqli_data_seek($drivers, 0);
                       while($driver = mysqli_fetch_assoc($drivers)): ?>
-                        <option value="<?= $driver['driver_id'] ?>"
-                                data-phone="<?= htmlspecialchars($driver['driver_number']) ?>"
-                                data-license="<?= htmlspecialchars($driver['driver_license']) ?>"
-                                <?= $data['driver_id'] == $driver['driver_id'] ? 'selected' : '' ?>>
-                          <?= htmlspecialchars($driver['driver_name']) ?>
+                        <option value="<?= $driver['staff_id'] ?>"
+                                data-phone="<?= htmlspecialchars($driver['staff_phone']) ?>"
+                                data-license="<?= htmlspecialchars($driver['driving_license']) ?>"
+                                <?= $data['driver_id'] == $driver['staff_id'] ? 'selected' : '' ?>>
+                          <?= htmlspecialchars($driver['staff_name']) ?>
                         </option>
                       <?php endwhile; ?>
                     </select>
@@ -310,10 +310,10 @@ $offices = mysqli_query($conn, "SELECT * FROM tbl_offices ORDER BY office_name A
                       <?php 
                       mysqli_data_seek($helpers, 0);
                       while($helper = mysqli_fetch_assoc($helpers)): ?>
-                        <option value="<?= $helper['helper_id'] ?>"
-                                data-phone="<?= htmlspecialchars($helper['helper_number']) ?>"
-                                <?= $data['helper_id'] == $helper['helper_id'] ? 'selected' : '' ?>>
-                          <?= htmlspecialchars($helper['helper_name']) ?>
+                        <option value="<?= $helper['staff_id'] ?>"
+                                data-phone="<?= htmlspecialchars($helper['staff_phone']) ?>"
+                                <?= $data['helper_id'] == $helper['staff_id'] ? 'selected' : '' ?>>
+                          <?= htmlspecialchars($helper['staff_name']) ?>
                         </option>
                       <?php endwhile; ?>
                     </select>

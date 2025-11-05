@@ -3,8 +3,8 @@ require 'conn.php';
 // Prepare company/car/driver/helper lists for selects
 $companies = mysqli_query($conn, "SELECT * FROM tbl_company ORDER BY company_title ASC");
 $cars = mysqli_query($conn, "SELECT * FROM tbl_car ORDER BY car_number ASC");
-$drivers = mysqli_query($conn, "SELECT * FROM tbl_driver ORDER BY driver_name ASC");
-$helpers = mysqli_query($conn, "SELECT * FROM tbl_helper ORDER BY helper_name ASC");
+$drivers = mysqli_query($conn, "SELECT staff_id, staff_name, staff_phone, driving_license FROM tbl_staff WHERE staff_role = 'Driver' AND active_status = 1 ORDER BY staff_name ASC");
+$helpers = mysqli_query($conn, "SELECT staff_id, staff_name, staff_phone FROM tbl_staff WHERE staff_role = 'Helper' AND active_status = 1 ORDER BY staff_name ASC");
 
 // Notification message after registration
 $show_success = isset($_GET['msg']) && $_GET['msg'] === 'success';
@@ -116,7 +116,7 @@ function get_helper_phone_no(v) {
             <select name="driver_id" id="driver_id" class="form-control" onchange="get_driver_phone_no(this.value);">
               <option value="">Select</option>
               <?php mysqli_data_seek($drivers, 0); while ($driver = mysqli_fetch_assoc($drivers)) { ?>
-                <option value="<?= $driver['driver_id']; ?>"><?= $driver['driver_name']; ?></option>
+                <option value="<?= $driver['staff_id']; ?>"><?= $driver['staff_name']; ?></option>
               <?php } ?>
             </select>
           </div>
@@ -133,7 +133,7 @@ function get_helper_phone_no(v) {
             <select name="helper_id" id="helper_id" class="form-control" onchange="get_helper_phone_no(this.value)">
               <option value="">Select</option>
               <?php mysqli_data_seek($helpers, 0); while ($helper = mysqli_fetch_assoc($helpers)) { ?>
-                <option value="<?= $helper['helper_id']; ?>"><?= $helper['helper_name']; ?></option>
+                <option value="<?= $helper['staff_id']; ?>"><?= $helper['staff_name']; ?></option>
               <?php } ?>
             </select>
           </div>

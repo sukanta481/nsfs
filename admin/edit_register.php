@@ -19,8 +19,8 @@ if (!$data) {
 // Prepare dropdowns
 $companies = mysqli_query($conn, "SELECT * FROM tbl_company ORDER BY company_title ASC");
 $cars      = mysqli_query($conn, "SELECT * FROM tbl_car ORDER BY car_number ASC");
-$drivers   = mysqli_query($conn, "SELECT * FROM tbl_driver ORDER BY driver_name ASC");
-$helpers   = mysqli_query($conn, "SELECT * FROM tbl_helper ORDER BY helper_name ASC");
+$drivers   = mysqli_query($conn, "SELECT staff_id, staff_name, staff_phone, driving_license FROM tbl_staff WHERE staff_role = 'Driver' AND active_status = 1 ORDER BY staff_name ASC");
+$helpers   = mysqli_query($conn, "SELECT staff_id, staff_name, staff_phone FROM tbl_staff WHERE staff_role = 'Helper' AND active_status = 1 ORDER BY staff_name ASC");
 ?>
 
 <!-- Edit Register Content -->
@@ -66,8 +66,8 @@ $helpers   = mysqli_query($conn, "SELECT * FROM tbl_helper ORDER BY helper_name 
                       <?php
                         mysqli_data_seek($drivers, 0);
                         while ($driver = mysqli_fetch_assoc($drivers)) {
-                          $selected = ($driver['driver_id'] == $data['driver_id']) ? 'selected' : '';
-                          echo "<option value='{$driver['driver_id']}' $selected>{$driver['driver_name']}</option>";
+                          $selected = ($driver['staff_id'] == $data['driver_id']) ? 'selected' : '';
+                          echo "<option value='{$driver['staff_id']}' $selected>{$driver['staff_name']}</option>";
                         }
                       ?>
                     </select>
@@ -87,8 +87,8 @@ $helpers   = mysqli_query($conn, "SELECT * FROM tbl_helper ORDER BY helper_name 
                       <?php
                         mysqli_data_seek($helpers, 0);
                         while ($helper = mysqli_fetch_assoc($helpers)) {
-                          $selected = ($helper['helper_id'] == $data['helper_id']) ? 'selected' : '';
-                          echo "<option value='{$helper['helper_id']}' $selected>{$helper['helper_name']}</option>";
+                          $selected = ($helper['staff_id'] == $data['helper_id']) ? 'selected' : '';
+                          echo "<option value='{$helper['staff_id']}' $selected>{$helper['staff_name']}</option>";
                         }
                       ?>
                     </select>
