@@ -2,20 +2,39 @@
 /**
  * Authentication Check
  * Include this at the top of protected pages
+ * Works with both old (tbl_administrator) and new (tbl_users) systems
  */
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
+// Check if user is logged in (old or new system)
+// Old system uses $_SESSION['admin_id'], new system uses $_SESSION['user_id']
+$is_logged_in = (isset($_SESSION['admin_id']) || isset($_SESSION['user_id']));
+
+if (!$is_logged_in) {
     header('Location: login.php');
     exit;
 }
 
+// If old system user, set up basic session for compatibility
+if (isset($_SESSION['admin_id']) && !isset($_SESSION['user_id'])) {
+    $_SESSION['user_id'] = $_SESSION['admin_id'];
+    $_SESSION['username'] = $_SESSION['adminname'] ?? 'admin';
+    $_SESSION['full_name'] = $_SESSION['adminname'] ?? 'Administrator';
+    $_SESSION['role_id'] = 1; // Super Admin role
+    $_SESSION['role_name'] = 'Super Admin';
+    $_SESSION['is_legacy_admin'] = true;
+}
+
 // Function to check if user has specific permission
 function hasPermission($permission_key) {
+    // Legacy admin has all permissions
+    if (isset($_SESSION['is_legacy_admin']) && $_SESSION['is_legacy_admin']) {
+        return true;
+    }
+    
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role_id'])) {
         return false;
     }
@@ -28,6 +47,9 @@ function hasPermission($permission_key) {
               WHERE rp.role_id = {$_SESSION['role_id']} AND p.permission_key = '$permission_key'";
     
     $result = mysqli_query($conn, $query);
+    if (!$result) {
+        return false;
+    }
     $row = mysqli_fetch_assoc($result);
     
     return $row['has_perm'] > 0;
@@ -35,6 +57,11 @@ function hasPermission($permission_key) {
 
 // Function to get all user permissions
 function getUserPermissions() {
+    // Legacy admin has all permissions
+    if (isset($_SESSION['is_legacy_admin']) && $_SESSION['is_legacy_admin']) {
+        return ['*']; // Wildcard for all permissions
+    }
+    
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role_id'])) {
         return [];
     }
@@ -60,6 +87,11 @@ function getUserPermissions() {
 
 // Function to require permission (redirect if not authorized)
 function requirePermission($permission_key) {
+    // Legacy admin bypasses permission check
+    if (isset($_SESSION['is_legacy_admin']) && $_SESSION['is_legacy_admin']) {
+        return;
+    }
+    
     if (!hasPermission($permission_key)) {
         header('HTTP/1.1 403 Forbidden');
         echo "<!DOCTYPE html>
@@ -92,6 +124,10 @@ function requirePermission($permission_key) {
 
 // Function to check if user is Super Admin
 function isSuperAdmin() {
+    // Legacy admin is super admin
+    if (isset($_SESSION['is_legacy_admin']) && $_SESSION['is_legacy_admin']) {
+        return true;
+    }
     return isset($_SESSION['role_name']) && $_SESSION['role_name'] === 'Super Admin';
 }
 ?>
