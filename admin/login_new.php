@@ -152,6 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
             top: 50%;
             transform: translateY(-50%);
             color: #999;
+            z-index: 10;
         }
         
         .toggle-password {
@@ -159,13 +160,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
             right: 15px;
             top: 50%;
             transform: translateY(-50%);
-            color: #999;
+            color: #667eea;
             cursor: pointer;
             transition: color 0.3s;
+            z-index: 10;
+            font-size: 18px;
         }
         
         .toggle-password:hover {
-            color: #667eea;
+            color: #764ba2;
         }
         
         .form-control {
