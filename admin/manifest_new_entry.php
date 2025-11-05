@@ -129,7 +129,7 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
               <input type="text" name="client_name[]" class="form-control client-field" readonly style="background: #f5f5f5; text-transform: uppercase; font-size: 0.85rem; padding: 5px 6px; width: 100%;">
             </td>
             <td style="padding: 2px;">
-              <input type="text" name="item[]" class="form-control client-field" readonly style="background: #f5f5f5; text-transform: uppercase; font-size: 0.85rem; padding: 5px 6px; width: 100%;">
+              <input type="text" name="item[]" class="form-control editable-field" style="background: #fff; text-transform: uppercase; font-size: 0.85rem; padding: 5px 6px; width: 100%;">
             </td>
             <td style="padding: 2px;">
               <input type="text" name="client_address[]" class="form-control client-field" readonly style="background: #f5f5f5; text-transform: uppercase; font-size: 0.85rem; padding: 5px 6px; width: 100%;">
@@ -141,16 +141,16 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
               <input type="number" name="weight[]" class="form-control client-field" readonly step="0.01" style="background: #f5f5f5; font-size: 0.85rem; padding: 5px 4px; width: 100%;">
             </td>
             <td style="padding: 2px;">
-              <input type="number" name="rate[]" class="form-control rate-input" readonly step="0.01" style="background: #f5f5f5; font-size: 0.85rem; padding: 5px 4px; width: 100%;">
+              <input type="number" name="rate[]" class="form-control rate-input editable-field" step="0.01" style="background: #fff; font-size: 0.85rem; padding: 5px 4px; width: 100%;">
             </td>
             <td style="padding: 2px;">
               <input type="number" name="amount[]" class="form-control amount-field" readonly step="0.01" style="background: #f5f5f5; font-weight: 700; font-size: 0.85rem; padding: 5px 4px; width: 100%;">
             </td>
             <td style="padding: 2px;">
-              <input type="text" name="eway_bill[]" class="form-control client-field" readonly style="background: #f5f5f5; text-transform: uppercase; font-size: 0.85rem; padding: 5px 6px; width: 100%;">
+              <input type="text" name="eway_bill[]" class="form-control editable-field" style="background: #fff; text-transform: uppercase; font-size: 0.85rem; padding: 5px 6px; width: 100%;">
             </td>
             <td style="padding: 2px;">
-              <input type="number" name="pay_to[]" class="form-control pay-to-input" readonly step="0.01" style="background: #f5f5f5; font-size: 0.85rem; padding: 5px 4px; width: 100%;">
+              <input type="number" name="pay_to[]" class="form-control pay-to-input editable-field" step="0.01" style="background: #fff; font-size: 0.85rem; padding: 5px 4px; width: 100%;">
             </td>
           </tr>
           <?php endfor; ?>
@@ -287,9 +287,11 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
   
   /**
    * Set readonly state for docket fields
+   * Note: item, rate, eway_bill, and pay_to are always editable
    */
   function setFieldsReadonly(readonly) {
-    const fields = document.querySelectorAll('.client-field, .box-input, .rate-input, .pay-to-input');
+    // Only control client-field and box-input (not editable-field)
+    const fields = document.querySelectorAll('.client-field, .box-input');
     fields.forEach(field => {
       field.readOnly = readonly;
       field.style.background = readonly ? '#f5f5f5' : '#fff';
@@ -370,18 +372,22 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
   
   /**
    * Handle amount calculation when rate or box changes
+   * Also recalculate totals when pay_to changes
    */
   function handleAmountCalculation(e) {
-    if (!e.target.classList.contains('rate-input') && !e.target.classList.contains('box-input')) {
-      return;
+    // Recalculate amount if rate or box changed
+    if (e.target.classList.contains('rate-input') || e.target.classList.contains('box-input')) {
+      const row = e.target.closest('tr');
+      const rate = parseFloat(row.querySelector('.rate-input').value) || 0;
+      const box = parseFloat(row.querySelector('.box-input').value) || 1;
+      row.querySelector('input[name="amount[]"]').value = (rate * box).toFixed(2);
     }
     
-    const row = e.target.closest('tr');
-    const rate = parseFloat(row.querySelector('.rate-input').value) || 0;
-    const box = parseFloat(row.querySelector('.box-input').value) || 1;
-    row.querySelector('input[name="amount[]"]').value = (rate * box).toFixed(2);
-    
-    calculateTotals();
+    // Recalculate totals for any numeric field change
+    if (e.target.name === 'amount[]' || e.target.name === 'pay_to[]' || 
+        e.target.classList.contains('rate-input') || e.target.classList.contains('box-input')) {
+      calculateTotals();
+    }
   }
   
   /**
