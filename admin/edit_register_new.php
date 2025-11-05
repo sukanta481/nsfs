@@ -271,9 +271,9 @@ $offices = mysqli_query($conn, "SELECT * FROM tbl_offices ORDER BY office_name A
                       while($car = mysqli_fetch_assoc($cars)): ?>
                         <option value="<?= $car['car_id'] ?>" 
                                 data-number="<?= htmlspecialchars($car['car_number']) ?>"
-                                data-model="<?= htmlspecialchars($car['car_model']) ?>"
+                                data-details="<?= htmlspecialchars($car['car_details'] ?? '') ?>"
                                 <?= $data['car_id'] == $car['car_id'] ? 'selected' : '' ?>>
-                          <?= htmlspecialchars($car['car_number']) ?> - <?= htmlspecialchars($car['car_model']) ?>
+                          <?= htmlspecialchars($car['car_number']) ?><?= !empty($car['car_details']) ? ' - ' . htmlspecialchars($car['car_details']) : '' ?>
                         </option>
                       <?php endwhile; ?>
                     </select>
@@ -641,13 +641,23 @@ document.getElementById('editDocketForm').addEventListener('submit', function(e)
 }
 
 .form-control {
-    padding: 12px 15px;
+    padding: 10px 12px;
     border: 2px solid #e0e6ed;
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 500;
     transition: all 0.3s;
     font-family: 'Inter', sans-serif;
+    line-height: 1.4;
+}
+
+select.form-control {
+    padding: 8px 12px;
+    height: auto;
+}
+
+select.form-control option {
+    padding: 8px 12px;
 }
 
 .form-control:focus {
