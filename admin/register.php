@@ -1,4 +1,10 @@
-<?php require 'top_header.php'; ?>
+<?php 
+require 'top_header.php'; 
+
+// Get the type parameter from URL
+$type = $_GET['type'] ?? '';
+$lp = $_GET['lp'] ?? 'ac';
+?>
 <body class="nav-md">
 
   <div class="container body">
@@ -28,7 +34,7 @@
             <div class="col-md-12 col-sm-12 col-xs-12">
          	<?php 
 				if(isset($type) && ($type=='list_register')) {
-					require 'list_register.php';
+					require 'list_register_new.php';
 				}elseif(isset($type) && ($type=='add_register')){
 					require 'add_register.php';
 				}elseif(isset($type) && ($type=='edit_register')){

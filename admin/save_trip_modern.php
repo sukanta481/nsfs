@@ -1,20 +1,34 @@
 <?php
 require_once 'includes/top.php';
+require_once 'DocketDetailsManager.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: add_trip_modern.php');
     exit;
 }
 
+// Initialize Docket Manager
+$docketManager = new DocketDetailsManager($conn);
+
 // Get trip details
+$office_id = isset($_POST['office_id']) ? intval($_POST['office_id']) : 0;
 $car_id = isset($_POST['car_id']) ? intval($_POST['car_id']) : 0;
 $driver_id = isset($_POST['driver_id']) ? intval($_POST['driver_id']) : 0;
 $helper_id = isset($_POST['helper_id']) ? intval($_POST['helper_id']) : 0;
 $pickup_datetime = isset($_POST['pickup_datetime']) ? mysqli_real_escape_string($conn, $_POST['pickup_datetime']) : '';
 $dockets = isset($_POST['dockets']) ? $_POST['dockets'] : [];
 
+// Get office details for auto-sync
+$office_name = 'N/A';
+if ($office_id > 0) {
+    $office_result = mysqli_query($conn, "SELECT office_name FROM tbl_offices WHERE office_id = $office_id");
+    if ($office_result && $office_row = mysqli_fetch_assoc($office_result)) {
+        $office_name = $office_row['office_name'];
+    }
+}
+
 // Validation
-if ($car_id <= 0 || $driver_id <= 0 || empty($pickup_datetime) || empty($dockets)) {
+if ($office_id <= 0 || $car_id <= 0 || $driver_id <= 0 || empty($pickup_datetime) || empty($dockets)) {
     $_SESSION['error_msg'] = 'Please fill all required fields and add at least one docket!';
     header('Location: add_trip_modern.php?msg=error');
     exit;
@@ -30,16 +44,13 @@ try {
     $success_count = 0;
     $duplicate_dockets = [];
     
-    // First, check for duplicates
+    // First, check for duplicates in docket_details
     foreach ($dockets as $docket) {
-        $doc_no = mysqli_real_escape_string($conn, trim($docket['doc_no'] ?? ''));
+        $doc_no = trim($docket['doc_no'] ?? '');
         if (empty($doc_no)) continue;
         
-        // Check if docket already exists
-        $check_query = "SELECT doc_no FROM tbl_shipping_details WHERE doc_no = '$doc_no' LIMIT 1";
-        $check_result = mysqli_query($conn, $check_query);
-        
-        if ($check_result && mysqli_num_rows($check_result) > 0) {
+        // Check if docket already exists in docket_details
+        if ($docketManager->docketExists($doc_no)) {
             $duplicate_dockets[] = $doc_no;
         }
     }
@@ -53,134 +64,64 @@ try {
         exit;
     }
     
-    // Insert each docket with the same trip_group_id
+    // Insert each docket into docket_details with auto-sync
     foreach ($dockets as $docket) {
-        // Sanitize inputs
-        $doc_no = mysqli_real_escape_string($conn, $docket['doc_no'] ?? '');
-        $service_type = mysqli_real_escape_string($conn, $docket['service_type'] ?? 'Standard');
-        $company_id = intval($docket['company_id'] ?? 0);
-        $company_address = mysqli_real_escape_string($conn, $docket['company_address'] ?? '');
-        $client_name = mysqli_real_escape_string($conn, $docket['client_name'] ?? '');
-        $client_phone = mysqli_real_escape_string($conn, $docket['client_phone'] ?? '');
-        $client_email = mysqli_real_escape_string($conn, $docket['client_email'] ?? '');
-        $client_address = mysqli_real_escape_string($conn, $docket['client_address'] ?? '');
-        $weight = intval($docket['weight'] ?? 0);
-        $box = intval($docket['box'] ?? 0);
-        $dimensions = mysqli_real_escape_string($conn, $docket['dimensions'] ?? '');
+        $doc_no = trim($docket['doc_no'] ?? '');
         
-        // Skip if essential fields are missing
-        if (empty($doc_no) || $company_id <= 0 || empty($company_address) || empty($client_address) || empty($client_name)) {
+        // Skip if docket number is empty
+        if (empty($doc_no)) {
             continue;
         }
         
-        // Insert into tbl_shipping_details
-        $insert_query = "INSERT INTO tbl_shipping_details (
-            trip_group_id,
-            doc_no,
-            doc_type,
-            service_type,
-            branch_office,
-            register_id,
-            shipping_id,
-            company_id,
-            company_email,
-            company_address,
-            client_id,
-            client_name,
-            item,
-            client_phone,
-            client_email,
-            client_address,
-            box,
-            weight,
-            dimensions,
-            rate,
-            amount,
-            unit_price,
-            have_eoa_bill_no,
-            eoa_bill_no,
-            pay_to,
-            pickup_dates,
-            status,
-            reason_of_delay,
-            proof_of_delivery,
-            tracking_link,
-            car_id,
-            car_number,
-            rented_car,
-            car_oil_amount,
-            driver_id,
-            driver_name,
-            driver_number,
-            helper_id,
-            helper_name,
-            helper_number,
-            car_out_time
-        ) VALUES (
-            '$trip_group_id',
-            '$doc_no',
-            '',
-            '$service_type',
-            '',
-            0,
-            0,
-            $company_id,
-            '$client_email',
-            '$company_address',
-            0,
-            '$client_name',
-            NULL,
-            '$client_phone',
-            '$client_email',
-            '$client_address',
-            $box,
-            $weight,
-            " . (empty($dimensions) ? "NULL" : "'$dimensions'") . ",
-            NULL,
-            NULL,
-            0,
-            0,
-            0,
-            0,
-            '$pickup_datetime',
-            'Picked Up',
-            '',
-            '',
-            '',
-            $car_id,
-            '',
-            0,
-            0,
-            $driver_id,
-            '',
-            '',
-            " . ($helper_id > 0 ? $helper_id : "NULL") . ",
-            '',
-            '',
-            NULL
-        )";
-        
-        if (mysqli_query($conn, $insert_query)) {
-            $shipping_details_id = mysqli_insert_id($conn);
-            $success_count++;
+        // Prepare docket data for auto-sync
+        $docketData = [
+            'doc_no' => $doc_no,
+            'trip_group_id' => $trip_group_id,
+            'service_type' => $docket['service_type'] ?? 'Standard',
+            'doc_type' => 'DRS',
+            'status' => 'Picked Up',
             
-            // Add to history if table exists
-            $check_table = @mysqli_query($conn, "SHOW TABLES LIKE 'tbl_shipping_history'");
-            if ($check_table && mysqli_num_rows($check_table) > 0) {
-                $admin_name = $_SESSION['user_name'] ?? $_SESSION['admin'] ?? 'Admin';
-                $history_insert = "INSERT INTO tbl_shipping_history (
-                    shipping_details_id, 
-                    status, 
-                    notes, 
-                    created_at
-                ) VALUES (
-                    $shipping_details_id,
-                    'Picked Up',
-                    'Trip created by $admin_name',
-                    NOW()
-                )";
-                @mysqli_query($conn, $history_insert);
-            }
+            // Office data (will auto-sync from tbl_offices)
+            'office_id' => $office_id,
+            'branch_office' => $office_name,
+            
+            // Company/Sender data (will auto-sync if company_id provided)
+            'company_id' => intval($docket['company_id'] ?? 0) ?: null,
+            'company_address' => $docket['company_address'] ?? null,
+            'pickup_location' => $docket['company_address'] ?? null,
+            
+            // Client/Receiver data
+            'client_name' => $docket['client_name'] ?? 'N/A',
+            'client_phone' => $docket['client_phone'] ?? 'N/A',
+            'client_email' => $docket['client_email'] ?? 'N/A',
+            'client_address' => $docket['client_address'] ?? null,
+            'delivery_location' => $docket['client_address'] ?? null,
+            
+            // Car data (will auto-sync from tbl_car)
+            'car_id' => $car_id,
+            
+            // Driver data (will auto-sync from tbl_driver)
+            'driver_id' => $driver_id,
+            
+            // Helper data (will auto-sync from tbl_helper if provided)
+            'helper_id' => ($helper_id > 0) ? $helper_id : null,
+            
+            // Package information
+            'weight' => floatval($docket['weight'] ?? 0),
+            'box' => intval($docket['box'] ?? 0),
+            'dimensions' => $docket['dimensions'] ?? 'N/A',
+            
+            // Dates
+            'pickup_datetime' => $pickup_datetime,
+        ];
+        
+        // Save docket with auto-sync to docket_details table
+        $result = $docketManager->saveDocket($docketData);
+        
+        if ($result['success']) {
+            $success_count++;
+        } else {
+            error_log("Failed to save docket $doc_no: " . ($result['error'] ?? 'Unknown error'));
         }
     }
     
@@ -188,7 +129,7 @@ try {
         // Commit transaction
         mysqli_commit($conn);
         
-        $_SESSION['success_msg'] = "Trip created successfully with $success_count docket(s)!";
+        $_SESSION['success_msg'] = "Trip created successfully with $success_count docket(s) in docket_details table! All details auto-synced from car, driver, helper, and company tables.";
         header('Location: add_trip_modern.php?msg=success');
         exit;
     } else {

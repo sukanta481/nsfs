@@ -1,5 +1,14 @@
 <?php
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 include('conn.php');
+
+// Check if database connection exists
+if(!isset($conn) || !$conn) {
+    die("Database connection failed! Please check conn.php");
+}
 
 // Get filter parameters
 $doc_type = $_GET['doc_type'] ?? '';
@@ -11,45 +20,94 @@ $typedata = $_GET['typedata'] ?? '';
 $consignor = trim($_GET['consignor'] ?? '');
 $consignee = trim($_GET['consignee'] ?? '');
 
+// Debug log
+$debugLog = "Filter applied at " . date('Y-m-d H:i:s') . "\n";
+$debugLog .= "From: $fromdate, To: $todate, Status: $status\n";
+file_put_contents('debug_filter.log', $debugLog, FILE_APPEND);
+
+// Validate date range
+$dateError = '';
+if (!empty($fromdate) && !empty($todate)) {
+    if (strtotime($fromdate) > strtotime($todate)) {
+        $dateError = "From date cannot be greater than To date";
+    }
+}
+
 // Build WHERE clause
 $where = [];
-if (!empty($fromdate) && !empty($todate)) {
-    $where[] = "(pickup_dates BETWEEN '".mysqli_real_escape_string($conn, $fromdate)."' AND '".mysqli_real_escape_string($conn, $todate)."')";
+
+// Fix date filtering - use time range to include full day
+if (!empty($fromdate) && !empty($todate) && empty($dateError)) {
+    $fromDateTime = mysqli_real_escape_string($conn, $fromdate) . ' 00:00:00';
+    $toDateTime = mysqli_real_escape_string($conn, $todate) . ' 23:59:59';
+    $where[] = "(dd.pickup_datetime >= '$fromDateTime' AND dd.pickup_datetime <= '$toDateTime')";
+} elseif (!empty($fromdate) && empty($todate)) {
+    $fromDateTime = mysqli_real_escape_string($conn, $fromdate) . ' 00:00:00';
+    $where[] = "dd.pickup_datetime >= '$fromDateTime'";
+} elseif (empty($fromdate) && !empty($todate)) {
+    $toDateTime = mysqli_real_escape_string($conn, $todate) . ' 23:59:59';
+    $where[] = "dd.pickup_datetime <= '$toDateTime'";
 }
+
 if (!empty($doc_type)) {
-    $where[] = "sd.doc_type='".mysqli_real_escape_string($conn, $doc_type)."'";
+    $where[] = "dd.doc_type='".mysqli_real_escape_string($conn, $doc_type)."'";
 }
 if (!empty($status)) {
-    $where[] = "sd.status='".mysqli_real_escape_string($conn, $status)."'";
+    $where[] = "dd.status='".mysqli_real_escape_string($conn, $status)."'";
 }
 if (!empty($type) && !empty($typedata)) {
     if ($type == 'doc') {
-        $where[] = "sd.doc_no='".mysqli_real_escape_string($conn, $typedata)."'";
+        $where[] = "dd.doc_no LIKE '%" . mysqli_real_escape_string($conn, $typedata) . "%'";
     }
     if ($type == 'box') {
-        $where[] = "sd.box='".mysqli_real_escape_string($conn, $typedata)."'";
+        $where[] = "dd.box_no LIKE '%" . mysqli_real_escape_string($conn, $typedata) . "%'";
     }
 }
 if (!empty($consignor)) {
-    $where[] = "c.company_title LIKE '%" . mysqli_real_escape_string($conn, $consignor) . "%'";
+    $where[] = "dd.company_name LIKE '%" . mysqli_real_escape_string($conn, $consignor) . "%'";
 }
 if (!empty($consignee)) {
-    $where[] = "sd.client_name LIKE '%" . mysqli_real_escape_string($conn, $consignee) . "%'";
+    $where[] = "dd.client_name LIKE '%" . mysqli_real_escape_string($conn, $consignee) . "%'";
 }
 $whereSQL = (count($where) > 0) ? ("WHERE " . implode(" AND ", $where)) : "";
 
-// Fetch data
-$sql = "SELECT sd.*, c.company_title
-        FROM tbl_shipping_details sd
-        LEFT JOIN tbl_company c ON sd.company_id = c.company_id
+// Fetch data from docket_details table
+$sql = "SELECT dd.*, 
+               o.office_name as branch_office_name
+        FROM docket_details dd
+        LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
         $whereSQL
-        ORDER BY sd.shipping_details_id DESC";
+        ORDER BY dd.docket_id DESC";
 
 $result = mysqli_query($conn, $sql);
+
+// Check for SQL errors
+if(!$result) {
+    $sqlError = mysqli_error($conn);
+    error_log("SQL Error in list_register.php: " . $sqlError);
+}
+
 $totalRecords = $result ? mysqli_num_rows($result) : 0;
+
+// Debug output
+if(isset($_GET['debug'])) {
+    echo "<pre>";
+    echo "SQL: " . htmlspecialchars($sql) . "\n\n";
+    echo "Total Records: $totalRecords\n\n";
+    if($result && $totalRecords > 0) {
+        mysqli_data_seek($result, 0);
+        while($r = mysqli_fetch_assoc($result)) {
+            print_r($r);
+        }
+        mysqli_data_seek($result, 0);
+    }
+    if(!$result) {
+        echo "SQL Error: " . mysqli_error($conn);
+    }
+    echo "</pre>";
+}
 ?>
 
-<!DOCTYPE html>
 <style>
 /* Disable ALL loading indicators */
 .pace, .pace-progress, .pace-activity, .pace-running .pace, 
@@ -66,7 +124,91 @@ window.Pace = { start: function(){}, restart: function(){}, stop: function(){}, 
 window.__NO_DATATABLES__ = true;
 </script>
 
+<!-- DEBUG MARKER - If you see this, the file is loading -->
+<?php 
+echo "<!-- DEBUG: list_register.php loaded successfully -->";
+echo "<!-- DEBUG: Total Records = " . $totalRecords . " -->";
+echo "<!-- DEBUG: SQL = " . htmlspecialchars($sql) . " -->";
+if(!$result) {
+    echo "<!-- DEBUG ERROR: " . htmlspecialchars(mysqli_error($conn)) . " -->";
+}
+
+// Visible debug info if needed
+if(isset($_GET['show_debug'])) {
+    echo "<div style='background: #fff3cd; border: 2px solid #856404; padding: 15px; margin: 15px 0; border-radius: 5px;'>";
+    echo "<h3 style='color: #856404; margin: 0 0 10px 0;'>🔍 Debug Information</h3>";
+    echo "<p><strong>Total Records Found:</strong> " . $totalRecords . "</p>";
+    echo "<p><strong>SQL Query:</strong></p>";
+    echo "<pre style='background: #fff; padding: 10px; border: 1px solid #ddd; overflow-x: auto;'>" . htmlspecialchars($sql) . "</pre>";
+    if(!$result) {
+        echo "<p style='color: red;'><strong>SQL Error:</strong> " . htmlspecialchars(mysqli_error($conn)) . "</p>";
+    }
+    echo "<p><strong>Filter Parameters:</strong></p>";
+    echo "<ul>";
+    echo "<li>From Date: " . htmlspecialchars($fromdate ?: 'Not set') . "</li>";
+    echo "<li>To Date: " . htmlspecialchars($todate ?: 'Not set') . "</li>";
+    echo "<li>Status: " . htmlspecialchars($status ?: 'Not set') . "</li>";
+    echo "<li>Type: " . htmlspecialchars($type ?: 'Not set') . "</li>";
+    echo "<li>Type Data: " . htmlspecialchars($typedata ?: 'Not set') . "</li>";
+    echo "<li>Consignor: " . htmlspecialchars($consignor ?: 'Not set') . "</li>";
+    echo "<li>Consignee: " . htmlspecialchars($consignee ?: 'Not set') . "</li>";
+    echo "</ul>";
+    echo "</div>";
+}
+?>
+
 <div class="register-list-container">
+    
+    <!-- VISIBLE TEST MARKER -->
+    <div style="background: #4CAF50; color: white; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-weight: bold;">
+        ✅ List Register Page Loaded | Total Records: <?= $totalRecords ?> | Date Filter: <?= htmlspecialchars($fromdate) ?> to <?= htmlspecialchars($todate) ?>
+    </div>
+    
+    <!-- Success Message -->
+    <?php if(isset($_GET['success'])): ?>
+    <div class="alert-message alert-success">
+        <i class="fa fa-check-circle"></i>
+        <span>Docket updated successfully!</span>
+        <button class="close-alert" onclick="this.parentElement.style.display='none'">&times;</button>
+    </div>
+    <?php endif; ?>
+    
+    <!-- Deleted Message -->
+    <?php if(isset($_GET['deleted'])): ?>
+    <div class="alert-message alert-deleted">
+        <i class="fa fa-trash"></i>
+        <span>Docket <?= htmlspecialchars($_GET['doc_no'] ?? '') ?> deleted successfully!</span>
+        <button class="close-alert" onclick="this.parentElement.style.display='none'">&times;</button>
+    </div>
+    <?php endif; ?>
+    
+    <!-- Error Message -->
+    <?php if(isset($_GET['error'])): ?>
+    <div class="alert-message alert-error">
+        <i class="fa fa-exclamation-circle"></i>
+        <span><?= htmlspecialchars($_GET['error']) ?></span>
+        <button class="close-alert" onclick="this.parentElement.style.display='none'">&times;</button>
+    </div>
+    <?php endif; ?>
+    
+    <!-- Date Validation Error -->
+    <?php if(!empty($dateError)): ?>
+    <div class="alert-message alert-error">
+        <i class="fa fa-exclamation-circle"></i>
+        <span><?= htmlspecialchars($dateError) ?></span>
+        <button class="close-alert" onclick="this.parentElement.style.display='none'">&times;</button>
+    </div>
+    <?php endif; ?>
+    
+    <!-- SQL Error -->
+    <?php if(!empty($sqlError)): ?>
+    <div class="alert-message alert-error">
+        <i class="fa fa-exclamation-circle"></i>
+        <span><strong>Database Error:</strong> <?= htmlspecialchars($sqlError) ?></span>
+        <button class="close-alert" onclick="this.parentElement.style.display='none'">&times;</button>
+    </div>
+    <?php endif; ?>
+    
     <!-- Advanced Filters -->
     <div class="filter-section">
         <div class="filter-header">
@@ -89,18 +231,10 @@ window.__NO_DATATABLES__ = true;
                 </div>
                 
                 <div class="filter-col">
-                    <label><i class="fa fa-file-text"></i> DRS Type</label>
-                    <select name="doc_type">
-                        <option value="">All Types</option>
-                        <option value="DRS" <?= $doc_type == 'DRS' ? 'selected' : '' ?>>DRS</option>
-                        <option value="NON-DRS" <?= $doc_type == 'NON-DRS' ? 'selected' : '' ?>>NON-DRS</option>
-                    </select>
-                </div>
-                
-                <div class="filter-col">
                     <label><i class="fa fa-info-circle"></i> Status</label>
                     <select name="status">
                         <option value="">All Status</option>
+                        <option value="Pending" <?= $status == 'Pending' ? 'selected' : '' ?>>Pending</option>
                         <option value="Picked Up" <?= $status == 'Picked Up' ? 'selected' : '' ?>>Picked Up</option>
                         <option value="In Transit" <?= $status == 'In Transit' ? 'selected' : '' ?>>In Transit</option>
                         <option value="Out for Delivery" <?= $status == 'Out for Delivery' ? 'selected' : '' ?>>Out for Delivery</option>
@@ -108,9 +242,7 @@ window.__NO_DATATABLES__ = true;
                         <option value="Delayed" <?= $status == 'Delayed' ? 'selected' : '' ?>>Delayed</option>
                     </select>
                 </div>
-            </div>
-            
-            <div class="filter-row">
+                
                 <div class="filter-col">
                     <label><i class="fa fa-search"></i> Search By</label>
                     <div class="search-inputs">
@@ -122,7 +254,9 @@ window.__NO_DATATABLES__ = true;
                         <input type="text" name="typedata" value="<?= htmlspecialchars($typedata) ?>" placeholder="Enter value" style="width: 63%;">
                     </div>
                 </div>
-                
+            </div>
+            
+            <div class="filter-row">
                 <div class="filter-col">
                     <label><i class="fa fa-building"></i> Consignor Company</label>
                     <input type="text" name="consignor" value="<?= htmlspecialchars($consignor) ?>" placeholder="Search company...">
@@ -141,6 +275,11 @@ window.__NO_DATATABLES__ = true;
                 <button type="button" class="btn-reset" onclick="window.location.href='register.php?type=list_register&lp=<?= htmlspecialchars($_GET['lp'] ?? 'ac') ?>'">
                     <i class="fa fa-refresh"></i> Reset
                 </button>
+                <?php if($totalRecords > 0): ?>
+                <button type="button" class="btn-export" onclick="exportToExcel()">
+                    <i class="fa fa-file-excel-o"></i> Export to Excel
+                </button>
+                <?php endif; ?>
             </div>
         </form>
     </div>
@@ -178,9 +317,9 @@ window.__NO_DATATABLES__ = true;
                         while($row = mysqli_fetch_assoc($result)) {
                             // Format date
                             $pickup_date = 'N/A';
-                            if(!empty($row['pickup_dates'])) {
-                                $date = DateTime::createFromFormat('Y-m-d H:i:s', $row['pickup_dates']);
-                                if(!$date) $date = DateTime::createFromFormat('Y-m-d', $row['pickup_dates']);
+                            if(!empty($row['pickup_datetime'])) {
+                                $date = DateTime::createFromFormat('Y-m-d H:i:s', $row['pickup_datetime']);
+                                if(!$date) $date = DateTime::createFromFormat('Y-m-d', $row['pickup_datetime']);
                                 if($date) $pickup_date = $date->format('d-m-Y');
                             }
                             
@@ -198,16 +337,22 @@ window.__NO_DATATABLES__ = true;
                         <td><?= $sl ?></td>
                         <td><?= $pickup_date ?></td>
                         <td><strong><?= htmlspecialchars($row['doc_no'] ?? '-') ?></strong></td>
-                        <td><?= htmlspecialchars($row['company_title'] ?? '-') ?></td>
+                        <td><?= htmlspecialchars($row['company_name'] ?? '-') ?></td>
                         <td><?= htmlspecialchars($row['client_name'] ?? '-') ?></td>
                         <td><?= htmlspecialchars($row['client_address'] ?? '-') ?></td>
                         <td><span class="status-badge <?= $status_class ?>"><?= htmlspecialchars($row['status'] ?? '-') ?></span></td>
                         <td>
                             <div class="action-btns">
-                                <a href="edit_register.php?shipping_details_id=<?= $row['shipping_details_id'] ?>&<?= session_name().'='.session_id() ?>" class="btn-edit" title="Edit">
+                                <a href="view_register.php?docket_id=<?= $row['docket_id'] ?>&<?= session_name().'='.session_id() ?>" class="btn-view" title="View">
+                                    <i class="fa fa-eye"></i>
+                                </a>
+                                <a href="download_docket.php?docket_id=<?= $row['docket_id'] ?>" class="btn-download" title="Download PDF" target="_blank">
+                                    <i class="fa fa-download"></i>
+                                </a>
+                                <a href="edit_register_new.php?docket_id=<?= $row['docket_id'] ?>&<?= session_name().'='.session_id() ?>" class="btn-edit" title="Edit">
                                     <i class="fa fa-edit"></i>
                                 </a>
-                                <a href="javascript:void(0)" onclick="deleteRecord(<?= $row['shipping_details_id'] ?>)" class="btn-delete" title="Delete">
+                                <a href="javascript:void(0)" onclick="deleteRecord(<?= $row['docket_id'] ?>)" class="btn-delete" title="Delete">
                                     <i class="fa fa-trash"></i>
                                 </a>
                             </div>
@@ -217,11 +362,41 @@ window.__NO_DATATABLES__ = true;
                             $sl++;
                         }
                     } else {
+                        // Check if filters are applied
+                        $hasFilters = !empty($fromdate) || !empty($todate) || !empty($status) || 
+                                     !empty($type) || !empty($consignor) || !empty($consignee);
                     ?>
                     <tr>
                         <td colspan="8" class="no-data">
-                            <i class="fa fa-inbox"></i>
-                            <p>No dockets found</p>
+                            <i class="fa fa-inbox" style="font-size: 48px; color: #95a5a6; margin-bottom: 10px;"></i>
+                            <p style="font-size: 18px; font-weight: 600; margin: 10px 0 5px;">No dockets found</p>
+                            <?php if($hasFilters): ?>
+                            <p style="font-size: 14px; color: #7f8c8d;">
+                                No records match your filter criteria. Try adjusting your filters.
+                            </p>
+                            <p style="font-size: 13px; color: #95a5a6; margin-top: 8px;">
+                                <strong>Active Filters:</strong>
+                                <?php if(!empty($fromdate) || !empty($todate)): ?>
+                                    Date: <?= htmlspecialchars($fromdate ?: 'Any') ?> to <?= htmlspecialchars($todate ?: 'Any') ?> &nbsp;|&nbsp;
+                                <?php endif; ?>
+                                <?php if(!empty($status)): ?>
+                                    Status: <?= htmlspecialchars($status) ?> &nbsp;|&nbsp;
+                                <?php endif; ?>
+                                <?php if(!empty($type) && !empty($typedata)): ?>
+                                    <?= ucfirst($type) ?>: <?= htmlspecialchars($typedata) ?> &nbsp;|&nbsp;
+                                <?php endif; ?>
+                                <?php if(!empty($consignor)): ?>
+                                    Consignor: <?= htmlspecialchars($consignor) ?> &nbsp;|&nbsp;
+                                <?php endif; ?>
+                                <?php if(!empty($consignee)): ?>
+                                    Consignee: <?= htmlspecialchars($consignee) ?>
+                                <?php endif; ?>
+                            </p>
+                            <?php else: ?>
+                            <p style="font-size: 14px; color: #7f8c8d;">
+                                No dockets have been created yet.
+                            </p>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php } ?>
@@ -240,10 +415,32 @@ if (typeof jQuery !== 'undefined') {
 window.handleDataTableButtons = function() {};
 window.TableManageButtons = { init: function() {} };
 
-function deleteRecord(id) {
+function deleteRecord(docket_id) {
     if(confirm('Are you sure you want to delete this record?')) {
-        window.location.href = 'action_handler.php?action=delete_shipping_details&shipping_details_id=' + id + '&' + window.location.search.substring(1);
+        window.location.href = 'action_handler.php?action=delete_docket&docket_id=' + docket_id + '&' + window.location.search.substring(1);
     }
+}
+
+function exportToExcel() {
+    // Get current URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Build export URL with filter parameters
+    let exportUrl = 'export_dockets_excel.php?';
+    const params = [];
+    
+    if(urlParams.get('fromdate')) params.push('fromdate=' + urlParams.get('fromdate'));
+    if(urlParams.get('todate')) params.push('todate=' + urlParams.get('todate'));
+    if(urlParams.get('status')) params.push('status=' + urlParams.get('status'));
+    if(urlParams.get('type')) params.push('type=' + urlParams.get('type'));
+    if(urlParams.get('typedata')) params.push('typedata=' + urlParams.get('typedata'));
+    if(urlParams.get('consignor')) params.push('consignor=' + urlParams.get('consignor'));
+    if(urlParams.get('consignee')) params.push('consignee=' + urlParams.get('consignee'));
+    
+    exportUrl += params.join('&');
+    
+    // Open in new window to trigger download
+    window.open(exportUrl, '_blank');
 }
 
 // Remove pace elements
@@ -252,6 +449,35 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.pace, .pace-progress, .pace-activity').forEach(el => el.remove());
         document.body.classList.remove('pace-running', 'pace-active');
     }, 100);
+    
+    // Auto-dismiss alerts after 5 seconds
+    const alerts = document.querySelectorAll('.alert-message');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            alert.style.animation = 'slideUp 0.3s ease';
+            setTimeout(() => alert.remove(), 300);
+        }, 5000);
+    });
+    
+    // Date validation
+    const filterForm = document.getElementById('filterForm');
+    if(filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            const fromDate = document.querySelector('input[name="fromdate"]').value;
+            const toDate = document.querySelector('input[name="todate"]').value;
+            
+            if(fromDate && toDate) {
+                const from = new Date(fromDate);
+                const to = new Date(toDate);
+                
+                if(from > to) {
+                    e.preventDefault();
+                    alert('Error: "From Date" cannot be greater than "To Date".\n\nPlease adjust your date range.');
+                    return false;
+                }
+            }
+        });
+    }
 });
 </script>
 
@@ -263,6 +489,81 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 0px 15px 10px 15px;
     min-height: calc(100vh - 160px);
     margin-top: 0;
+}
+
+/* Success Alert */
+.alert-message {
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    position: relative;
+    animation: slideDown 0.3s ease;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.alert-deleted {
+    background: #fff3cd;
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.alert-message i {
+    font-size: 1.3rem;
+}
+
+.alert-message span {
+    flex: 1;
+}
+
+.close-alert {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    padding: 0 5px;
+}
+
+.close-alert:hover {
+    opacity: 1;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
 }
 
 /* Filter Section */
@@ -389,6 +690,16 @@ document.addEventListener('DOMContentLoaded', function() {
     transform: translateY(-2px);
 }
 
+.btn-export {
+    background: #28a745;
+    color: #fff;
+}
+
+.btn-export:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
 /* Table Section */
 .table-section {
     background: #fff;
@@ -502,8 +813,12 @@ document.addEventListener('DOMContentLoaded', function() {
 .action-btns {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
+.btn-view,
+.btn-download,
 .btn-edit,
 .btn-delete {
     width: 34px;
@@ -515,6 +830,28 @@ document.addEventListener('DOMContentLoaded', function() {
     text-decoration: none;
     transition: all 0.2s;
     cursor: pointer;
+}
+
+.btn-view {
+    background: #3498db;
+    color: #fff;
+}
+
+.btn-view:hover {
+    background: #2980b9;
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.btn-download {
+    background: #27ae60;
+    color: #fff;
+}
+
+.btn-download:hover {
+    background: #229954;
+    color: #fff;
+    transform: scale(1.1);
 }
 
 .btn-edit {

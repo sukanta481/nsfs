@@ -2,15 +2,15 @@
 require 'top_header.php';
 require 'conn.php';
 
-$shipping_details_id = intval($_REQUEST['shipping_details_id'] ?? 0);
+$docket_id = intval($_REQUEST['docket_id'] ?? 0);
 
-// Fetch existing shipping entry
-$sql = "SELECT * FROM tbl_shipping_details WHERE shipping_details_id = $shipping_details_id";
+// Fetch existing docket entry from docket_details table
+$sql = "SELECT * FROM docket_details WHERE docket_id = $docket_id";
 $res = mysqli_query($conn, $sql);
 $data = mysqli_fetch_assoc($res);
 
 if (!$data) {
-    echo '<div class="alert alert-danger">Shipping entry not found. <a href="register.php?type=list_register&lp=cu">Back to List</a></div>';
+    echo '<div class="alert alert-danger">Docket entry not found. <a href="register.php?type=list_register&lp=cu">Back to List</a></div>';
     exit;
 }
 
@@ -214,7 +214,7 @@ $helpers   = mysqli_query($conn, "SELECT * FROM tbl_helper ORDER BY helper_name 
                   <input type="number" name="weight" required value="<?= htmlspecialchars($data['weight']); ?>" class="form-control" min="0" step="0.01">
                 </div>
               </div>
-              <input type="hidden" name="shipping_details_id" value="<?= $data['shipping_details_id']; ?>">
+              <input type="hidden" name="docket_id" value="<?= $data['docket_id']; ?>">
               <input type="hidden" name="status" value="<?= htmlspecialchars($data['status']); ?>">
               <div class="form-group">
                 <div class="col-md-6 col-md-offset-3">

@@ -26,6 +26,39 @@ switch($action) {
     header("Location: trip.php?type=list_trip&status=Delivered&msg=deleted");
     exit;
 
+    case 'delete_docket':
+        $docket_id = intval($_GET['docket_id'] ?? 0);
+        
+        if ($docket_id > 0) {
+            // Get docket number before deleting
+            $check_query = mysqli_query($conn, "SELECT doc_no FROM docket_details WHERE docket_id=$docket_id");
+            $docket_data = mysqli_fetch_assoc($check_query);
+            
+            if($docket_data) {
+                $doc_no = $docket_data['doc_no'];
+                
+                // Delete the docket
+                if(mysqli_query($conn, "DELETE FROM docket_details WHERE docket_id=$docket_id")) {
+                    // Success - redirect with deleted message
+                    header("Location: register.php?type=list_register&lp=ac&deleted=1&doc_no=" . urlencode($doc_no));
+                    exit;
+                } else {
+                    // Error - redirect with error message
+                    header("Location: register.php?type=list_register&lp=ac&error=" . urlencode('Failed to delete docket'));
+                    exit;
+                }
+            } else {
+                // Docket not found
+                header("Location: register.php?type=list_register&lp=ac&error=" . urlencode('Docket not found'));
+                exit;
+            }
+        } else {
+            // Invalid ID
+            header("Location: register.php?type=list_register&lp=ac&error=" . urlencode('Invalid docket ID'));
+            exit;
+        }
+        break;
+
 
     // Add more cases for other actions (edit, update, etc)
     default:

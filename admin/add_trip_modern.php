@@ -14,6 +14,14 @@ $companies = mysqli_query($conn, "SELECT company_id, company_title, company_addr
 $cars = mysqli_query($conn, "SELECT * FROM tbl_car ORDER BY car_number ASC");
 $drivers = mysqli_query($conn, "SELECT * FROM tbl_driver ORDER BY driver_name ASC");
 $helpers = mysqli_query($conn, "SELECT * FROM tbl_helper ORDER BY helper_name ASC");
+$offices = mysqli_query($conn, "SELECT * FROM tbl_offices ORDER BY office_name ASC");
+
+// Get Barasat office as default
+$barasat_office = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM tbl_offices WHERE office_name = 'Barasat' LIMIT 1"));
+$default_office_id = $barasat_office['office_id'] ?? 0;
+$default_office_name = $barasat_office['office_name'] ?? '';
+$default_office_address = $barasat_office['office_address'] ?? '';
+$default_office_phone = $barasat_office['office_phone'] ?? '';
 
 $show_success = isset($_GET['msg']) && $_GET['msg'] === 'success';
 $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
@@ -458,6 +466,45 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                     <div class="form-grid">
                         <div class="form-group">
                             <label>
+                                <i class="fas fa-building"></i>
+                                Branch Office <span class="required">*</span>
+                            </label>
+                            <select name="office_id" id="office_select" class="form-control" required style="color: #000 !important; background: #fff !important;">
+                                <?php 
+                                mysqli_data_seek($offices, 0);
+                                while ($office = mysqli_fetch_assoc($offices)): 
+                                    $selected = ($office['office_id'] == $default_office_id) ? 'selected' : '';
+                                ?>
+                                    <option value="<?= $office['office_id'] ?>" 
+                                            data-name="<?= htmlspecialchars($office['office_name']) ?>"
+                                            data-address="<?= htmlspecialchars($office['office_address']) ?>"
+                                            data-phone="<?= htmlspecialchars($office['office_phone']) ?>"
+                                            <?= $selected ?>
+                                            style="color: #000 !important;">
+                                        <?= htmlspecialchars($office['office_name']) ?>
+                                    </option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-map-marker-alt"></i>
+                                Office Address
+                            </label>
+                            <input type="text" name="office_address" id="office_address" class="form-control" readonly value="<?= htmlspecialchars($default_office_address) ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-phone-alt"></i>
+                                Office Phone
+                            </label>
+                            <input type="text" name="office_phone" id="office_phone" class="form-control" readonly value="<?= htmlspecialchars($default_office_phone) ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
                                 <i class="fas fa-car"></i>
                                 Select Car <span class="required">*</span>
                             </label>
@@ -482,7 +529,7 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             <select name="driver_id" id="driver_select" class="form-control" required style="color: #000 !important; background: #fff !important;">
                                 <option value="">Choose Driver</option>
                                 <?php while ($driver = mysqli_fetch_assoc($drivers)): ?>
-                                    <option value="<?= $driver['driver_id'] ?>" data-phone="<?= htmlspecialchars($driver['driver_phone'] ?? '') ?>">
+                                    <option value="<?= $driver['driver_id'] ?>" data-phone="<?= htmlspecialchars($driver['driver_number'] ?? '') ?>">
                                         <?= htmlspecialchars($driver['driver_name']) ?>
                                     </option>
                                 <?php endwhile; ?>
@@ -505,7 +552,7 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             <select name="helper_id" id="helper_select" class="form-control" style="color: #000 !important; background: #fff !important;">
                                 <option value="">Choose Helper (Optional)</option>
                                 <?php while ($helper = mysqli_fetch_assoc($helpers)): ?>
-                                    <option value="<?= $helper['helper_id'] ?>" data-phone="<?= htmlspecialchars($helper['helper_phone'] ?? '') ?>">
+                                    <option value="<?= $helper['helper_id'] ?>" data-phone="<?= htmlspecialchars($helper['helper_number'] ?? '') ?>">
                                         <?= htmlspecialchars($helper['helper_name']) ?>
                                     </option>
                                 <?php endwhile; ?>
@@ -600,6 +647,19 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                 }, 10000); // 10 seconds
             }
             
+            // Setup office auto-fill
+            const officeSelect = document.getElementById('office_select');
+            const officeAddress = document.getElementById('office_address');
+            const officePhone = document.getElementById('office_phone');
+            
+            if (officeSelect && officeAddress && officePhone) {
+                officeSelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    officeAddress.value = selectedOption.getAttribute('data-address') || '';
+                    officePhone.value = selectedOption.getAttribute('data-phone') || '';
+                });
+            }
+            
             // Setup driver phone auto-fill
             const driverSelect = document.getElementById('driver_select');
             const driverPhoneInput = document.getElementById('driver_phone');
@@ -629,6 +689,22 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
             docketCount++;
             const container = document.getElementById('dockets-container');
             
+            // Get first docket's company info if exists
+            let defaultCompanyId = '';
+            let defaultCompanyAddress = '';
+            
+            if (docketCount > 1) {
+                const firstCompanySelect = document.querySelector('select[name="dockets[1][company_id]"]');
+                const firstCompanyAddress = document.querySelector('textarea[name="dockets[1][company_address]"]');
+                
+                if (firstCompanySelect) {
+                    defaultCompanyId = firstCompanySelect.value;
+                }
+                if (firstCompanyAddress) {
+                    defaultCompanyAddress = firstCompanyAddress.value;
+                }
+            }
+            
             const docketHTML = `
                 <div class="docket-item" id="docket-${docketCount}">
                     <div class="docket-header">
@@ -644,7 +720,7 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                     <div class="form-grid" style="margin-bottom: 20px;">
                         <div class="form-group">
                             <label>Docket Number <span class="required">*</span></label>
-                            <input type="text" name="dockets[${docketCount}][doc_no]" class="form-control docket-number-input" data-docket-id="${docketCount}" placeholder="Enter docket number" required style="color: #000 !important;">
+                            <input type="text" name="dockets[${docketCount}][doc_no]" class="form-control docket-number-input auto-uppercase" data-docket-id="${docketCount}" placeholder="Enter docket number" required style="color: #000 !important; text-transform: uppercase;">
                             <div class="duplicate-warning" id="duplicate-warning-${docketCount}" style="display:none; color:#e74c3c; font-size:0.85rem; margin-top:5px; font-weight:600;">
                                 <i class="fas fa-exclamation-triangle"></i> This docket number already exists!
                             </div>
@@ -663,7 +739,7 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                         <div class="docket-section">
                             <div class="section-title">
                                 <i class="fas fa-user"></i>
-                                Sender Information
+                                Sender Information ${docketCount > 1 ? '<small style="color:#27ae60;">(Auto-filled from first docket)</small>' : ''}
                             </div>
                             <div class="form-group">
                                 <label>Company <span class="required">*</span></label>
@@ -679,7 +755,7 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             </div>
                             <div class="form-group">
                                 <label>Company Address (Pickup Location) <span class="required">*</span></label>
-                                <textarea name="dockets[${docketCount}][company_address]" class="form-control company-address-${docketCount}" rows="2" required style="color: #000 !important;"></textarea>
+                                <textarea name="dockets[${docketCount}][company_address]" class="form-control company-address-${docketCount} auto-uppercase" rows="2" required style="color: #000 !important; text-transform: uppercase;"></textarea>
                             </div>
                         </div>
 
@@ -690,7 +766,7 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             </div>
                             <div class="form-group">
                                 <label>Name <span class="required">*</span></label>
-                                <input type="text" name="dockets[${docketCount}][client_name]" class="form-control" required style="color: #000 !important;">
+                                <input type="text" name="dockets[${docketCount}][client_name]" class="form-control auto-uppercase" required style="color: #000 !important; text-transform: uppercase;">
                             </div>
                             <div class="form-group">
                                 <label>Phone <span class="required">*</span></label>
@@ -702,7 +778,7 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             </div>
                             <div class="form-group">
                                 <label>Client Address (Delivery Location) <span class="required">*</span></label>
-                                <textarea name="dockets[${docketCount}][client_address]" class="form-control" rows="2" required style="color: #000 !important;"></textarea>
+                                <textarea name="dockets[${docketCount}][client_address]" class="form-control auto-uppercase" rows="2" required style="color: #000 !important; text-transform: uppercase;"></textarea>
                             </div>
                         </div>
                     </div>
@@ -718,7 +794,7 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                         </div>
                         <div class="form-group">
                             <label>Dimensions (L x W x H)</label>
-                            <input type="text" name="dockets[${docketCount}][dimensions]" class="form-control" placeholder="e.g., 10x20x30 cm" style="color: #000 !important;">
+                            <input type="text" name="dockets[${docketCount}][dimensions]" class="form-control auto-uppercase" placeholder="e.g., 10x20x30 cm" style="color: #000 !important; text-transform: uppercase;">
                         </div>
                     </div>
                 </div>
@@ -726,11 +802,27 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
             
             container.insertAdjacentHTML('beforeend', docketHTML);
             
+            // Auto-fill sender info if this is not the first docket
+            if (docketCount > 1 && defaultCompanyId) {
+                const newCompanySelect = document.querySelector(`select[name="dockets[${docketCount}][company_id]"]`);
+                const newCompanyAddress = document.querySelector(`textarea[name="dockets[${docketCount}][company_address]"]`);
+                
+                if (newCompanySelect) {
+                    newCompanySelect.value = defaultCompanyId;
+                }
+                if (newCompanyAddress) {
+                    newCompanyAddress.value = defaultCompanyAddress;
+                }
+            }
+            
             // Setup company address auto-fill for the newly added docket
             setupCompanyAddressAutoFill(docketCount);
             
             // Setup duplicate checking for the newly added docket
             setupDuplicateCheck(docketCount);
+            
+            // Setup uppercase conversion for the newly added docket
+            setupUppercaseConversion(docketCount);
         }
         
         // Function to check for duplicate docket numbers
@@ -742,7 +834,7 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                 let checkTimeout;
                 
                 docketInput.addEventListener('input', function() {
-                    const docketNo = this.value.trim();
+                    const docketNo = this.value.trim().toUpperCase();
                     
                     // Clear previous timeout
                     clearTimeout(checkTimeout);
@@ -756,19 +848,22 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                         return;
                     }
                     
-                    // Debounce the API call (wait 500ms after user stops typing)
+                    // Debounce the API call (wait 800ms after user stops typing)
                     checkTimeout = setTimeout(function() {
                         fetch('check_duplicate_docket.php?doc_no=' + encodeURIComponent(docketNo))
                             .then(response => response.json())
                             .then(data => {
                                 if (data.exists) {
-                                    // Show warning
+                                    // Show inline warning
                                     warningDiv.style.display = 'block';
                                     warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> This docket already exists! (Status: ${data.status}, Created: ${data.created_at})`;
                                     docketInput.style.borderColor = '#e74c3c';
                                     docketInput.style.boxShadow = '0 0 0 3px rgba(231,76,60,0.1)';
+                                    
+                                    // Show popup alert with details
+                                    showDuplicateAlert(docketNo, data);
                                 } else {
-                                    // Hide warning
+                                    // Hide warning and show success
                                     warningDiv.style.display = 'none';
                                     docketInput.style.borderColor = '#27ae60';
                                     docketInput.style.boxShadow = '0 0 0 3px rgba(39,174,96,0.1)';
@@ -777,9 +872,137 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             .catch(error => {
                                 console.error('Error checking duplicate:', error);
                             });
-                    }, 500);
+                    }, 800);
+                });
+                
+                // Also check on blur (when user leaves the field)
+                docketInput.addEventListener('blur', function() {
+                    const docketNo = this.value.trim().toUpperCase();
+                    if (!docketNo) return;
+                    
+                    fetch('check_duplicate_docket.php?doc_no=' + encodeURIComponent(docketNo))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.exists) {
+                                warningDiv.style.display = 'block';
+                                warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> This docket already exists! (Status: ${data.status}, Created: ${data.created_at})`;
+                                docketInput.style.borderColor = '#e74c3c';
+                                docketInput.style.boxShadow = '0 0 0 3px rgba(231,76,60,0.1)';
+                            }
+                        });
                 });
             }
+        }
+        
+        // Function to show duplicate alert popup
+        function showDuplicateAlert(docketNo, data) {
+            // Remove existing alert if any
+            const existingAlert = document.getElementById('duplicate-alert-modal');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+            
+            // Create modal alert
+            const alertHTML = `
+                <div id="duplicate-alert-modal" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.3s ease;
+                ">
+                    <div style="
+                        background: white;
+                        padding: 30px;
+                        border-radius: 15px;
+                        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+                        max-width: 500px;
+                        width: 90%;
+                        animation: slideDown 0.3s ease;
+                    ">
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #e74c3c;"></i>
+                        </div>
+                        <h3 style="color: #e74c3c; text-align: center; margin-bottom: 20px; font-size: 1.5rem; font-weight: 800;">
+                            ⚠️ DUPLICATE DOCKET FOUND!
+                        </h3>
+                        <div style="background: #fff3cd; padding: 20px; border-radius: 10px; border-left: 5px solid #ffc107; margin-bottom: 20px;">
+                            <p style="margin: 0 0 15px 0; font-size: 1.1rem; color: #333;">
+                                <strong style="color: #e74c3c;">Docket Number:</strong> 
+                                <span style="font-weight: 700; color: #d63031;">${docketNo}</span>
+                            </p>
+                            <p style="margin: 0 0 15px 0; font-size: 1rem; color: #333;">
+                                <strong>Status:</strong> <span style="color: #f39c12; font-weight: 600;">${data.status}</span>
+                            </p>
+                            <p style="margin: 0 0 15px 0; font-size: 1rem; color: #333;">
+                                <strong>Created On:</strong> ${data.created_at}
+                            </p>
+                            ${data.trip_group_id ? `<p style="margin: 0 0 15px 0; font-size: 1rem; color: #333;">
+                                <strong>Trip Group:</strong> ${data.trip_group_id}
+                            </p>` : ''}
+                            ${data.company_name && data.company_name !== 'N/A' ? `<p style="margin: 0 0 15px 0; font-size: 1rem; color: #333;">
+                                <strong>Company:</strong> ${data.company_name}
+                            </p>` : ''}
+                            ${data.client_name && data.client_name !== 'N/A' ? `<p style="margin: 0; font-size: 1rem; color: #333;">
+                                <strong>Client:</strong> ${data.client_name}
+                            </p>` : ''}
+                        </div>
+                        <div style="background: #fee; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <p style="margin: 0; color: #c0392b; font-size: 1rem; font-weight: 600;">
+                                <i class="fas fa-info-circle"></i> This docket number already exists in the system. Please use a different docket number.
+                            </p>
+                        </div>
+                        <button onclick="document.getElementById('duplicate-alert-modal').remove()" style="
+                            width: 100%;
+                            padding: 15px;
+                            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            font-size: 1.1rem;
+                            font-weight: 700;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 15px rgba(231,76,60,0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                            <i class="fas fa-times-circle"></i> CLOSE
+                        </button>
+                    </div>
+                </div>
+                <style>
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes slideDown {
+                        from { transform: translateY(-50px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                </style>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', alertHTML);
+            
+            // Auto close after 10 seconds
+            setTimeout(function() {
+                const modal = document.getElementById('duplicate-alert-modal');
+                if (modal) {
+                    modal.style.animation = 'fadeOut 0.3s ease';
+                    setTimeout(() => modal.remove(), 300);
+                }
+            }, 10000);
+            
+            // Close on clicking outside
+            document.getElementById('duplicate-alert-modal').addEventListener('click', function(e) {
+                if (e.target.id === 'duplicate-alert-modal') {
+                    this.remove();
+                }
+            });
         }
         
         // Function to setup company address auto-fill
@@ -791,9 +1014,27 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                 companySelect.addEventListener('change', function() {
                     const selectedOption = this.options[this.selectedIndex];
                     const address = selectedOption.getAttribute('data-address') || '';
-                    addressField.value = address;
+                    addressField.value = address.toUpperCase();
                 });
             }
+        }
+        
+        // Function to setup uppercase conversion for text inputs
+        function setupUppercaseConversion(docketId) {
+            const docketElement = document.getElementById(`docket-${docketId}`);
+            if (!docketElement) return;
+            
+            // Get all inputs and textareas with auto-uppercase class
+            const uppercaseFields = docketElement.querySelectorAll('.auto-uppercase');
+            
+            uppercaseFields.forEach(function(field) {
+                field.addEventListener('input', function() {
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.toUpperCase();
+                    this.setSelectionRange(start, end);
+                });
+            });
         }
 
         function removeDocket(id) {

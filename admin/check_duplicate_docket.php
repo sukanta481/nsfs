@@ -1,30 +1,31 @@
 <?php
 require 'conn.php';
+require 'DocketDetailsManager.php';
 
 header('Content-Type: application/json');
 
-$doc_no = isset($_GET['doc_no']) ? mysqli_real_escape_string($conn, trim($_GET['doc_no'])) : '';
+$doc_no = isset($_GET['doc_no']) ? trim($_GET['doc_no']) : '';
 
 if (empty($doc_no)) {
     echo json_encode(['exists' => false]);
     exit;
 }
 
-// Check if docket number already exists
-$query = "SELECT shipping_details_id, doc_no, status, created_at 
-          FROM tbl_shipping_details 
-          WHERE doc_no = '$doc_no' 
-          LIMIT 1";
+// Initialize Docket Manager
+$docketManager = new DocketDetailsManager($conn);
 
-$result = mysqli_query($conn, $query);
+// Check if docket exists in docket_details table
+$docket = $docketManager->getDocketByNumber($doc_no);
 
-if ($result && mysqli_num_rows($result) > 0) {
-    $docket = mysqli_fetch_assoc($result);
+if ($docket) {
     echo json_encode([
         'exists' => true,
         'doc_no' => $docket['doc_no'],
         'status' => $docket['status'],
-        'created_at' => date('d M Y', strtotime($docket['created_at']))
+        'created_at' => date('d M Y', strtotime($docket['created_at'])),
+        'trip_group_id' => $docket['trip_group_id'] ?? 'N/A',
+        'company_name' => $docket['company_name'] ?? 'N/A',
+        'client_name' => $docket['client_name'] ?? 'N/A'
     ]);
 } else {
     echo json_encode(['exists' => false]);
