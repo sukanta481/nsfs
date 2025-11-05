@@ -6,6 +6,7 @@
  */
 
 if (session_status() === PHP_SESSION_NONE) {
+    session_name('pro'); // Use same session name as main application
     session_start();
 }
 
@@ -39,7 +40,10 @@ function hasPermission($permission_key) {
         return false;
     }
     
-    require_once 'conn.php';
+    global $conn;
+    if (!isset($conn)) {
+        require_once 'conn.php';
+    }
     
     // Check if user's role has the permission
     $query = "SELECT COUNT(*) as has_perm FROM tbl_role_permissions rp
@@ -67,7 +71,10 @@ function getUserPermissions() {
     }
     
     if (!isset($_SESSION['permissions'])) {
-        require_once 'conn.php';
+        global $conn;
+        if (!isset($conn)) {
+            require_once 'conn.php';
+        }
         
         $query = "SELECT p.permission_key FROM tbl_role_permissions rp
                   JOIN tbl_permissions p ON rp.permission_id = p.permission_id

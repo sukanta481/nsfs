@@ -2,6 +2,8 @@
 /**
  * New Login System - Works with tbl_users table
  */
+// IMPORTANT: Use same session name as the rest of the application
+session_name('pro');
 session_start();
 require 'conn.php';
 
@@ -9,7 +11,8 @@ $error = '';
 $success = '';
 
 // If already logged in, redirect to dashboard
-if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])) {
+if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id']) && 
+    isset($_SESSION['admin']) && !empty($_SESSION['admin'])) {
     header('Location: index.php');
     exit;
 }
@@ -63,6 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
                 
                 // Update last login
                 mysqli_query($conn, "UPDATE tbl_users SET last_login = NOW() WHERE user_id = " . $user['user_id']);
+                
+                // Force session write
+                session_write_close();
+                session_start();
                 
                 // Redirect to dashboard
                 header('Location: index.php');
