@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Sync - Fix Guide</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        .problem {
+            background: #ffe6e6;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        .problem h3 {
+            color: #dc3545;
+            margin-bottom: 8px;
+        }
+        .steps {
+            margin-bottom: 30px;
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .step h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .link-button {
+            display: block;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .link-button:hover {
+            transform: translateY(-2px);
+        }
+        .link-button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .link-button.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .warning h4 {
+            color: #856404;
+            margin-bottom: 8px;
+        }
+        ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        .checklist {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .checklist h4 {
+            color: #155724;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>🔧</span>
+            Database Sync - Live Server Fix Guide
+        </h1>
+        <p class="subtitle">HTTP 500 Error Troubleshooting & Resolution</p>
+
+        <div class="problem">
+            <h3>🚨 The Problem</h3>
+            <p>Database sync page works fine on localhost but shows <strong>HTTP ERROR 500</strong> on live server.</p>
+        </div>
+
+        <div class="steps">
+            <h2 style="margin-bottom: 20px;">📋 Step-by-Step Fix</h2>
+
+            <div class="step">
+                <h3>
+                    <span class="step-number">1</span>
+                    Upload Debug Files
+                </h3>
+                <p>Upload these files to your live server in the <code>/admin/database/</code> folder:</p>
+                <ul>
+                    <li><code>test_debug.php</code> - Diagnostic tool</li>
+                    <li><code>database_sync.php</code> - Updated with debug logging</li>
+                    <li><code>database_sync_standalone.php</code> - Standalone version (backup)</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <h3>
+                    <span class="step-number">2</span>
+                    Run Diagnostic Test
+                </h3>
+                <p>Open this URL in your browser (replace yourdomain.com):</p>
+                <div class="links">
+                    <a href="#" class="link-button" onclick="openCustomUrl('test_debug.php'); return false;">
+                        🔍 Run Diagnostic Test
+                    </a>
+                </div>
+                <p style="margin-top: 10px;">Look for any ✗ (red marks) indicating problems with:</p>
+                <ul>
+                    <li>Missing files (conn.php, includes)</li>
+                    <li>File permissions</li>
+                    <li>Database connection</li>
+                    <li>PHP configuration</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <h3>
+                    <span class="step-number">3</span>
+                    Try Different Versions
+                </h3>
+                <div class="links">
+                    <a href="#" class="link-button" onclick="openCustomUrl('database_sync.php'); return false;">
+                        📊 Main Version (with debug)
+                    </a>
+                    <a href="#" class="link-button secondary" onclick="openCustomUrl('database_sync_standalone.php'); return false;">
+                        🎯 Standalone Version
+                    </a>
+                </div>
+                <p style="margin-top: 10px;">If main version still fails, use standalone version which doesn't require include files.</p>
+            </div>
+
+            <div class="step">
+                <h3>
+                    <span class="step-number">4</span>
+                    Check Debug Log
+                </h3>
+                <p>After trying to access the main page, download the debug log from your server:</p>
+                <ul>
+                    <li>File location: <code>/admin/database/debug_sync.log</code></li>
+                    <li>Shows exactly where the script fails</li>
+                    <li>Contains all execution steps and errors</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="checklist">
+            <h4>✅ Common Issues Checklist</h4>
+            <ul>
+                <li><strong>Missing conn.php:</strong> Ensure database connection file exists at <code>/admin/conn.php</code></li>
+                <li><strong>Missing .env:</strong> Check if .env file exists with DB credentials</li>
+                <li><strong>Wrong paths:</strong> Verify directory structure matches localhost</li>
+                <li><strong>Permissions:</strong> Set directories to 755, files to 644</li>
+                <li><strong>PHP version:</strong> Check if live server has PHP 7.0 or higher</li>
+                <li><strong>Memory limit:</strong> May need to increase PHP memory_limit</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h4>⚠️ Security Warning</h4>
+            <p>After fixing the issue:</p>
+            <ul>
+                <li>Delete <code>test_debug.php</code> from live server</li>
+                <li>Remove or comment out debug logging code</li>
+                <li>Set <code>display_errors = 0</code> in production</li>
+            </ul>
+        </div>
+
+        <h2 style="margin-top: 30px; margin-bottom: 15px;">📚 Documentation Files</h2>
+        <ul>
+            <li><code>FIX_SUMMARY.md</code> - Quick reference guide</li>
+            <li><code>DEBUG_INSTRUCTIONS.md</code> - Detailed debugging steps</li>
+        </ul>
+
+        <script>
+            function openCustomUrl(file) {
+                const domain = prompt('Enter your domain (e.g., yourdomain.com):', 'yourdomain.com');
+                if (domain) {
+                    const url = `https://${domain}/admin/database/${file}`;
+                    window.open(url, '_blank');
+                }
+            }
+        </script>
+    </div>
+</body>
+</html>

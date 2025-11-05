@@ -5,19 +5,96 @@ ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../error_log');
 
+// Set error handler
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    $error_msg = "Error [$errno]: $errstr in $errfile on line $errline";
+    debug_log("PHP Error: " . $error_msg);
+    return false; // Let PHP handle it too
+});
+
+// Set exception handler
+set_exception_handler(function($exception) {
+    $error_msg = "Uncaught Exception: " . $exception->getMessage() . " in " . $exception->getFile() . " on line " . $exception->getLine();
+    debug_log("PHP Exception: " . $error_msg);
+    echo "<h1>Fatal Error</h1>";
+    echo "<p>" . htmlspecialchars($error_msg) . "</p>";
+    echo "<p>Check debug_sync.log in /admin/database/ folder for details</p>";
+});
+
+// Register shutdown function to catch fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        $error_msg = "Fatal Error [{$error['type']}]: {$error['message']} in {$error['file']} on line {$error['line']}";
+        debug_log("PHP Fatal Error: " . $error_msg);
+        echo "<h1>Fatal Error</h1>";
+        echo "<p>" . htmlspecialchars($error_msg) . "</p>";
+        echo "<p>Check debug_sync.log in /admin/database/ folder for details</p>";
+    }
+});
+
+// Debug log function
+function debug_log($message, $data = null) {
+    $log_file = __DIR__ . '/debug_sync.log';
+    $timestamp = date('Y-m-d H:i:s');
+    $log_message = "[$timestamp] $message";
+    if ($data !== null) {
+        $log_message .= "\n" . print_r($data, true);
+    }
+    $log_message .= "\n" . str_repeat('-', 80) . "\n";
+    file_put_contents($log_file, $log_message, FILE_APPEND);
+}
+
+debug_log("Script started");
+debug_log("Current directory: " . __DIR__);
+debug_log("Document root: " . $_SERVER['DOCUMENT_ROOT']);
+debug_log("PHP Version: " . phpversion());
+
 // Start session first
 session_name('pro');
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
+try {
+    if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+        debug_log("Session started successfully");
+    } else {
+        debug_log("Session already active");
+    }
+} catch (Exception $e) {
+    debug_log("Session error: " . $e->getMessage());
 }
 
 // Simple authentication check (without permission system)
+debug_log("Checking authentication");
+debug_log("Session data", $_SESSION);
+
 if (!isset($_SESSION['admin_id']) && !isset($_SESSION['user_id'])) {
+    debug_log("User not authenticated, redirecting to login");
     header('Location: ../login_new.php');
     exit();
+} else {
+    debug_log("User authenticated successfully");
 }
 
-require __DIR__ . '/../conn.php';
+// Check if conn.php exists
+$conn_path = __DIR__ . '/../conn.php';
+debug_log("Checking conn.php at: $conn_path");
+if (!file_exists($conn_path)) {
+    debug_log("ERROR: conn.php not found!");
+    die("Error: Database connection file not found at: $conn_path");
+}
+
+try {
+    require $conn_path;
+    debug_log("conn.php loaded successfully");
+    if (isset($conn)) {
+        debug_log("Database connection established");
+    } else {
+        debug_log("WARNING: conn.php loaded but \$conn not set");
+    }
+} catch (Exception $e) {
+    debug_log("ERROR loading conn.php: " . $e->getMessage());
+    die("Error loading database connection: " . $e->getMessage());
+}
 
 // Session is already started
 // Check for session messages
@@ -332,6 +409,9 @@ if (!function_exists('getUserPermissions')) {
         return ['*']; // Grant all permissions for database sync page
     }
 }
+
+debug_log("Permission functions defined");
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -359,8 +439,38 @@ if (!function_exists('getUserPermissions')) {
 <body class="nav-md">
 <div class="container body">
 <div class="main_container">
-<?php require __DIR__ . '/../left_panel.php'; ?>
-<?php require __DIR__ . '/../header_banner.php'; ?>
+<?php 
+try {
+    debug_log("Loading left_panel.php");
+    $left_panel_path = __DIR__ . '/../left_panel.php';
+    if (!file_exists($left_panel_path)) {
+        debug_log("WARNING: left_panel.php not found at: $left_panel_path");
+        echo "<!-- left_panel.php not found -->";
+    } else {
+        require $left_panel_path;
+        debug_log("left_panel.php loaded successfully");
+    }
+} catch (Exception $e) {
+    debug_log("ERROR loading left_panel.php: " . $e->getMessage());
+    echo "<!-- Error loading left_panel.php: " . htmlspecialchars($e->getMessage()) . " -->";
+}
+?>
+<?php 
+try {
+    debug_log("Loading header_banner.php");
+    $header_banner_path = __DIR__ . '/../header_banner.php';
+    if (!file_exists($header_banner_path)) {
+        debug_log("WARNING: header_banner.php not found at: $header_banner_path");
+        echo "<!-- header_banner.php not found -->";
+    } else {
+        require $header_banner_path;
+        debug_log("header_banner.php loaded successfully");
+    }
+} catch (Exception $e) {
+    debug_log("ERROR loading header_banner.php: " . $e->getMessage());
+    echo "<!-- Error loading header_banner.php: " . htmlspecialchars($e->getMessage()) . " -->";
+}
+?>
 
 <div class="right_col" role="main">
     <div class="sync-container">
@@ -498,7 +608,24 @@ if (!function_exists('getUserPermissions')) {
     </div>
 </div>
 
-<?php require __DIR__ . '/../footer.php'; ?>
+<?php 
+try {
+    debug_log("Loading footer.php");
+    $footer_path = __DIR__ . '/../footer.php';
+    if (!file_exists($footer_path)) {
+        debug_log("WARNING: footer.php not found at: $footer_path");
+        echo "<!-- footer.php not found -->";
+    } else {
+        require $footer_path;
+        debug_log("footer.php loaded successfully");
+    }
+} catch (Exception $e) {
+    debug_log("ERROR loading footer.php: " . $e->getMessage());
+    echo "<!-- Error loading footer.php: " . htmlspecialchars($e->getMessage()) . " -->";
+}
+
+debug_log("Script completed successfully");
+?>
 </div>
 </div>
 
