@@ -1,5 +1,5 @@
 <?php
-require 'conn.php';
+require __DIR__ . '/../conn.php';
 
 // Session is already started in top_header.php
 // Check for session messages
