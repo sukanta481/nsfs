@@ -29,7 +29,7 @@
         <ul class="submenu">
           <li><a href="add_trip_modern.php">Create New Trip</a></li>
           <li><a href="register.php?type=list_register&lp=ac">All Dockets</a></li>
-          <li><a href="register.php?type=list_register&lp=cu">All Trips</a></li>
+          <li><a href="trip.php?type=list_trips">All Trips</a></li>
         </ul>
       </li>
 

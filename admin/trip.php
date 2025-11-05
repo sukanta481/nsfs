@@ -37,6 +37,10 @@
                 } elseif(isset($type) && ($type=='list_trip')) {
                   $pending_pod_mode = $pending_pod_mode; // just for clarity
                   require 'list_trip.php';
+                } elseif(isset($type) && ($type=='list_trips')) {
+                  require 'list_trips.php';
+                } elseif(isset($type) && ($type=='trip_dockets')) {
+                  require 'trip_dockets.php';
                 } elseif(isset($type) && ($type=='list_trip_company')) {
                   require 'list_trip_compnay.php';
                 } elseif(isset($type) && ($type=='edit_trip_company')) {
