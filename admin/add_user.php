@@ -32,9 +32,9 @@ function require_file_or_die($path) {
   exit;
 }
 
+require_file_or_die('conn.php');
 require_file_or_die('check_auth.php');
 requirePermission('user_create');
-require_file_or_die('conn.php');
 
 $error = '';
 $success = '';
