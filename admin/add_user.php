@@ -9,9 +9,32 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
   error_log("add_user.php debug start - " . date('c') . " - SAPI:" . PHP_SAPI . " - REMOTE_ADDR:" . ($_SERVER['REMOTE_ADDR'] ?? 'cli') . " - REQUEST_METHOD:" . ($_SERVER['REQUEST_METHOD'] ?? 'cli'));
 }
 
-require 'check_auth.php';
+// Safe require helper: tries relative to admin dir first, logs and shows friendly message on missing files
+function require_file_or_die($path) {
+  $candidates = [__DIR__ . '/' . $path, __DIR__ . '/../' . $path, $path];
+  foreach ($candidates as $c) {
+    if (file_exists($c)) {
+      require $c;
+      return;
+    }
+  }
+  // Log and show minimal error (only when debug enabled)
+  $msg = "add_user.php missing include: {$path}";
+  error_log($msg);
+  if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+    // Minimal HTML to avoid further fatal includes
+    echo "<html><head><title>Include Missing</title></head><body>";
+    echo "<h1>Include missing:</h1><p>" . htmlspecialchars($path) . "</p>";
+    echo "<p>Check file exists under admin/ or project root. See admin/debug_add_user.log for details.</p>";
+    echo "</body></html>";
+  }
+  header('HTTP/1.1 500 Internal Server Error');
+  exit;
+}
+
+require_file_or_die('check_auth.php');
 requirePermission('user_create');
-require 'conn.php';
+require_file_or_die('conn.php');
 
 $error = '';
 $success = '';
