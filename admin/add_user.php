@@ -1,4 +1,14 @@
 <?php
+// Temporary opt-in debug helpers. Enable by visiting add_user.php?debug=1
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+  ini_set('display_errors', '1');
+  ini_set('display_startup_errors', '1');
+  error_reporting(E_ALL);
+  ini_set('log_errors', '1');
+  ini_set('error_log', __DIR__ . '/debug_add_user.log');
+  error_log("add_user.php debug start - " . date('c') . " - SAPI:" . PHP_SAPI . " - REMOTE_ADDR:" . ($_SERVER['REMOTE_ADDR'] ?? 'cli') . " - REQUEST_METHOD:" . ($_SERVER['REQUEST_METHOD'] ?? 'cli'));
+}
+
 require 'check_auth.php';
 requirePermission('user_create');
 require 'conn.php';
@@ -52,9 +62,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
                     // Redirect to users list page after success
                     header("Location: users.php?success=User created successfully");
                     exit;
-                } else {
-                    $error = "Error creating user: " . mysqli_error($conn);
-                }
+        } else {
+          $error = "Error creating user: " . mysqli_error($conn);
+          // Log DB error to debug file when debug mode is enabled
+          if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+            error_log("add_user.php - DB insert failed: " . $error . " - Query: " . $insert_query);
+          }
+        }
             }
         }
     }
