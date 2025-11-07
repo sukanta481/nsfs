@@ -112,7 +112,7 @@ if (file_exists('check_auth.php')) {
           <?php if (hasPermission('client_create')): ?>
           <li><a href="company.php?type=add_company&lp=ac">Add Consignor</a></li>
           <?php endif; ?>
-          <li><a href="offices.php">Offices</a></li>
+          <li><a href="offices.php">Office</a></li>
         </ul>
       </li>
       <?php endif; ?>
