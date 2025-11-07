@@ -105,7 +105,7 @@ $roles_result = mysqli_query($conn, $roles_query);
 $staff_query = "SELECT staff_id, CONCAT(first_name, ' ', last_name) as staff_name FROM tbl_staff ORDER BY first_name";
 $staff_result = mysqli_query($conn, $staff_query);
 
-require 'top_header.php';
+require_file_or_die('top_header.php');
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 <style>
@@ -323,8 +323,8 @@ require 'top_header.php';
 <body class="nav-md">
   <div class="container body">
     <div class="main_container">
-      <?php require 'left_panel.php';?>
-      <?php require 'header_banner.php';?>
+  <?php require_file_or_die('left_panel.php');?>
+  <?php require_file_or_die('header_banner.php');?>
       
       <div class="right_col" role="main">
         <div class="user-form-container">
@@ -497,7 +497,7 @@ require 'top_header.php';
         </div>
       </div>
 
-      <?php require 'footer.php'; ?>
+  <?php require_file_or_die('footer.php'); ?>
     </div>
   </div>
 
