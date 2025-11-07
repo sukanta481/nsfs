@@ -1,0 +1,7 @@
+<?php
+// phpinfo helper (admin/phpinfo.php)
+// Visit: /admin/phpinfo.php
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+phpinfo();
+?>
