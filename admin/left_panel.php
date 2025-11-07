@@ -3,6 +3,7 @@
 if (file_exists('check_auth.php')) {
     require_once 'check_auth.php';
 }
+// Updated: Changed "Offices" to "Office" in Companies submenu
 ?>
 <div class="modern-sidebar" id="modernSidebar">
   <div class="sidebar-header">
