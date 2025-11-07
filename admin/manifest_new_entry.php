@@ -38,6 +38,55 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
   <!-- Alert Message Container -->
   <div id="manifest_save_result"></div>
 
+  <!-- Manifest Exists Modal -->
+  <div class="modal fade" id="manifestExistsModal" tabindex="-1" role="dialog" aria-labelledby="manifestExistsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md" role="document">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#ffeb3b;color:#000;">
+          <h5 class="modal-title" id="manifestExistsLabel"><i class="fa fa-exclamation-triangle"></i> Docket Already In Manifest</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>The docket <strong id="modalDocketNo">-</strong> is already present in the following manifest:</p>
+          <ul style="font-size:1rem;">
+            <li><strong>Manifest No:</strong> <span id="modalManifestNo">-</span></li>
+            <li><strong>Manifest ID:</strong> <span id="modalManifestId">-</span></li>
+            <li><strong>Created At:</strong> <span id="modalManifestCreated">-</span></li>
+          </ul>
+          <p class="text-muted">You can still add it to the current manifest, but please confirm this is intentional.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" id="modalAddAnywayBtn" class="btn btn-warning">Add Anyway</button>
+          <a href="#" id="modalViewManifestBtn" target="_blank" class="btn btn-primary">View Manifest</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Duplicate Docket Modal (within form) -->
+  <div class="modal fade" id="duplicateDocketModal" tabindex="-1" role="dialog" aria-labelledby="duplicateDocketLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+      <div class="modal-content">
+        <div class="modal-header" style="background:#f8d7da;color:#721c24;">
+          <h5 class="modal-title" id="duplicateDocketLabel"><i class="fa fa-exclamation-circle"></i> Duplicate Docket</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>The docket <strong id="dupDocketNo">-</strong> is entered more than once in the current manifest form.</p>
+          <p class="small text-muted">Please remove duplicates or keep only one entry.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Manifest Form -->
   <form id="manifestForm" autocomplete="off">
     <input type="hidden" name="office_id" value="<?= $office_id ?>">
@@ -166,6 +215,9 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
         <button type="button" id="saveManifestBtn" class="btn btn-success btn-lg" style="font-weight: 800; font-size: 1.3rem; padding: 14px 45px; border-radius: 10px; box-shadow: 0 6px 20px rgba(76,175,80,0.4);">
           <i class="fa fa-save" style="margin-right: 10px;"></i> SAVE MANIFEST
         </button>
+        <button type="button" id="resetListBtn" class="btn btn-outline-secondary btn-lg" style="font-weight: 700; font-size: 1.05rem; padding: 12px 22px; margin-left:12px; border-radius: 10px;">
+          <i class="fa fa-undo" style="margin-right:8px;"></i> Reset List
+        </button>
       </div>
 
       <!-- Totals Display -->
@@ -256,6 +308,16 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
     
     // Form submission
     form.addEventListener('submit', handleFormSubmit);
+
+    // Reset list button
+    const resetBtn = document.getElementById('resetListBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function() {
+        // Confirm quick action
+        if (!confirm('Reset docket list? This will clear all docket rows and totals but keep Car/Driver selections.')) return;
+        resetDocketList();
+      });
+    }
     
     // Enter key navigation
     form.addEventListener('keydown', handleEnterKeyNavigation);
@@ -312,13 +374,16 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
       calculateTotals();
       return;
     }
-    
-    // In manual mode, don't fetch data
+    // Check duplicate in current form first
+    checkDuplicateInForm(docketNo, e.target.closest('tr'));
+
+    // If manual mode: still check whether docket exists in any manifest and show popup/warning
     if (isManualMode) {
+      checkManifestPresenceOnly(docketNo, e.target.closest('tr'));
       return;
     }
-    
-    // Fetch docket data
+
+    // Auto-fetch docket data in auto mode
     fetchDocketData(docketNo, e.target.closest('tr'));
   }
   
@@ -329,18 +394,223 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
     fetch(`manifest_fetch_docket.php?docket_no=${encodeURIComponent(docketNo)}`)
       .then(response => response.json())
       .then(data => {
-        if (data && data.status !== 'not_found') {
+        if (data && data.status && data.status === 'found') {
+          // If the docket is already present in a manifest, show realtime popup
+          if (data.in_manifest) {
+            try {
+              showManifestModal(docketNo, data, row);
+            } catch (e) {
+              console.warn('Manifest modal show failed', e);
+            }
+            // Highlight the row to indicate warning
+            markRowAsInManifest(row);
+          } else {
+            // remove any previous highlight
+            unmarkRow(row);
+          }
+
           populateRow(row, data);
         } else {
+          // Not found in docket_details
           clearRow(row);
+          unmarkRow(row);
         }
         calculateTotals();
       })
       .catch(error => {
         console.error('Error fetching docket data:', error);
         clearRow(row);
+        unmarkRow(row);
         calculateTotals();
       });
+  }
+
+  /**
+   * Check only whether docket exists in any manifest (used in manual mode)
+   */
+  function checkManifestPresenceOnly(docketNo, row) {
+    fetch(`manifest_fetch_docket.php?docket_no=${encodeURIComponent(docketNo)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data && data.status && data.status === 'found' && data.in_manifest) {
+          // show modal and mark row
+          showManifestModal(docketNo, data, row);
+          markRowAsInManifest(row);
+        } else {
+          // make sure any previous warning removed
+          unmarkRow(row);
+        }
+      })
+      .catch(error => {
+        console.error('Error checking manifest presence:', error);
+        unmarkRow(row);
+      });
+  }
+
+  /**
+   * Check for duplicate docket in the current form (multiple rows)
+   */
+  function checkDuplicateInForm(docketNo, currentRow) {
+    if (!docketNo) return false;
+    const inputs = Array.from(document.querySelectorAll('.docket-input'));
+    const matches = inputs.filter(i => i.value.trim().toUpperCase() === docketNo);
+    if (matches.length > 1) {
+      // highlight all matching rows
+      matches.forEach(i => {
+        const r = i.closest('tr');
+        if (r) r.classList.add('table-danger');
+      });
+      // show duplicate modal
+      showDuplicateModal(docketNo);
+      return true;
+    } else {
+      // remove any previous duplicate highlights for this docket
+      inputs.forEach(i => {
+        if (i.value.trim().toUpperCase() === docketNo) {
+          const r = i.closest('tr');
+          if (r) r.classList.remove('table-danger');
+        }
+      });
+      return false;
+    }
+  }
+
+  function showDuplicateModal(docketNo) {
+    const el = document.getElementById('dupDocketNo');
+    if (el) el.textContent = docketNo;
+    if (window.jQuery && typeof window.jQuery('#duplicateDocketModal').modal === 'function') {
+      window.jQuery('#duplicateDocketModal').modal('show');
+    } else {
+      alert('Duplicate docket: ' + docketNo);
+    }
+  }
+
+  /**
+   * Reset only the docket list (rows) and related state, not the whole page
+   */
+  function resetDocketList() {
+    // Clear all docket inputs and related fields
+    const rows = document.querySelectorAll('#docketTableBody tr');
+    rows.forEach(row => {
+      const docketInput = row.querySelector('.docket-input');
+      if (docketInput) docketInput.value = '';
+      // clear other inputs in the row
+      const inputs = row.querySelectorAll('input:not(.docket-input)');
+      inputs.forEach(i => i.value = '');
+      // remove warning/highlight classes
+      row.classList.remove('table-warning', 'table-danger', 'manifest-ignored');
+      // remove manifest badge if any
+      const badge = row.querySelector('.manifest-badge'); if (badge) badge.remove();
+    });
+
+    // Remove any ignore_manifest hidden inputs added to the form
+    const ignores = form.querySelectorAll('input[name="ignore_manifest[]"]');
+    ignores.forEach(i => i.remove());
+
+    // Close modals if open
+    if (window.jQuery) {
+      try { window.jQuery('#manifestExistsModal').modal('hide'); } catch(e){}
+      try { window.jQuery('#duplicateDocketModal').modal('hide'); } catch(e){}
+    } else {
+      const m1 = document.getElementById('manifestExistsModal'); if (m1) m1.style.display='none';
+      const m2 = document.getElementById('duplicateDocketModal'); if (m2) m2.style.display='none';
+    }
+
+    // Recalculate totals and notify
+    calculateTotals();
+    showAlert('✓ Docket list reset (Car/Driver selections retained)', 'info');
+  }
+
+  /**
+   * Show manifest modal with details
+   */
+  // Keep track of the row currently shown in modal (so Add Anyway targets it)
+  let _currentManifestModalRow = null;
+
+  function showManifestModal(docketNo, data, row) {
+    _currentManifestModalRow = row || null;
+    // Fill modal fields
+    const modal = document.getElementById('manifestExistsModal');
+    if (!modal) return;
+    document.getElementById('modalDocketNo').textContent = docketNo;
+    document.getElementById('modalManifestNo').textContent = data.manifest_no || '-';
+    document.getElementById('modalManifestId').textContent = data.manifest_id || '-';
+    document.getElementById('modalManifestCreated').textContent = data.manifest_created_at || '-';
+    const viewBtn = document.getElementById('modalViewManifestBtn');
+    if (viewBtn && data.manifest_id) {
+      viewBtn.href = `manifest_print.php?manifest_id=${encodeURIComponent(data.manifest_id)}`;
+      viewBtn.style.display = '';
+    } else if (viewBtn) {
+      viewBtn.style.display = 'none';
+    }
+
+    // Use jQuery/Bootstrap modal if available
+    if (window.jQuery && typeof window.jQuery('#manifestExistsModal').modal === 'function') {
+      window.jQuery('#manifestExistsModal').modal('show');
+    } else {
+      // Fallback - simple alert (rare)
+      alert(`Docket ${docketNo} is already in manifest: ${data.manifest_no || data.manifest_id}`);
+    }
+  }
+
+  // Hook Add Anyway button
+  document.addEventListener('DOMContentLoaded', function() {
+    const addBtn = document.getElementById('modalAddAnywayBtn');
+    if (addBtn) {
+      addBtn.addEventListener('click', function() {
+        if (!_currentManifestModalRow) return;
+        const docketInput = _currentManifestModalRow.querySelector('.docket-input');
+        const docketNo = docketInput ? docketInput.value.trim().toUpperCase() : '';
+        if (!docketNo) return;
+
+        // Mark row as ignored and remove warning
+        _currentManifestModalRow.classList.add('manifest-ignored');
+        unmarkRow(_currentManifestModalRow);
+
+        // Create hidden input to indicate ignore for server
+        // Ensure we don't duplicate
+        const existing = form.querySelectorAll('input[name="ignore_manifest[]"]');
+        let found = false;
+        existing.forEach(i => { if (i.value === docketNo) found = true; });
+        if (!found) {
+          const hidden = document.createElement('input');
+          hidden.type = 'hidden';
+          hidden.name = 'ignore_manifest[]';
+          hidden.value = docketNo;
+          form.appendChild(hidden);
+        }
+
+        // Close modal (use jQuery if available)
+        if (window.jQuery && typeof window.jQuery('#manifestExistsModal').modal === 'function') {
+          window.jQuery('#manifestExistsModal').modal('hide');
+        } else {
+          document.getElementById('manifestExistsModal').style.display = 'none';
+        }
+      });
+    }
+  });
+
+  function markRowAsInManifest(row) {
+    if (!row) return;
+    row.classList.add('table-warning');
+    // add small badge to docket cell
+    const docketInput = row.querySelector('.docket-input');
+    if (docketInput && !row.querySelector('.manifest-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'manifest-badge';
+      badge.style.marginLeft = '6px';
+      badge.style.color = '#856404';
+      badge.style.fontWeight = '700';
+      badge.textContent = ' (In Manifest)';
+      docketInput.parentNode.appendChild(badge);
+    }
+  }
+
+  function unmarkRow(row) {
+    if (!row) return;
+    row.classList.remove('table-warning');
+    const badge = row.querySelector('.manifest-badge');
+    if (badge) badge.remove();
   }
   
   /**
@@ -457,6 +727,18 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
     // Add manual mode flag
     formData.append('is_manual', isManualMode ? '1' : '0');
     
+    // Before submitting, ensure there are no unignored manifest conflicts
+    const warningRows = Array.from(document.querySelectorAll('tr.table-warning'));
+    const unignored = warningRows.filter(r => !r.classList.contains('manifest-ignored'));
+    if (unignored.length > 0) {
+      const docketNos = unignored.map(r => (r.querySelector('.docket-input')||{value:''}).value || '').filter(Boolean);
+      showAlert('⚠️ The following docket(s) are already present in other manifest(s): <strong>' + docketNos.join(', ') + '</strong>. Please review each and click "Add Anyway" in the popup to ignore, or remove them before saving.', 'danger');
+      // Focus first offending docket
+      const firstInput = unignored[0].querySelector('.docket-input');
+      if (firstInput) firstInput.focus();
+      return;
+    }
+
     // Show loading message
     showAlert('<i class="fa fa-spinner fa-spin"></i> Saving manifest...', 'info');
     

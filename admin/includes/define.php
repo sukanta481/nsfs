@@ -19,7 +19,20 @@ define('DATE_FORMAT', 'm/d/Y');
 define('DATE_TIME_FORMAT', DATE_FORMAT_SHORT . ' %H:%M:%S');
 define('USE_PCONNECT', false);
 
-define('SITE_URL', 'https://northsuperfastservice.com/');
+// Dynamic SITE_URL - auto-detect localhost or production
+if (isset($_SERVER['HTTP_HOST'])) {
+    $host = $_SERVER['HTTP_HOST'];
+    // Check if we're on localhost
+    if ($host === 'localhost' || strpos($host, '127.0.0.1') !== false || strpos($host, 'localhost:') === 0) {
+        define('SITE_URL', 'http://localhost/nsfs/');
+    } else {
+        define('SITE_URL', 'https://northsuperfastservice.com/');
+    }
+} else {
+    // Fallback for CLI
+    define('SITE_URL', 'https://northsuperfastservice.com/');
+}
+
 /* DATABASE INFORMATION*/
 require_once __DIR__ . '/../../config.php';
 

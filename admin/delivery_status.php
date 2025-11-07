@@ -8,18 +8,57 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
     $docket_id = intval($_POST['docket_id']);
     $new_status = mysqli_real_escape_string($conn, $_POST['status']);
     $remarks = mysqli_real_escape_string($conn, trim($_POST['remarks']));
-    $updated_by = $_SESSION['user_id'] ?? $_SESSION['admin_id'];
+    $location = isset($_POST['location']) ? mysqli_real_escape_string($conn, trim($_POST['location'])) : '';
+    $updated_by = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? 0;
+    $updated_by_name = $_SESSION['user_name'] ?? $_SESSION['admin_name'] ?? 'Admin';
     
-    // Update status in docket_details
-    $update_query = "UPDATE docket_details SET 
-                     status = '$new_status'
-                     WHERE docket_id = $docket_id";
+    // Get doc_no for this docket
+    $doc_query = "SELECT doc_no FROM docket_details WHERE docket_id = $docket_id";
+    $doc_result = mysqli_query($conn, $doc_query);
+    $doc_row = mysqli_fetch_assoc($doc_result);
+    $doc_no = $doc_row['doc_no'] ?? '';
     
-    if (mysqli_query($conn, $update_query)) {
-        header("Location: delivery_status.php?success=Status updated successfully for Docket!");
+    // Start transaction
+    mysqli_begin_transaction($conn);
+    
+    try {
+        // Update status in docket_details
+        $update_query = "UPDATE docket_details SET 
+                         status = '$new_status',
+                         last_status_update = NOW()";
+        
+        if (!empty($location)) {
+            $update_query .= ", current_location = '$location'";
+        }
+        
+        if ($new_status === 'Delivered') {
+            $update_query .= ", actual_delivery = NOW()";
+        }
+        
+        $update_query .= " WHERE docket_id = $docket_id";
+        
+        if (!mysqli_query($conn, $update_query)) {
+            throw new Exception(mysqli_error($conn));
+        }
+        
+        // Insert into tracking history
+        if (!empty($doc_no)) {
+            $tracking_query = "INSERT INTO tbl_tracking_history 
+                (doc_no, docket_id, status, notes, location, updated_by, updated_by_name, created_at) 
+                VALUES ('$doc_no', $docket_id, '$new_status', '$remarks', '$location', $updated_by, '$updated_by_name', NOW())";
+            
+            if (!mysqli_query($conn, $tracking_query)) {
+                throw new Exception(mysqli_error($conn));
+            }
+        }
+        
+        mysqli_commit($conn);
+        header("Location: delivery_status.php?success=Status updated successfully with tracking history!");
         exit;
-    } else {
-        $error = "Error updating status: " . mysqli_error($conn);
+        
+    } catch (Exception $e) {
+        mysqli_rollback($conn);
+        $error = "Error updating status: " . $e->getMessage();
     }
 }
 
@@ -638,18 +677,28 @@ body {
     <form method="POST" action="" id="statusForm">
       <input type="hidden" name="docket_id" id="modalDocketId">
       
-      <div style="margin-bottom: 25px;">
+      <div class="form-group-tracking">
         <label style="display: block; font-weight: 700; color: #34495e; margin-bottom: 12px; font-size: 16px;">
           <i class="fas fa-flag"></i> Select New Status
         </label>
         <select name="status" required class="filter-input" style="width: 100%; font-size: 18px; padding: 15px;">
           <option value="">-- Choose Status --</option>
           <option value="Pending">⏳ Pending</option>
+          <option value="Confirmed">✓ Confirmed</option>
+          <option value="Picked Up">📦 Picked Up</option>
           <option value="In Transit">🚚 In Transit</option>
           <option value="Out for Delivery">📍 Out for Delivery</option>
           <option value="Delivered">✅ Delivered</option>
           <option value="Failed">❌ Failed Delivery</option>
+          <option value="Delayed">⏰ Delayed</option>
         </select>
+      </div>
+      
+      <div style="margin-bottom: 25px;">
+        <label style="display: block; font-weight: 700; color: #34495e; margin-bottom: 12px; font-size: 16px;">
+          <i class="fas fa-map-marker-alt"></i> Current Location (Optional)
+        </label>
+        <input type="text" name="location" class="filter-input" style="width: 100%;" placeholder="e.g., Mumbai Warehouse, Delhi Hub">
       </div>
       
       <div style="margin-bottom: 30px;">

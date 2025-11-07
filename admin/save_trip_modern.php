@@ -16,7 +16,36 @@ $car_id = isset($_POST['car_id']) ? intval($_POST['car_id']) : 0;
 $driver_id = isset($_POST['driver_id']) ? intval($_POST['driver_id']) : 0;
 $helper_id = isset($_POST['helper_id']) ? intval($_POST['helper_id']) : 0;
 $pickup_datetime = isset($_POST['pickup_datetime']) ? mysqli_real_escape_string($conn, $_POST['pickup_datetime']) : '';
-$dockets = isset($_POST['dockets']) ? $_POST['dockets'] : [];
+$raw_dockets = isset($_POST['dockets']) ? $_POST['dockets'] : [];
+
+// Log incoming request size and docket keys for debugging when many dockets are posted
+error_log('save_trip_modern.php called - POST count: ' . count($_POST) . ', raw_dockets keys: ' . implode(',', array_keys((array)$raw_dockets)));
+
+// Normalize dockets: remove empty entries and ensure array structure
+$dockets = [];
+if (is_array($raw_dockets)) {
+    foreach ($raw_dockets as $key => $entry) {
+        if (!is_array($entry)) continue;
+        $doc_no = trim($entry['doc_no'] ?? '');
+        if ($doc_no === '') continue; // skip empty docket entries
+        // ensure well-formed sub-array (keep only relevant fields to avoid massive POST injection)
+        $dockets[] = [
+            'doc_no' => strtoupper($doc_no),
+            'service_type' => $entry['service_type'] ?? 'Standard',
+            'company_id' => intval($entry['company_id'] ?? 0),
+            'company_address' => $entry['company_address'] ?? null,
+            'client_name' => $entry['client_name'] ?? null,
+            'client_phone' => $entry['client_phone'] ?? null,
+            'client_email' => $entry['client_email'] ?? null,
+            'client_address' => $entry['client_address'] ?? null,
+            'weight' => $entry['weight'] ?? 0,
+            'box' => $entry['box'] ?? 0,
+            'dimensions' => $entry['dimensions'] ?? null,
+        ];
+    }
+}
+
+error_log('save_trip_modern.php normalized docket count: ' . count($dockets));
 
 // Get office details for auto-sync
 $office_name = 'N/A';

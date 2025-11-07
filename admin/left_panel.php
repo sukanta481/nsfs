@@ -60,6 +60,25 @@ if (file_exists('check_auth.php')) {
       </li>
       <?php endif; ?>
 
+      <!-- Tracking Management -->
+      <?php if (hasPermission('tracking_management') || hasPermission('tracking_view')): ?>
+      <li class="menu-item has-submenu">
+        <a href="javascript:void(0)" class="menu-link">
+          <i class="fa fa-map-marker"></i>
+          <span>Tracking</span>
+          <i class="fa fa-chevron-down submenu-arrow"></i>
+        </a>
+        <ul class="submenu">
+          <?php if (hasPermission('tracking_management')): ?>
+          <li><a href="tracking_management.php">📍 Tracking Dashboard</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('tracking_view')): ?>
+          <li><a href="tracking_management.php">📦 All Shipments</a></li>
+          <?php endif; ?>
+        </ul>
+      </li>
+      <?php endif; ?>
+
       <!-- Fleet Management -->
       <?php if (hasPermission('vehicle_view') || hasPermission('staff_view')): ?>
       <li class="menu-item has-submenu">

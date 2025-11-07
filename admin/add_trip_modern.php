@@ -856,28 +856,42 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                     
                     // Debounce the API call (wait 800ms after user stops typing)
                     checkTimeout = setTimeout(function() {
-                        fetch('check_duplicate_docket.php?doc_no=' + encodeURIComponent(docketNo))
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.exists) {
-                                    // Show inline warning
+                        (function() {
+                            // robust fetch with error handling and timeout
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), 7000);
+                            fetch('check_duplicate_docket.php?doc_no=' + encodeURIComponent(docketNo), { signal: controller.signal })
+                                .then(response => {
+                                    clearTimeout(timeoutId);
+                                    if (!response.ok) throw new Error('Server returned ' + response.status);
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    if (data && data.exists) {
+                                        // Show inline warning
+                                        warningDiv.style.display = 'block';
+                                        warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> This docket already exists! (Status: ${data.status || 'N/A'}, Created: ${data.created_at || 'N/A'})`;
+                                        docketInput.style.borderColor = '#e74c3c';
+                                        docketInput.style.boxShadow = '0 0 0 3px rgba(231,76,60,0.1)';
+                                        // Show popup alert with details
+                                        showDuplicateAlert(docketNo, data);
+                                    } else {
+                                        // Hide warning and show success
+                                        warningDiv.style.display = 'none';
+                                        docketInput.style.borderColor = '#27ae60';
+                                        docketInput.style.boxShadow = '0 0 0 3px rgba(39,174,96,0.1)';
+                                    }
+                                })
+                                .catch(error => {
+                                    clearTimeout(timeoutId);
+                                    console.error('Error checking duplicate:', error);
+                                    // Show non-blocking inline message to user
                                     warningDiv.style.display = 'block';
-                                    warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> This docket already exists! (Status: ${data.status}, Created: ${data.created_at})`;
-                                    docketInput.style.borderColor = '#e74c3c';
-                                    docketInput.style.boxShadow = '0 0 0 3px rgba(231,76,60,0.1)';
-                                    
-                                    // Show popup alert with details
-                                    showDuplicateAlert(docketNo, data);
-                                } else {
-                                    // Hide warning and show success
-                                    warningDiv.style.display = 'none';
-                                    docketInput.style.borderColor = '#27ae60';
-                                    docketInput.style.boxShadow = '0 0 0 3px rgba(39,174,96,0.1)';
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error checking duplicate:', error);
-                            });
+                                    warningDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> Unable to validate duplicate (server error).`; 
+                                    warningDiv.style.color = '#856404';
+                                    docketInput.style.borderColor = '#f0ad4e';
+                                });
+                        })();
                     }, 800);
                 });
                 
@@ -886,16 +900,33 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                     const docketNo = this.value.trim().toUpperCase();
                     if (!docketNo) return;
                     
-                    fetch('check_duplicate_docket.php?doc_no=' + encodeURIComponent(docketNo))
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.exists) {
+                    (function() {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 7000);
+                        fetch('check_duplicate_docket.php?doc_no=' + encodeURIComponent(docketNo), { signal: controller.signal })
+                            .then(response => {
+                                clearTimeout(timeoutId);
+                                if (!response.ok) throw new Error('Server returned ' + response.status);
+                                return response.json();
+                            })
+                            .then(data => {
+                                if (data && data.exists) {
+                                    warningDiv.style.display = 'block';
+                                    warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> This docket already exists! (Status: ${data.status || 'N/A'}, Created: ${data.created_at || 'N/A'})`;
+                                    docketInput.style.borderColor = '#e74c3c';
+                                    docketInput.style.boxShadow = '0 0 0 3px rgba(231,76,60,0.1)';
+                                    showDuplicateAlert(docketNo, data);
+                                }
+                            })
+                            .catch(error => {
+                                clearTimeout(timeoutId);
+                                console.error('Error checking duplicate (blur):', error);
                                 warningDiv.style.display = 'block';
-                                warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> This docket already exists! (Status: ${data.status}, Created: ${data.created_at})`;
-                                docketInput.style.borderColor = '#e74c3c';
-                                docketInput.style.boxShadow = '0 0 0 3px rgba(231,76,60,0.1)';
-                            }
-                        });
+                                warningDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> Duplicate check failed (server error).`;
+                                warningDiv.style.color = '#856404';
+                                docketInput.style.borderColor = '#f0ad4e';
+                            });
+                    })();
                 });
             }
         }

@@ -125,15 +125,33 @@ try {
     }
     
     $manifest_id = mysqli_insert_id($conn);
+    // Read ignore list from POST (docket numbers the user chose to "Add Anyway")
+    $ignore_raw = $_POST['ignore_manifest'] ?? [];
+    $ignore_list = array_map(function($v){ return strtoupper(trim($v)); }, (array)$ignore_raw);
 
-    // Insert manifest details
+    // Insert manifest details (but check for existing manifest entries unless ignored)
     foreach ($details_to_insert as $d) {
+        $doc_clean = mysqli_real_escape_string($conn, $d['doc']);
+
+        // Check if this docket is already present in any other manifest
+        $md_q = "SELECT md.manifest_id, m.manifest_no FROM tbl_manifest_details md LEFT JOIN tbl_manifest m ON md.manifest_id=m.manifest_id WHERE md.doc_no='".$doc_clean."' LIMIT 1";
+        $md_res = mysqli_query($conn, $md_q);
+        if ($md_res && mysqli_num_rows($md_res) > 0) {
+            $md_row = mysqli_fetch_assoc($md_res);
+            $existing_manifest_no = $md_row['manifest_no'] ?? $md_row['manifest_id'];
+            // If the user did not explicitly ignore this docket, abort
+            if (!in_array(strtoupper($d['doc']), $ignore_list)) {
+                throw new Exception("Docket " . htmlspecialchars($d['doc']) . " is already present in manifest " . htmlspecialchars($existing_manifest_no) . ". Please remove it or choose 'Add Anyway' for this docket.");
+            }
+            // else: allowed to add duplicate entry
+        }
+
         $detail_insert = "INSERT INTO tbl_manifest_details (
             manifest_id, doc_no, client_name, item, client_address, 
             box, weight, rate, amount, eway_bill, pay_to
         ) VALUES (
             ".intval($manifest_id).",
-            '".mysqli_real_escape_string($conn, $d['doc'])."',
+            '".$doc_clean."',
             '".mysqli_real_escape_string($conn, $d['client'])."',
             '".mysqli_real_escape_string($conn, $d['item'])."',
             '".mysqli_real_escape_string($conn, $d['addr'])."',
@@ -150,59 +168,69 @@ try {
         }
     }
 
-    // If manual mode, also save to docket_details table
-    if ($is_manual == 1) {
-        $car_result = mysqli_query($conn, "SELECT car_number FROM tbl_car WHERE car_id=".intval($car_id));
-        $car_info = mysqli_fetch_assoc($car_result);
+    // Get car and driver info for updates
+    $car_result = mysqli_query($conn, "SELECT car_number FROM tbl_car WHERE car_id=".intval($car_id));
+    $car_info = mysqli_fetch_assoc($car_result);
+    
+    $driver_result = mysqli_query($conn, "SELECT staff_name, staff_phone FROM tbl_staff WHERE staff_id=".intval($driver_id)." AND staff_role='Driver'");
+    $driver_info = mysqli_fetch_assoc($driver_result);
+    
+    $car_number = $car_info['car_number'] ?? 'N/A';
+    $driver_name = $driver_info['staff_name'] ?? 'N/A';
+    $driver_phone = $driver_info['staff_phone'] ?? 'N/A';
+    
+    // Sync manifest_id to docket_details for ALL dockets (manual or auto-fetched)
+    foreach ($details_to_insert as $d) {
+        $check_result = mysqli_query($conn, "SELECT docket_id FROM docket_details WHERE doc_no='".mysqli_real_escape_string($conn, $d['doc'])."'");
         
-        $driver_result = mysqli_query($conn, "SELECT staff_name, staff_phone FROM tbl_staff WHERE staff_id=".intval($driver_id)." AND staff_role='Driver'");
-        $driver_info = mysqli_fetch_assoc($driver_result);
-        
-        $car_number = $car_info['car_number'] ?? 'N/A';
-        $driver_name = $driver_info['staff_name'] ?? 'N/A';
-        $driver_phone = $driver_info['staff_phone'] ?? 'N/A';
-        
-        foreach ($details_to_insert as $d) {
-            $check_result = mysqli_query($conn, "SELECT docket_id FROM docket_details WHERE doc_no='".mysqli_real_escape_string($conn, $d['doc'])."'");
+        if ($check_result && mysqli_num_rows($check_result) > 0) {
+            // Docket exists - UPDATE manifest_id and car/driver info
+            $update_query = "UPDATE docket_details SET 
+                manifest_id = ".intval($manifest_id).",
+                car_id = ".intval($car_id).",
+                car_number = '".mysqli_real_escape_string($conn, $car_number)."',
+                driver_id = ".intval($driver_id).",
+                staff_id = ".intval($driver_id).",
+                driver_name = '".mysqli_real_escape_string($conn, $driver_name)."',
+                driver_phone = '".mysqli_real_escape_string($conn, $driver_phone)."',
+                updated_at = NOW()
+                WHERE doc_no='".mysqli_real_escape_string($conn, $d['doc'])."'";
             
-            if ($check_result && mysqli_num_rows($check_result) > 0) {
-                $update_query = "UPDATE docket_details SET 
-                    manifest_id = ".intval($manifest_id).",
-                    updated_at = NOW()
-                    WHERE doc_no='".mysqli_real_escape_string($conn, $d['doc'])."'";
-                mysqli_query($conn, $update_query);
-            } else {
-                $docket_insert = "INSERT INTO docket_details (
-                    doc_no, doc_type, trip_group_id, manifest_id, status, created_at, pickup_datetime,
-                    company_name, client_name, client_address, item, box, weight, rate, amount,
-                    unit_price, pay_to, eway_bill, office_id, branch_office, car_id, car_number,
-                    driver_id, staff_id, driver_name, driver_phone, driver_license, service_type
-                ) VALUES (
-                    '".mysqli_real_escape_string($conn, $d['doc'])."',
-                    'NON-DRS', NULL, ".intval($manifest_id).", 'In Transit',
-                    '".mysqli_real_escape_string($conn, $created_at)."',
-                    '".mysqli_real_escape_string($conn, $created_at)."',
-                    'Manual Entry',
-                    '".mysqli_real_escape_string($conn, $d['client'])."',
-                    '".mysqli_real_escape_string($conn, $d['addr'])."',
-                    '".mysqli_real_escape_string($conn, $d['item'])."',
-                    ".intval($d['box']).", ".floatval($d['weight']).", ".floatval($d['rate']).",
-                    ".floatval($d['amount']).", ".floatval($d['rate']).", ".floatval($d['pay']).",
-                    '".mysqli_real_escape_string($conn, $d['eway'])."',
-                    ".intval($office_id).",
-                    '".mysqli_real_escape_string($conn, $office_name)."',
-                    ".intval($car_id).",
-                    '".mysqli_real_escape_string($conn, $car_number)."',
-                    ".intval($driver_id).", ".intval($driver_id).",
-                    '".mysqli_real_escape_string($conn, $driver_name)."',
-                    '".mysqli_real_escape_string($conn, $driver_phone)."',
-                    '".mysqli_real_escape_string($conn, $driver_license)."',
-                    'Manual Manifest Entry'
-                )";
-                
-                if (!mysqli_query($conn, $docket_insert)) {
-                    throw new Exception('Failed to insert docket details: ' . mysqli_error($conn));
-                }
+            if (!mysqli_query($conn, $update_query)) {
+                throw new Exception('Failed to update docket manifest_id: ' . mysqli_error($conn));
+            }
+        } else if ($is_manual == 1) {
+            // Manual mode: CREATE new docket if not exists
+            $docket_insert = "INSERT INTO docket_details (
+                doc_no, doc_type, trip_group_id, manifest_id, status, created_at, pickup_datetime,
+                company_name, client_name, client_address, item, box, weight, rate, amount,
+                unit_price, pay_to, eway_bill, office_id, branch_office, car_id, car_number,
+                driver_id, staff_id, driver_name, driver_phone, driver_license, service_type
+            ) VALUES (
+                '".mysqli_real_escape_string($conn, $d['doc'])."',
+                'NON-DRS', NULL, ".intval($manifest_id).", 'In Transit',
+                '".mysqli_real_escape_string($conn, $created_at)."',
+                '".mysqli_real_escape_string($conn, $created_at)."',
+                'Manual Entry',
+                '".mysqli_real_escape_string($conn, $d['client'])."',
+                '".mysqli_real_escape_string($conn, $d['addr'])."',
+                '".mysqli_real_escape_string($conn, $d['item'])."',
+                ".intval($d['box']).", ".floatval($d['weight']).", ".floatval($d['rate']).",
+                ".floatval($d['amount']).", ".floatval($d['rate']).", ".floatval($d['pay']).",
+                '".mysqli_real_escape_string($conn, $d['eway'])."',
+                ".intval($office_id).",
+                '".mysqli_real_escape_string($conn, $office_name)."',
+                ".intval($car_id).",
+                '".mysqli_real_escape_string($conn, $car_number)."',
+                ".intval($driver_id).", ".intval($driver_id).",
+                '".mysqli_real_escape_string($conn, $driver_name)."',
+                '".mysqli_real_escape_string($conn, $driver_phone)."',
+                '".mysqli_real_escape_string($conn, $driver_license)."',
+                'Manual Manifest Entry'
+            )";
+            
+            if (!mysqli_query($conn, $docket_insert)) {
+                throw new Exception('Failed to insert docket details: ' . mysqli_error($conn));
             }
         }
     }
