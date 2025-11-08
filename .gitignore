@@ -4,3 +4,12 @@ admin/backups/
 *.log
 admin/database/*.log
 error_log
+
+# Uploaded files and images
+admin/post_img/*/
+admin/uploads/*/
+files/
+demo/
+
+# Composer lock (if you want consistent dependencies, remove this line)
+composer.lock
