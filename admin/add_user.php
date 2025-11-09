@@ -139,7 +139,7 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
 }
 
 // Fetch staff for dropdown
-$staff_query = "SELECT staff_id, CONCAT(first_name, ' ', last_name) as staff_name FROM tbl_staff ORDER BY first_name";
+$staff_query = "SELECT staff_id, staff_name FROM tbl_staff ORDER BY staff_name";
 $staff_result = mysqli_query($conn, $staff_query);
 
 if (isset($_GET['debug']) && $_GET['debug'] === '1') {
