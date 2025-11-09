@@ -1,15 +1,20 @@
 <?php
-// Don't include top_header if already included (check if $conn exists)
-if (!isset($conn)) {
+// Check if this page is being included or accessed directly
+$is_standalone = !isset($conn);
+
+if ($is_standalone) {
+    // Standalone access - include full headers
+    require 'check_auth.php';
+    requirePermission('docket_view');
     require 'conn.php';
 }
-require_once 'DocketDetailsManager.php';
 
+// DocketDetailsManager.php is optional - we don't actually use it
+// Just query directly instead
 $docket_id = intval($_REQUEST['id'] ?? $_REQUEST['docket_id'] ?? 0);
 
-// Fetch docket details
-$manager = new DocketDetailsManager($conn);
-$sql = "SELECT dd.*, o.office_name 
+// Fetch docket details - query directly without DocketDetailsManager
+$sql = "SELECT dd.*, o.office_name
         FROM docket_details dd
         LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
         WHERE dd.docket_id = $docket_id";
@@ -45,6 +50,19 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
 
 // Generate tracking URL for QR code
 $tracking_url = "http://" . $_SERVER['HTTP_HOST'] . "/nsfs/track.php?doc_no=" . urlencode($data['doc_no']);
+
+// If standalone, include top_header and open body/layout
+if ($is_standalone) {
+    require 'top_header.php';
+?>
+<body class="nav-md">
+  <div class="container body">
+    <div class="main_container">
+      <?php require 'left_panel.php'; ?>
+      <?php require 'header_banner.php'; ?>
+      <div class="right_col" role="main">
+<?php
+}
 ?>
 
 <!-- View Docket Content -->
@@ -217,6 +235,37 @@ $tracking_url = "http://" . $_SERVER['HTTP_HOST'] . "/nsfs/track.php?doc_no=" . 
                           <div class="timeline-content">
                             <div class="timeline-text"><?= htmlspecialchars($history['notes'] ?? 'Status updated') ?></div>
                             <div class="timeline-date"><?= date('M d, Y g:i A', strtotime($history['changed_at'])) ?></div>
+
+                            <?php if ($history['new_status'] === 'Delivered'): ?>
+                              <div class="timeline-pod" style="margin-top: 10px;">
+                                <?php if (!empty($history['pod_file'])): ?>
+                                  <a href="<?= htmlspecialchars($history['pod_file']) ?>" target="_blank" class="btn-view-pod">
+                                    <i class="fa fa-file-image-o"></i> View POD
+                                  </a>
+                                <?php else: ?>
+                                  <span style="color: #dc3545; font-size: 13px;">
+                                    <i class="fa fa-exclamation-circle"></i> POD not available
+                                  </span>
+                                <?php endif; ?>
+                              </div>
+                            <?php endif; ?>
+
+                            <?php if ($history['new_status'] === 'Out for Delivery' && (!empty($history['car_number']) || !empty($history['driver_name']))): ?>
+                              <div class="timeline-vehicle" style="margin-top: 8px; font-size: 13px; color: #7f8c8d;">
+                                <?php if (!empty($history['car_number'])): ?>
+                                  <i class="fa fa-car"></i> <?= htmlspecialchars($history['car_number']) ?>
+                                <?php endif; ?>
+                                <?php if (!empty($history['driver_name'])): ?>
+                                  &nbsp;&nbsp;<i class="fa fa-user"></i> <?= htmlspecialchars($history['driver_name']) ?>
+                                <?php endif; ?>
+                              </div>
+                            <?php endif; ?>
+
+                            <?php if ($history['new_status'] === 'Delayed' && !empty($history['delay_reason'])): ?>
+                              <div class="timeline-delay" style="margin-top: 8px; font-size: 13px; color: #856404; background: #fff3cd; padding: 5px 10px; border-radius: 5px; display: inline-block;">
+                                <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($history['delay_reason']) ?>
+                              </div>
+                            <?php endif; ?>
                           </div>
                         </div>
                       <?php endforeach; ?>
@@ -279,6 +328,12 @@ $tracking_url = "http://" . $_SERVER['HTTP_HOST'] . "/nsfs/track.php?doc_no=" . 
                     <input type="hidden" name="current_status" value="<?= htmlspecialchars($data['status']) ?>">
                     <input type="hidden" name="doc_no" value="<?= htmlspecialchars($data['doc_no']) ?>">
 
+                    <!-- Error Message -->
+                    <div id="statusErrorMessage" style="display: none; background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; border-left: 4px solid #dc3545; margin-bottom: 15px;">
+                      <i class="fa fa-exclamation-circle"></i>
+                      <span id="statusErrorText"></span>
+                    </div>
+
                     <div class="form-group">
                       <label>
                         <i class="fa fa-flag"></i> Status <span style="color: #dc3545;">*</span>
@@ -312,44 +367,48 @@ $tracking_url = "http://" . $_SERVER['HTTP_HOST'] . "/nsfs/track.php?doc_no=" . 
                     <div id="carDriverField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                       <div class="form-group">
                         <label>
-                          <i class="fa fa-car"></i> Select Vehicle <span style="color: #dc3545;">*</span>
+                          <i class="fa fa-car"></i> Vehicle Number <span style="color: #dc3545;">*</span>
                         </label>
-                        <select name="car_id" class="form-control-modern">
-                          <option value="">-- Select Vehicle --</option>
+                        <input type="text" name="car_number" id="carNumberInput" class="form-control-modern" list="carList" placeholder="Type or select vehicle number" autocomplete="off">
+                        <datalist id="carList">
                           <?php
                           if ($cars_result) {
                               mysqli_data_seek($cars_result, 0);
                               while ($car = mysqli_fetch_assoc($cars_result)):
                           ?>
-                            <option value="<?= $car['car_id'] ?>">
+                            <option value="<?= htmlspecialchars($car['car_number']) ?>" data-id="<?= $car['car_id'] ?>" data-details="<?= htmlspecialchars($car['car_details']) ?>">
                               <?= htmlspecialchars($car['car_number'] . ' - ' . $car['car_details']) ?>
                             </option>
                           <?php
                               endwhile;
                           }
                           ?>
-                        </select>
+                        </datalist>
+                        <input type="hidden" name="car_id" id="carIdHidden">
+                        <small style="color: #7f8c8d;">Type manually for external vehicles or select from dropdown</small>
                       </div>
 
                       <div class="form-group">
                         <label>
-                          <i class="fa fa-user"></i> Select Driver <span style="color: #dc3545;">*</span>
+                          <i class="fa fa-user"></i> Driver Name <span style="color: #dc3545;">*</span>
                         </label>
-                        <select name="driver_id" class="form-control-modern">
-                          <option value="">-- Select Driver --</option>
+                        <input type="text" name="driver_name" id="driverNameInput" class="form-control-modern" list="driverList" placeholder="Type or select driver name" autocomplete="off">
+                        <datalist id="driverList">
                           <?php
                           if ($drivers_result) {
                               mysqli_data_seek($drivers_result, 0);
                               while ($driver = mysqli_fetch_assoc($drivers_result)):
                           ?>
-                            <option value="<?= $driver['staff_id'] ?>">
+                            <option value="<?= htmlspecialchars($driver['staff_name']) ?>" data-id="<?= $driver['staff_id'] ?>" data-phone="<?= htmlspecialchars($driver['staff_phone']) ?>">
                               <?= htmlspecialchars($driver['staff_name'] . ' - ' . $driver['staff_phone']) ?>
                             </option>
                           <?php
                               endwhile;
                           }
                           ?>
-                        </select>
+                        </datalist>
+                        <input type="hidden" name="driver_id" id="driverIdHidden">
+                        <small style="color: #7f8c8d;">Type manually for external drivers or select from dropdown</small>
                       </div>
                     </div>
 
@@ -480,6 +539,21 @@ function hideAllConditionalFields() {
   document.getElementById('carDriverField').style.display = 'none';
   document.getElementById('delayReasonField').style.display = 'none';
   document.getElementById('podField').style.display = 'none';
+  // Hide error message when changing status
+  document.getElementById('statusErrorMessage').style.display = 'none';
+}
+
+function showError(message) {
+  const errorDiv = document.getElementById('statusErrorMessage');
+  const errorText = document.getElementById('statusErrorText');
+  errorText.textContent = message;
+  errorDiv.style.display = 'block';
+  errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // Auto hide after 5 seconds
+  setTimeout(() => {
+    errorDiv.style.display = 'none';
+  }, 5000);
 }
 
 function handleStatusChange() {
@@ -501,23 +575,60 @@ function handleStatusChange() {
   }
 }
 
+// Auto-fill car_id and driver_id when selecting from datalist
+document.getElementById('carNumberInput').addEventListener('input', function() {
+  const value = this.value;
+  const options = document.querySelectorAll('#carList option');
+  const hiddenInput = document.getElementById('carIdHidden');
+
+  let matched = false;
+  options.forEach(option => {
+    if (option.value === value) {
+      hiddenInput.value = option.getAttribute('data-id') || '';
+      matched = true;
+    }
+  });
+
+  if (!matched) {
+    hiddenInput.value = ''; // Manual input - no ID
+  }
+});
+
+document.getElementById('driverNameInput').addEventListener('input', function() {
+  const value = this.value;
+  const options = document.querySelectorAll('#driverList option');
+  const hiddenInput = document.getElementById('driverIdHidden');
+
+  let matched = false;
+  options.forEach(option => {
+    if (option.value === value) {
+      hiddenInput.value = option.getAttribute('data-id') || '';
+      matched = true;
+    }
+  });
+
+  if (!matched) {
+    hiddenInput.value = ''; // Manual input - no ID
+  }
+});
+
 // Form validation
 document.getElementById('statusUpdateForm').addEventListener('submit', function(e) {
   const status = document.getElementById('statusSelect').value;
 
   if (!status) {
     e.preventDefault();
-    alert('Please select a status');
+    showError('Please select a status');
     return false;
   }
 
   // Validate Out for Delivery requirements
   if (status === 'Out for Delivery') {
-    const carId = document.querySelector('[name="car_id"]').value;
-    const driverId = document.querySelector('[name="driver_id"]').value;
-    if (!carId || !driverId) {
+    const carNumber = document.querySelector('[name="car_number"]').value;
+    const driverName = document.querySelector('[name="driver_name"]').value;
+    if (!carNumber || !driverName) {
       e.preventDefault();
-      alert('Car and Driver are required for Out for Delivery status');
+      showError('Vehicle number and Driver name are required for Out for Delivery status');
       return false;
     }
   }
@@ -527,7 +638,7 @@ document.getElementById('statusUpdateForm').addEventListener('submit', function(
     const delayReason = document.querySelector('[name="delay_reason"]').value;
     if (!delayReason) {
       e.preventDefault();
-      alert('Delay reason is required for Delayed status');
+      showError('Delay reason is required for Delayed status');
       return false;
     }
   }
@@ -537,7 +648,7 @@ document.getElementById('statusUpdateForm').addEventListener('submit', function(
     const podFile = document.querySelector('[name="pod_file"]').files.length;
     if (!podFile) {
       e.preventDefault();
-      alert('POD file is required for Delivered status');
+      showError('POD file is required for Delivered status');
       return false;
     }
   }
@@ -1036,4 +1147,45 @@ document.getElementById('statusUpdateForm').addEventListener('submit', function(
         grid-template-columns: 1fr;
     }
 }
+
+/* POD View Button */
+.btn-view-pod {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+}
+
+.btn-view-pod:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.btn-view-pod i {
+    font-size: 14px;
+}
 </style>
+
+<?php
+// If standalone, close the layout divs and include footer
+if ($is_standalone) {
+?>
+      </div><!-- /right_col -->
+      <?php require 'footer.php'; ?>
+    </div><!-- /main_container -->
+  </div><!-- /container body -->
+</body>
+</html>
+<?php
+}
+?>

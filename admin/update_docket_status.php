@@ -25,8 +25,13 @@ $current_status = mysqli_real_escape_string($conn, trim($_POST['current_status']
 $remarks = mysqli_real_escape_string($conn, trim($_POST['remarks'] ?? ''));
 $location = isset($_POST['location']) ? mysqli_real_escape_string($conn, trim($_POST['location'])) : '';
 $status_date = isset($_POST['status_date']) ? mysqli_real_escape_string($conn, $_POST['status_date']) : NULL;
+
+// Car and driver can be manual input or from database
+$car_number = isset($_POST['car_number']) ? mysqli_real_escape_string($conn, trim($_POST['car_number'])) : NULL;
 $car_id = isset($_POST['car_id']) && !empty($_POST['car_id']) ? intval($_POST['car_id']) : NULL;
+$driver_name = isset($_POST['driver_name']) ? mysqli_real_escape_string($conn, trim($_POST['driver_name'])) : NULL;
 $driver_id = isset($_POST['driver_id']) && !empty($_POST['driver_id']) ? intval($_POST['driver_id']) : NULL;
+
 $delay_reason = isset($_POST['delay_reason']) ? mysqli_real_escape_string($conn, $_POST['delay_reason']) : NULL;
 $doc_no = isset($_POST['doc_no']) ? mysqli_real_escape_string($conn, $_POST['doc_no']) : '';
 
@@ -91,8 +96,8 @@ if (!$error) {
             if ($hierarchy['requires_date'] && empty($status_date)) {
                 $error = "Date is required for '$new_status' status.";
             }
-            if ($hierarchy['requires_car_driver'] && (empty($car_id) || empty($driver_id))) {
-                $error = "Both car and driver are required for '$new_status' status.";
+            if ($hierarchy['requires_car_driver'] && (empty($car_number) || empty($driver_name))) {
+                $error = "Both vehicle number and driver name are required for '$new_status' status.";
             }
             if ($hierarchy['requires_delay_reason'] && empty($delay_reason)) {
                 $error = "Delay reason is required for '$new_status' status.";
@@ -142,25 +147,8 @@ if ($error) {
 mysqli_begin_transaction($conn);
 
 try {
-    // Get car and driver details if provided
-    $car_number = NULL;
-    $driver_name = NULL;
-
-    if ($car_id) {
-        $car_query = "SELECT car_number FROM tbl_car WHERE car_id = $car_id";
-        $car_result = mysqli_query($conn, $car_query);
-        if ($car_row = mysqli_fetch_assoc($car_result)) {
-            $car_number = mysqli_real_escape_string($conn, $car_row['car_number']);
-        }
-    }
-
-    if ($driver_id) {
-        $driver_query = "SELECT staff_name FROM tbl_staff WHERE staff_id = $driver_id AND staff_role = 'Driver'";
-        $driver_result = mysqli_query($conn, $driver_query);
-        if ($driver_row = mysqli_fetch_assoc($driver_result)) {
-            $driver_name = mysqli_real_escape_string($conn, $driver_row['staff_name']);
-        }
-    }
+    // car_number and driver_name already obtained from form (can be manual or from dropdown)
+    // car_id and driver_id will be NULL if manually entered, or set if selected from dropdown
 
     // Update status in docket_details
     $update_query = "UPDATE docket_details SET
