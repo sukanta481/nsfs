@@ -7,22 +7,32 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
   ini_set('log_errors', '1');
   ini_set('error_log', __DIR__ . '/debug_add_user.log');
   error_log("add_user.php debug start - " . date('c') . " - SAPI:" . PHP_SAPI . " - REMOTE_ADDR:" . ($_SERVER['REMOTE_ADDR'] ?? 'cli') . " - REQUEST_METHOD:" . ($_SERVER['REQUEST_METHOD'] ?? 'cli'));
+  echo "<div style='background: #e7f3ff; padding: 10px; margin: 10px; border-left: 4px solid #2196F3;'>DEBUG MODE: add_user.php started</div>";
 }
 
 // Safe require helper: tries relative to admin dir first, logs and shows friendly message on missing files
 function require_file_or_die($path) {
+  global $debug_enabled;
+  $debug_enabled = (isset($_GET['debug']) && $_GET['debug'] === '1');
+  
   $candidates = [__DIR__ . '/' . $path, __DIR__ . '/../' . $path, $path];
   foreach ($candidates as $c) {
     if (file_exists($c)) {
+      if ($debug_enabled) {
+        echo "<div style='background: #d4edda; padding: 5px; margin: 5px; border-left: 4px solid #28a745; font-size: 12px;'>✓ Loading: $path (from $c)</div>";
+        error_log("Successfully loading: $c");
+      }
       require $c;
+      if ($debug_enabled) {
+        echo "<div style='background: #d4edda; padding: 5px; margin: 5px; border-left: 4px solid #28a745; font-size: 12px;'>✓ Loaded: $path</div>";
+      }
       return;
     }
   }
   // Log and show minimal error (only when debug enabled)
   $msg = "add_user.php missing include: {$path}";
   error_log($msg);
-  if (isset($_GET['debug']) && $_GET['debug'] === '1') {
-    // Minimal HTML to avoid further fatal includes
+  if ($debug_enabled) {
     echo "<html><head><title>Include Missing</title></head><body>";
     echo "<h1>Include missing:</h1><p>" . htmlspecialchars($path) . "</p>";
     echo "<p>Check file exists under admin/ or project root. See admin/debug_add_user.log for details.</p>";
@@ -33,8 +43,31 @@ function require_file_or_die($path) {
 }
 
 require_file_or_die('conn.php');
+
+// Check connection after loading conn.php
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+  if (!isset($conn)) {
+    echo "<div style='background: #f8d7da; padding: 10px; margin: 10px; border-left: 4px solid #dc3545;'>ERROR: \$conn not set after loading conn.php</div>";
+    exit;
+  }
+  if (!($conn instanceof mysqli)) {
+    echo "<div style='background: #f8d7da; padding: 10px; margin: 10px; border-left: 4px solid #dc3545;'>ERROR: \$conn is not a mysqli object. Type: " . gettype($conn) . "</div>";
+    exit;
+  }
+  echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ \$conn is valid mysqli connection</div>";
+}
+
 require_file_or_die('check_auth.php');
+
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+  echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ check_auth.php loaded successfully</div>";
+}
+
 requirePermission('user_create');
+
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+  echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ requirePermission passed</div>";
+}
 
 $error = '';
 $success = '';
@@ -85,13 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
                     // Redirect to users list page after success
                     header("Location: users.php?success=User created successfully");
                     exit;
-        } else {
-          $error = "Error creating user: " . mysqli_error($conn);
-          // Log DB error to debug file when debug mode is enabled
-          if (isset($_GET['debug']) && $_GET['debug'] === '1') {
-            error_log("add_user.php - DB insert failed: " . $error . " - Query: " . $insert_query);
-          }
-        }
+                } else {
+                    $error = "Error creating user: " . mysqli_error($conn);
+                    // Log DB error to debug file when debug mode is enabled
+                    if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+                        error_log("add_user.php - DB insert failed: " . $error . " - Query: " . $insert_query);
+                    }
+                }
             }
         }
     }
@@ -101,14 +134,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
 $roles_query = "SELECT role_id, role_name FROM tbl_roles ORDER BY role_name";
 $roles_result = mysqli_query($conn, $roles_query);
 
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+  echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ Roles query executed. Rows: " . ($roles_result ? mysqli_num_rows($roles_result) : 'FAILED') . "</div>";
+}
+
 // Fetch staff for dropdown
 $staff_query = "SELECT staff_id, CONCAT(first_name, ' ', last_name) as staff_name FROM tbl_staff ORDER BY first_name";
 $staff_result = mysqli_query($conn, $staff_query);
 
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+  echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ Staff query executed. Rows: " . ($staff_result ? mysqli_num_rows($staff_result) : 'FAILED') . "</div>";
+  echo "<div style='background: #fff3cd; padding: 10px; margin: 10px; border-left: 4px solid #ffc107;'>Now loading template files...</div>";
+}
+
 require_file_or_die('top_header.php');
+
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+  echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ top_header.php loaded</div>";
+}
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 <style>
+/* ... rest of your CSS stays the same ... */
 .user-form-container {
     background: white;
     border-radius: 15px;
@@ -323,11 +370,32 @@ require_file_or_die('top_header.php');
 <body class="nav-md">
   <div class="container body">
     <div class="main_container">
-  <?php require_file_or_die('left_panel.php');?>
-  <?php require_file_or_die('header_banner.php');?>
+  <?php 
+  require_file_or_die('left_panel.php');
+  if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+    echo "<div style='background: #d4edda; padding: 5px; margin: 5px; border-left: 4px solid #28a745; font-size: 12px;'>✓ left_panel.php loaded</div>";
+  }
+  ?>
+  <?php 
+  require_file_or_die('header_banner.php');
+  if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+    echo "<div style='background: #d4edda; padding: 5px; margin: 5px; border-left: 4px solid #28a745; font-size: 12px;'>✓ header_banner.php loaded</div>";
+  }
+  ?>
       
       <div class="right_col" role="main">
         <div class="user-form-container">
+          
+          <?php if (isset($_GET['debug']) && $_GET['debug'] === '1'): ?>
+          <div style='background: #d1ecf1; padding: 15px; margin: 15px 0; border-left: 4px solid #0c5460; border-radius: 5px;'>
+            <h3>🐛 Debug Info:</h3>
+            <ul>
+              <li>All includes loaded successfully</li>
+              <li>Database connection active</li>
+              <li>Ready to render form</li>
+            </ul>
+          </div>
+          <?php endif; ?>
           
           <div class="form-header">
             <h2><i class="fas fa-user-plus"></i> Add New User</h2>
@@ -497,7 +565,13 @@ require_file_or_die('top_header.php');
         </div>
       </div>
 
-  <?php require_file_or_die('footer.php'); ?>
+  <?php 
+  require_file_or_die('footer.php');
+  if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+    echo "<div style='background: #d4edda; padding: 5px; margin: 5px; border-left: 4px solid #28a745; font-size: 12px;'>✓ footer.php loaded</div>";
+    echo "<div style='background: #d1ecf1; padding: 15px; margin: 15px; border-left: 4px solid #0c5460; border-radius: 5px;'><strong>✓ DEBUG: Page rendered successfully!</strong></div>";
+  }
+  ?>
     </div>
   </div>
 

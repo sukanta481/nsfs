@@ -44,6 +44,11 @@ function hasPermission($permission_key) {
     if (!isset($conn)) {
         require_once 'conn.php';
     }
+    // Ensure $conn is a valid mysqli connection
+    if (!isset($conn) || !($conn instanceof mysqli)) {
+        echo "<b>Database connection error.</b> Please contact the administrator.";
+        exit();
+    }
     
     // Check if permission tables exist - if not, grant access (tables not set up yet)
     $tables_check = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_permissions'");
@@ -82,6 +87,11 @@ function getUserPermissions() {
         global $conn;
         if (!isset($conn)) {
             require_once 'conn.php';
+        }
+        // Ensure $conn is a valid mysqli connection
+        if (!isset($conn) || !($conn instanceof mysqli)) {
+            echo "<b>Database connection error.</b> Please contact the administrator.";
+            exit();
         }
         
         // Check if permission tables exist
@@ -125,6 +135,11 @@ function requirePermission($permission_key) {
     global $conn;
     if (!isset($conn)) {
         require_once 'conn.php';
+    }
+    // Ensure $conn is a valid mysqli connection
+    if (!isset($conn) || !($conn instanceof mysqli)) {
+        echo "<b>Database connection error.</b> Please contact the administrator.";
+        exit();
     }
     
     $tables_check = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_permissions'");
