@@ -31,6 +31,18 @@ if($history_result) {
     }
 }
 
+// Get cars for dropdown (for enhanced status update)
+$cars_query = "SELECT car_id, car_number, car_details FROM tbl_car WHERE active_status = 1 ORDER BY car_number";
+$cars_result = mysqli_query($conn, $cars_query);
+
+// Get drivers for dropdown (for enhanced status update)
+$drivers_query = "SELECT staff_id, staff_name, staff_phone FROM tbl_staff WHERE staff_role = 'Driver' AND active_status = 1 ORDER BY staff_name";
+$drivers_result = mysqli_query($conn, $drivers_query);
+
+// Get delay reasons (for enhanced status update)
+$delay_reasons_query = "SELECT reason_id, reason_text, reason_category FROM tbl_delay_reasons WHERE is_active = 1 ORDER BY reason_category, reason_text";
+$delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
+
 // Generate tracking URL for QR code
 $tracking_url = "http://" . $_SERVER['HTTP_HOST'] . "/nsfs/track.php?doc_no=" . urlencode($data['doc_no']);
 ?>
@@ -252,7 +264,7 @@ $tracking_url = "http://" . $_SERVER['HTTP_HOST'] . "/nsfs/track.php?doc_no=" . 
                 </div>
               </div>
 
-              <!-- Update Status Card -->
+              <!-- Update Status Card - Enhanced -->
               <div class="detail-card">
                 <div class="card-header">
                   <div class="header-left">
@@ -260,30 +272,277 @@ $tracking_url = "http://" . $_SERVER['HTTP_HOST'] . "/nsfs/track.php?doc_no=" . 
                     <h3>Update Status</h3>
                   </div>
                 </div>
-                
+
                 <div class="card-body">
-                  <form id="statusUpdateForm" method="POST" action="update_docket_status.php">
+                  <form id="statusUpdateForm" method="POST" action="update_docket_status.php" enctype="multipart/form-data">
                     <input type="hidden" name="docket_id" value="<?= $docket_id ?>">
-                    
+                    <input type="hidden" name="current_status" value="<?= htmlspecialchars($data['status']) ?>">
+                    <input type="hidden" name="doc_no" value="<?= htmlspecialchars($data['doc_no']) ?>">
+
                     <div class="form-group">
-                      <label>Status</label>
-                      <select name="status" class="form-control-modern" required>
-                        <option value="Pending" <?= $data['status'] == 'Pending' ? 'selected' : '' ?>>Pending</option>
-                        <option value="Picked Up" <?= $data['status'] == 'Picked Up' ? 'selected' : '' ?>>Picked Up</option>
-                        <option value="In Transit" <?= $data['status'] == 'In Transit' ? 'selected' : '' ?>>In Transit</option>
-                        <option value="Out for Delivery" <?= $data['status'] == 'Out for Delivery' ? 'selected' : '' ?>>Out for Delivery</option>
-                        <option value="Delivered" <?= $data['status'] == 'Delivered' ? 'selected' : '' ?>>Delivered</option>
-                        <option value="Delayed" <?= $data['status'] == 'Delayed' ? 'selected' : '' ?>>Delayed</option>
-                        <option value="Cancelled" <?= $data['status'] == 'Cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                      <label>
+                        <i class="fa fa-flag"></i> Status <span style="color: #dc3545;">*</span>
+                      </label>
+                      <select name="status" id="statusSelect" class="form-control-modern" required onchange="handleStatusChange()">
+                        <option value="">-- Select Status --</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Picked Up">Picked Up</option>
+                        <option value="In Transit">In Transit</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Delayed">Delayed</option>
+                        <option value="Failed">Failed Delivery</option>
+                        <option value="Cancelled">Cancelled</option>
                       </select>
+                      <small style="color: #7f8c8d;">Current: <strong><?= htmlspecialchars($data['status'] ?? 'Not Set') ?></strong></small>
                     </div>
-                    
-                    <button type="submit" class="action-button btn-update-status">
+
+                    <!-- Conditional: Date Field (for Out for Delivery, Delivered, Delayed) -->
+                    <div id="dateField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                      <div class="form-group">
+                        <label>
+                          <i class="fa fa-calendar"></i> <span id="dateLabelText">Date</span> <span style="color: #dc3545;">*</span>
+                        </label>
+                        <input type="datetime-local" name="status_date" class="form-control-modern" value="<?= date('Y-m-d\TH:i') ?>">
+                      </div>
+                    </div>
+
+                    <!-- Conditional: Car and Driver Fields (for Out for Delivery) -->
+                    <div id="carDriverField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                      <div class="form-group">
+                        <label>
+                          <i class="fa fa-car"></i> Select Vehicle <span style="color: #dc3545;">*</span>
+                        </label>
+                        <select name="car_id" class="form-control-modern">
+                          <option value="">-- Select Vehicle --</option>
+                          <?php
+                          if ($cars_result) {
+                              mysqli_data_seek($cars_result, 0);
+                              while ($car = mysqli_fetch_assoc($cars_result)):
+                          ?>
+                            <option value="<?= $car['car_id'] ?>">
+                              <?= htmlspecialchars($car['car_number'] . ' - ' . $car['car_details']) ?>
+                            </option>
+                          <?php
+                              endwhile;
+                          }
+                          ?>
+                        </select>
+                      </div>
+
+                      <div class="form-group">
+                        <label>
+                          <i class="fa fa-user"></i> Select Driver <span style="color: #dc3545;">*</span>
+                        </label>
+                        <select name="driver_id" class="form-control-modern">
+                          <option value="">-- Select Driver --</option>
+                          <?php
+                          if ($drivers_result) {
+                              mysqli_data_seek($drivers_result, 0);
+                              while ($driver = mysqli_fetch_assoc($drivers_result)):
+                          ?>
+                            <option value="<?= $driver['staff_id'] ?>">
+                              <?= htmlspecialchars($driver['staff_name'] . ' - ' . $driver['staff_phone']) ?>
+                            </option>
+                          <?php
+                              endwhile;
+                          }
+                          ?>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Conditional: Delay Reason (for Delayed) -->
+                    <div id="delayReasonField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                      <div class="form-group">
+                        <label>
+                          <i class="fa fa-exclamation-triangle"></i> Delay Reason <span style="color: #dc3545;">*</span>
+                        </label>
+                        <select name="delay_reason" class="form-control-modern">
+                          <option value="">-- Select Delay Reason --</option>
+                          <?php
+                          if ($delay_reasons_result) {
+                              $current_category = '';
+                              mysqli_data_seek($delay_reasons_result, 0);
+                              while ($reason = mysqli_fetch_assoc($delay_reasons_result)):
+                                if ($current_category != $reason['reason_category']) {
+                                  if ($current_category != '') echo '</optgroup>';
+                                  echo '<optgroup label="' . htmlspecialchars($reason['reason_category']) . '">';
+                                  $current_category = $reason['reason_category'];
+                                }
+                          ?>
+                            <option value="<?= htmlspecialchars($reason['reason_text']) ?>">
+                              <?= htmlspecialchars($reason['reason_text']) ?>
+                            </option>
+                          <?php
+                              endwhile;
+                              if ($current_category != '') echo '</optgroup>';
+                          }
+                          ?>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Conditional: POD Upload (for Delivered) -->
+                    <div id="podField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                      <div class="form-group">
+                        <label>
+                          <i class="fa fa-file-image-o"></i> Proof of Delivery (POD) <span style="color: #dc3545;">*</span>
+                        </label>
+                        <input type="file" name="pod_file" accept=".jpg,.jpeg,.png,.pdf" class="form-control-modern">
+                        <small style="color: #7f8c8d;">Accepted: JPG, PNG, PDF (Max 5MB)</small>
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label>
+                        <i class="fa fa-map-marker"></i> Current Location (Optional)
+                      </label>
+                      <input type="text" name="location" class="form-control-modern" placeholder="e.g., Mumbai Warehouse, Delhi Hub">
+                    </div>
+
+                    <div class="form-group">
+                      <label>
+                        <i class="fa fa-comment"></i> Remarks (Optional)
+                      </label>
+                      <textarea name="remarks" rows="3" class="form-control-modern" placeholder="Add any notes or comments..."></textarea>
+                    </div>
+
+                    <button type="submit" name="update_status" class="action-button btn-update-status">
                       <i class="fa fa-check"></i> Update Status
                     </button>
                   </form>
                 </div>
               </div>
+
+<style>
+.conditional-field {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  color: #34495e;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.form-group label i {
+  margin-right: 5px;
+  color: #667eea;
+}
+
+.form-control-modern {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e1e8ed;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.form-control-modern:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-control-modern option {
+  padding: 10px;
+}
+
+textarea.form-control-modern {
+  resize: vertical;
+  font-family: inherit;
+}
+</style>
+
+<script>
+function hideAllConditionalFields() {
+  document.getElementById('dateField').style.display = 'none';
+  document.getElementById('carDriverField').style.display = 'none';
+  document.getElementById('delayReasonField').style.display = 'none';
+  document.getElementById('podField').style.display = 'none';
+}
+
+function handleStatusChange() {
+  const status = document.getElementById('statusSelect').value;
+  hideAllConditionalFields();
+
+  if (status === 'Out for Delivery') {
+    document.getElementById('dateLabelText').textContent = 'Out for Delivery Date';
+    document.getElementById('dateField').style.display = 'block';
+    document.getElementById('carDriverField').style.display = 'block';
+  } else if (status === 'Delivered') {
+    document.getElementById('dateLabelText').textContent = 'Delivery Date';
+    document.getElementById('dateField').style.display = 'block';
+    document.getElementById('podField').style.display = 'block';
+  } else if (status === 'Delayed') {
+    document.getElementById('dateLabelText').textContent = 'Delay Date';
+    document.getElementById('dateField').style.display = 'block';
+    document.getElementById('delayReasonField').style.display = 'block';
+  }
+}
+
+// Form validation
+document.getElementById('statusUpdateForm').addEventListener('submit', function(e) {
+  const status = document.getElementById('statusSelect').value;
+
+  if (!status) {
+    e.preventDefault();
+    alert('Please select a status');
+    return false;
+  }
+
+  // Validate Out for Delivery requirements
+  if (status === 'Out for Delivery') {
+    const carId = document.querySelector('[name="car_id"]').value;
+    const driverId = document.querySelector('[name="driver_id"]').value;
+    if (!carId || !driverId) {
+      e.preventDefault();
+      alert('Car and Driver are required for Out for Delivery status');
+      return false;
+    }
+  }
+
+  // Validate Delayed requirements
+  if (status === 'Delayed') {
+    const delayReason = document.querySelector('[name="delay_reason"]').value;
+    if (!delayReason) {
+      e.preventDefault();
+      alert('Delay reason is required for Delayed status');
+      return false;
+    }
+  }
+
+  // Validate Delivered requirements
+  if (status === 'Delivered') {
+    const podFile = document.querySelector('[name="pod_file"]').files.length;
+    if (!podFile) {
+      e.preventDefault();
+      alert('POD file is required for Delivered status');
+      return false;
+    }
+  }
+});
+</script>
 
               <!-- QR Code Card -->
               <div class="detail-card">

@@ -179,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
             }
 
             mysqli_commit($conn);
-            header("Location: delivery_status.php?success=Status updated successfully!");
+            header("Location: delivery_status_enhanced.php?success=Status updated successfully!");
             exit;
 
         } catch (Exception $e) {
@@ -228,8 +228,8 @@ $counts_query = "SELECT
                  SUM(CASE WHEN status = 'In Transit' THEN 1 ELSE 0 END) as in_transit,
                  SUM(CASE WHEN status = 'Out for Delivery' THEN 1 ELSE 0 END) as out_for_delivery,
                  SUM(CASE WHEN status = 'Delivered' THEN 1 ELSE 0 END) as delivered,
-                 SUM(CASE WHEN status = 'Delayed' THEN 1 ELSE 0 END) as `delayed`,
-                 SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as `failed`
+                 SUM(CASE WHEN status = 'Delayed' THEN 1 ELSE 0 END) as delayed,
+                 SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END) as failed
                  FROM docket_details d
                  $where_clause";
 $counts_result = mysqli_query($conn, $counts_query);
