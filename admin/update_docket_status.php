@@ -19,7 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Get form data
-$docket_id = intval($_POST['docket_id'] ?? 0);
+$is_bulk = isset($_POST['is_bulk']) && $_POST['is_bulk'] == '1';
+$bulk_docket_ids = isset($_POST['bulk_docket_ids']) ? $_POST['bulk_docket_ids'] : '';
+
+// For bulk update, get array of docket IDs
+if ($is_bulk && !empty($bulk_docket_ids)) {
+    $docket_ids = array_map('intval', explode(',', $bulk_docket_ids));
+    $docket_id = 0; // Not used for bulk
+} else {
+    $docket_id = intval($_POST['docket_id'] ?? 0);
+    $docket_ids = [$docket_id];
+}
+
 $new_status = mysqli_real_escape_string($conn, trim($_POST['status'] ?? ''));
 $current_status = mysqli_real_escape_string($conn, trim($_POST['current_status'] ?? ''));
 $remarks = mysqli_real_escape_string($conn, trim($_POST['remarks'] ?? ''));
@@ -41,8 +52,12 @@ $updated_by_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Admin';
 // Validation
 $error = NULL;
 
-if ($docket_id <= 0) {
+if (!$is_bulk && $docket_id <= 0) {
     $error = 'Invalid docket ID';
+}
+
+if ($is_bulk && empty($docket_ids)) {
+    $error = 'No dockets selected for bulk update';
 }
 
 if (empty($new_status)) {
@@ -150,74 +165,90 @@ try {
     // car_number and driver_name already obtained from form (can be manual or from dropdown)
     // car_id and driver_id will be NULL if manually entered, or set if selected from dropdown
 
-    // Update status in docket_details
-    $update_query = "UPDATE docket_details SET
-                     status = '$new_status',
-                     last_status_update = NOW()";
+    $updated_count = 0;
 
-    if (!empty($location)) {
-        $update_query .= ", current_location = '$location'";
-    }
+    // Loop through all docket IDs (single or bulk)
+    foreach ($docket_ids as $current_docket_id) {
+        // Get current status for this docket (needed for bulk update)
+        if ($is_bulk) {
+            $status_check = mysqli_query($conn, "SELECT status FROM docket_details WHERE docket_id = $current_docket_id");
+            $status_row = mysqli_fetch_assoc($status_check);
+            $current_status = $status_row['status'] ?? '';
+        }
 
-    // Update specific date fields based on status
-    if ($new_status === 'Out for Delivery' && $status_date) {
-        $update_query .= ", out_for_delivery_date = '$status_date'";
-        if ($car_id) $update_query .= ", car_id = $car_id, car_number = '$car_number'";
-        if ($driver_id) $update_query .= ", driver_id = $driver_id, driver_name = '$driver_name'";
-    } elseif ($new_status === 'Delivered') {
-        $delivery_date = $status_date ?? date('Y-m-d H:i:s');
-        $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
-        if ($pod_file) $update_query .= ", proof_of_delivery = '$pod_file'";
-    } elseif ($new_status === 'Delayed' && $status_date) {
-        $update_query .= ", delay_date = '$status_date'";
-        if ($delay_reason) $update_query .= ", current_delay_reason = '$delay_reason', reason_of_delay = '$delay_reason'";
-    }
+        // Update status in docket_details
+        $update_query = "UPDATE docket_details SET
+                         status = '$new_status',
+                         last_status_update = NOW()";
 
-    $update_query .= " WHERE docket_id = $docket_id";
+        if (!empty($location)) {
+            $update_query .= ", current_location = '$location'";
+        }
 
-    if (!mysqli_query($conn, $update_query)) {
-        throw new Exception(mysqli_error($conn));
-    }
+        // Update specific date fields based on status
+        if ($new_status === 'Out for Delivery' && $status_date) {
+            $update_query .= ", out_for_delivery_date = '$status_date'";
+            if ($car_id) $update_query .= ", car_id = $car_id, car_number = '$car_number'";
+            if ($driver_id) $update_query .= ", driver_id = $driver_id, driver_name = '$driver_name'";
+        } elseif ($new_status === 'Delivered') {
+            $delivery_date = $status_date ?? date('Y-m-d H:i:s');
+            $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
+            if ($pod_file) $update_query .= ", proof_of_delivery = '$pod_file'";
+        } elseif ($new_status === 'Delayed' && $status_date) {
+            $update_query .= ", delay_date = '$status_date'";
+            if ($delay_reason) $update_query .= ", current_delay_reason = '$delay_reason', reason_of_delay = '$delay_reason'";
+        }
 
-    // Build notes for status history
-    $history_notes = $remarks;
-    if ($car_number && $driver_name) {
-        $history_notes .= "\nVehicle: $car_number, Driver: $driver_name";
-    }
-    if ($delay_reason) {
-        $history_notes .= "\nDelay Reason: $delay_reason";
-    }
+        $update_query .= " WHERE docket_id = $current_docket_id";
 
-    // Insert into docket_status_history
-    $history_query = "INSERT INTO docket_status_history
-        (docket_id, old_status, new_status, changed_by, changed_at, notes,
-         status_date, car_id, car_number, driver_id, driver_name,
-         delay_reason, pod_file, pod_uploaded_at, location,
-         updated_by, updated_by_name)
-        VALUES ($docket_id, '$current_status', '$new_status', '$updated_by_name', NOW(), " .
-        ($history_notes ? "'$history_notes'" : "NULL") . ", " .
-        ($status_date ? "'$status_date'" : "NULL") . ", " .
-        ($car_id ?: "NULL") . ", " .
-        ($car_number ? "'$car_number'" : "NULL") . ", " .
-        ($driver_id ?: "NULL") . ", " .
-        ($driver_name ? "'$driver_name'" : "NULL") . ", " .
-        ($delay_reason ? "'$delay_reason'" : "NULL") . ", " .
-        ($pod_file ? "'$pod_file'" : "NULL") . ", " .
-        ($pod_file ? "NOW()" : "NULL") . ", " .
-        ($location ? "'$location'" : "NULL") . ", " .
-        "$updated_by, '$updated_by_name')";
+        if (!mysqli_query($conn, $update_query)) {
+            throw new Exception(mysqli_error($conn));
+        }
 
-    if (!mysqli_query($conn, $history_query)) {
-        throw new Exception(mysqli_error($conn));
+        // Build notes for status history
+        $history_notes = $remarks;
+        if ($car_number && $driver_name) {
+            $history_notes .= "\nVehicle: $car_number, Driver: $driver_name";
+        }
+        if ($delay_reason) {
+            $history_notes .= "\nDelay Reason: $delay_reason";
+        }
+
+        // Insert into docket_status_history
+        $history_query = "INSERT INTO docket_status_history
+            (docket_id, old_status, new_status, changed_by, changed_at, notes,
+             status_date, car_id, car_number, driver_id, driver_name,
+             delay_reason, pod_file, pod_uploaded_at, location,
+             updated_by, updated_by_name)
+            VALUES ($current_docket_id, '$current_status', '$new_status', '$updated_by_name', NOW(), " .
+            ($history_notes ? "'$history_notes'" : "NULL") . ", " .
+            ($status_date ? "'$status_date'" : "NULL") . ", " .
+            ($car_id ?: "NULL") . ", " .
+            ($car_number ? "'$car_number'" : "NULL") . ", " .
+            ($driver_id ?: "NULL") . ", " .
+            ($driver_name ? "'$driver_name'" : "NULL") . ", " .
+            ($delay_reason ? "'$delay_reason'" : "NULL") . ", " .
+            ($pod_file ? "'$pod_file'" : "NULL") . ", " .
+            ($pod_file ? "NOW()" : "NULL") . ", " .
+            ($location ? "'$location'" : "NULL") . ", " .
+            "$updated_by, '$updated_by_name')";
+
+        if (!mysqli_query($conn, $history_query)) {
+            throw new Exception(mysqli_error($conn));
+        }
+
+        $updated_count++;
     }
 
     mysqli_commit($conn);
 
     // Return success
+    $success_message = $is_bulk ? "Successfully updated $updated_count docket(s)" : "Status updated successfully!";
+
     if ($is_json_request) {
-        echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+        echo json_encode(['success' => true, 'message' => $success_message]);
     } else {
-        header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'delivery_status.php') . "?success=Status updated successfully!");
+        header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'delivery_status.php') . "?success=" . urlencode($success_message));
     }
 
 } catch (Exception $e) {

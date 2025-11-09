@@ -738,14 +738,15 @@ body {
         </label>
         <select name="status" id="newStatus" required class="filter-input" style="width: 100%; font-size: 16px;" onchange="handleStatusChange()">
           <option value="">-- Choose Status --</option>
-          <option value="Pending">Pending</option>
-          <option value="Confirmed">Confirmed</option>
-          <option value="Picked Up">Picked Up</option>
-          <option value="In Transit">In Transit</option>
-          <option value="Out for Delivery">Out for Delivery</option>
-          <option value="Delivered">Delivered</option>
-          <option value="Delayed">Delayed</option>
-          <option value="Failed">Failed Delivery</option>
+          <option value="Pending" data-order="1">Pending</option>
+          <option value="Confirmed" data-order="2">Confirmed</option>
+          <option value="Picked Up" data-order="3">Picked Up</option>
+          <option value="In Transit" data-order="4">In Transit</option>
+          <option value="Delayed" data-order="4" data-allow-anytime="true">Delayed</option>
+          <option value="Out for Delivery" data-order="5">Out for Delivery</option>
+          <option value="Delivered" data-order="6" data-final="true">Delivered</option>
+          <option value="Failed" data-order="6" data-final="true">Failed Delivery</option>
+          <option value="Cancelled" data-order="6" data-final="true">Cancelled</option>
         </select>
       </div>
 
@@ -763,36 +764,40 @@ body {
       <div id="carDriverField" class="conditional-field">
         <div class="form-group">
           <label>
-            <i class="fas fa-car"></i> Select Vehicle <span class="required">*</span>
+            <i class="fas fa-car"></i> Vehicle Number <span class="required">*</span>
           </label>
-          <select name="car_id" class="filter-input" style="width: 100%;">
-            <option value="">-- Select Vehicle --</option>
+          <input type="text" name="car_number" id="carNumberInput" class="filter-input" list="carList" placeholder="Type or select vehicle number" autocomplete="off" style="width: 100%;">
+          <datalist id="carList">
             <?php
             mysqli_data_seek($cars_result, 0);
             while ($car = mysqli_fetch_assoc($cars_result)):
             ?>
-              <option value="<?php echo $car['car_id']; ?>">
+              <option value="<?php echo htmlspecialchars($car['car_number']); ?>" data-id="<?php echo $car['car_id']; ?>" data-details="<?php echo htmlspecialchars($car['car_details']); ?>">
                 <?php echo htmlspecialchars($car['car_number'] . ' - ' . $car['car_details']); ?>
               </option>
             <?php endwhile; ?>
-          </select>
+          </datalist>
+          <input type="hidden" name="car_id" id="carIdHidden">
+          <small style="color: #7f8c8d; font-size: 12px;">Type manually for external vehicles or select from dropdown</small>
         </div>
 
         <div class="form-group">
           <label>
-            <i class="fas fa-user-tie"></i> Select Driver <span class="required">*</span>
+            <i class="fas fa-user-tie"></i> Driver Name <span class="required">*</span>
           </label>
-          <select name="driver_id" class="filter-input" style="width: 100%;">
-            <option value="">-- Select Driver --</option>
+          <input type="text" name="driver_name" id="driverNameInput" class="filter-input" list="driverList" placeholder="Type or select driver name" autocomplete="off" style="width: 100%;">
+          <datalist id="driverList">
             <?php
             mysqli_data_seek($drivers_result, 0);
             while ($driver = mysqli_fetch_assoc($drivers_result)):
             ?>
-              <option value="<?php echo $driver['staff_id']; ?>">
+              <option value="<?php echo htmlspecialchars($driver['staff_name']); ?>" data-id="<?php echo $driver['staff_id']; ?>" data-phone="<?php echo htmlspecialchars($driver['staff_phone']); ?>">
                 <?php echo htmlspecialchars($driver['staff_name'] . ' - ' . $driver['staff_phone']); ?>
               </option>
             <?php endwhile; ?>
-          </select>
+          </datalist>
+          <input type="hidden" name="driver_id" id="driverIdHidden">
+          <small style="color: #7f8c8d; font-size: 12px;">Type manually for external drivers or select from dropdown</small>
         </div>
       </div>
 
@@ -928,6 +933,111 @@ setTimeout(function() {
         setTimeout(() => alert.remove(), 500);
     }
 }, 5000);
+
+// Auto-fill car_id and driver_id when selecting from datalist
+document.getElementById('carNumberInput').addEventListener('input', function() {
+  const value = this.value;
+  const options = document.querySelectorAll('#carList option');
+  const hiddenInput = document.getElementById('carIdHidden');
+
+  let matched = false;
+  options.forEach(option => {
+    if (option.value === value) {
+      hiddenInput.value = option.getAttribute('data-id') || '';
+      matched = true;
+    }
+  });
+
+  if (!matched) {
+    hiddenInput.value = ''; // Manual input - no ID
+  }
+});
+
+document.getElementById('driverNameInput').addEventListener('input', function() {
+  const value = this.value;
+  const options = document.querySelectorAll('#driverList option');
+  const hiddenInput = document.getElementById('driverIdHidden');
+
+  let matched = false;
+  options.forEach(option => {
+    if (option.value === value) {
+      hiddenInput.value = option.getAttribute('data-id') || '';
+      matched = true;
+    }
+  });
+
+  if (!matched) {
+    hiddenInput.value = ''; // Manual input - no ID
+  }
+});
+
+// Check for error in URL and show it
+window.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const error = urlParams.get('error');
+  if (error) {
+    // Show error in alert for now (can be enhanced with custom modal)
+    alert(decodeURIComponent(error));
+    // Clean URL without reloading
+    const cleanUrl = window.location.pathname + window.location.search.replace(/[?&]error=[^&]*/, '').replace(/^&/, '?');
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
+  // Disable previous status options when modal opens
+  const statusModal = document.getElementById('statusModal');
+  const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+      if (mutation.target.style.display === 'flex') {
+        disablePreviousStatusOptions();
+      }
+    });
+  });
+  observer.observe(statusModal, { attributes: true, attributeFilter: ['style'] });
+});
+
+function disablePreviousStatusOptions() {
+  const statusSelect = document.getElementById('newStatus');
+  const currentStatus = document.getElementById('modalCurrentStatus').value;
+
+  if (!currentStatus) return;
+
+  // Find current status option
+  let currentOrder = 0;
+  const options = statusSelect.querySelectorAll('option');
+
+  options.forEach(option => {
+    if (option.value === currentStatus) {
+      currentOrder = parseInt(option.getAttribute('data-order') || 0);
+    }
+  });
+
+  // Re-enable all first (in case modal reopened)
+  options.forEach(option => {
+    option.disabled = false;
+    option.style.color = '';
+    // Remove the (unavailable) text if it exists
+    option.textContent = option.textContent.replace(' (unavailable)', '');
+  });
+
+  // Disable previous options
+  options.forEach(option => {
+    // Skip empty option
+    if (!option.value) return;
+
+    const optionOrder = parseInt(option.getAttribute('data-order') || 0);
+    const allowAnytime = option.getAttribute('data-allow-anytime') === 'true';
+    const isFinal = option.getAttribute('data-final') === 'true';
+
+    if (optionOrder < currentOrder && !allowAnytime) {
+      option.disabled = true;
+      option.style.color = '#ccc';
+      // Only add (unavailable) if not already there
+      if (!option.textContent.includes('(unavailable)')) {
+        option.textContent = option.textContent + ' (unavailable)';
+      }
+    }
+  });
+}
 </script>
 
 </body>

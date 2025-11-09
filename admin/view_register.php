@@ -239,7 +239,7 @@ if ($is_standalone) {
                             <?php if ($history['new_status'] === 'Delivered'): ?>
                               <div class="timeline-pod" style="margin-top: 10px;">
                                 <?php if (!empty($history['pod_file'])): ?>
-                                  <a href="<?= htmlspecialchars($history['pod_file']) ?>" target="_blank" class="btn-view-pod">
+                                  <a href="../<?= htmlspecialchars($history['pod_file']) ?>" target="_blank" class="btn-view-pod">
                                     <i class="fa fa-file-image-o"></i> View POD
                                   </a>
                                 <?php else: ?>
@@ -338,17 +338,17 @@ if ($is_standalone) {
                       <label>
                         <i class="fa fa-flag"></i> Status <span style="color: #dc3545;">*</span>
                       </label>
-                      <select name="status" id="statusSelect" class="form-control-modern" required onchange="handleStatusChange()">
+                      <select name="status" id="statusSelect" class="form-control-modern" required onchange="handleStatusChange()" data-current-status="<?= htmlspecialchars($data['status'] ?? '') ?>">
                         <option value="">-- Select Status --</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Confirmed">Confirmed</option>
-                        <option value="Picked Up">Picked Up</option>
-                        <option value="In Transit">In Transit</option>
-                        <option value="Out for Delivery">Out for Delivery</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Delayed">Delayed</option>
-                        <option value="Failed">Failed Delivery</option>
-                        <option value="Cancelled">Cancelled</option>
+                        <option value="Pending" data-order="1">Pending</option>
+                        <option value="Confirmed" data-order="2">Confirmed</option>
+                        <option value="Picked Up" data-order="3">Picked Up</option>
+                        <option value="In Transit" data-order="4">In Transit</option>
+                        <option value="Delayed" data-order="4" data-allow-anytime="true">Delayed</option>
+                        <option value="Out for Delivery" data-order="5">Out for Delivery</option>
+                        <option value="Delivered" data-order="6" data-final="true">Delivered</option>
+                        <option value="Failed" data-order="6" data-final="true">Failed Delivery</option>
+                        <option value="Cancelled" data-order="6" data-final="true">Cancelled</option>
                       </select>
                       <small style="color: #7f8c8d;">Current: <strong><?= htmlspecialchars($data['status'] ?? 'Not Set') ?></strong></small>
                     </div>
@@ -534,6 +534,57 @@ textarea.form-control-modern {
 </style>
 
 <script>
+// Check for error in URL and show it
+window.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const error = urlParams.get('error');
+  if (error) {
+    showError(decodeURIComponent(error));
+    // Clean URL without reloading
+    const cleanUrl = window.location.pathname + window.location.search.replace(/[?&]error=[^&]*/, '').replace(/^&/, '?');
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
+  // Disable previous status options
+  disablePreviousStatusOptions();
+});
+
+function disablePreviousStatusOptions() {
+  const statusSelect = document.getElementById('statusSelect');
+  const currentStatus = statusSelect.getAttribute('data-current-status');
+
+  if (!currentStatus) return;
+
+  // Find current status option
+  let currentOrder = 0;
+  const options = statusSelect.querySelectorAll('option');
+
+  options.forEach(option => {
+    if (option.value === currentStatus) {
+      currentOrder = parseInt(option.getAttribute('data-order') || 0);
+    }
+  });
+
+  // Disable previous options
+  options.forEach(option => {
+    // Skip empty option
+    if (!option.value) return;
+
+    const optionOrder = parseInt(option.getAttribute('data-order') || 0);
+    const allowAnytime = option.getAttribute('data-allow-anytime') === 'true';
+    const isFinal = option.getAttribute('data-final') === 'true';
+
+    if (optionOrder < currentOrder && !allowAnytime) {
+      option.disabled = true;
+      option.style.color = '#ccc';
+      // Only add (unavailable) if not already there
+      if (!option.textContent.includes('(unavailable)')) {
+        option.textContent = option.textContent + ' (unavailable)';
+      }
+    }
+  });
+}
+
 function hideAllConditionalFields() {
   document.getElementById('dateField').style.display = 'none';
   document.getElementById('carDriverField').style.display = 'none';
@@ -714,30 +765,8 @@ function confirmDelete(docketId) {
     }
 }
 
-// Status Update Form
-document.getElementById('statusUpdateForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    
-    fetch('update_docket_status.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if(data.success) {
-            alert('Status updated successfully!');
-            location.reload();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    })
-    .catch(error => {
-        alert('An error occurred. Please try again.');
-        console.error(error);
-    });
-});
+// Status Update Form - Remove old AJAX handler
+// Form now submits normally and backend handles redirect with error/success messages
 </script>
 
 <style>
