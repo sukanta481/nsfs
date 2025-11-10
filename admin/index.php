@@ -17,9 +17,10 @@ require 'top_header.php';
         <?php
         function fetch_count($sql) {
           global $conn;
-          $res = mysqli_query($conn, $sql);
+          $res = @mysqli_query($conn, $sql);
           if (!$res) {
-            die("Query failed: ".mysqli_error($conn)." SQL: $sql");
+            // Return 0 if query fails (table doesn't exist, etc.)
+            return 0;
           }
           $row = mysqli_fetch_assoc($res);
           return $row['c'] ?? 0;

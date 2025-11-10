@@ -45,27 +45,32 @@ if ($get_shipping_details_row) {
     $manifest_id = null;
     $manifest_created_time = null;
     $manifest_office = '';
-    
-    // Check in manifest_dockets table (if exists)
-    $manifest_check_sql = "SELECT md.*, m.manifest_id, m.manifest_no, m.to_office, m.created_at as manifest_date
-                          FROM manifest_dockets md
-                          LEFT JOIN manifest m ON md.manifest_id = m.manifest_id
-                          WHERE md.docket_id = '$docket_id'
-                          LIMIT 1";
-    $manifest_check_rs = @mysqli_query($conn, $manifest_check_sql);
 
-    if ($manifest_check_rs && mysqli_num_rows($manifest_check_rs) > 0) {
-        $manifest_data = mysqli_fetch_assoc($manifest_check_rs);
-        $has_manifest = true;
-        $manifest_id = $manifest_data['manifest_id'];
-        $manifest_created_time = $manifest_data['manifest_date'];
+    // First check if manifest_dockets table exists
+    $table_check = @mysqli_query($conn, "SHOW TABLES LIKE 'manifest_dockets'");
 
-        // Get office name
-        if (!empty($manifest_data['to_office'])) {
-            $office_query = "SELECT office_name FROM tbl_offices WHERE office_id='" . $manifest_data['to_office'] . "'";
-            $office_rs = mysqli_query($conn, $office_query);
-            if ($office_row = mysqli_fetch_assoc($office_rs)) {
-                $manifest_office = $office_row['office_name'];
+    if ($table_check && mysqli_num_rows($table_check) > 0) {
+        // Table exists, proceed with manifest check
+        $manifest_check_sql = "SELECT md.*, m.manifest_id, m.manifest_no, m.to_office, m.created_at as manifest_date
+                              FROM manifest_dockets md
+                              LEFT JOIN manifest m ON md.manifest_id = m.manifest_id
+                              WHERE md.docket_id = '$docket_id'
+                              LIMIT 1";
+        $manifest_check_rs = @mysqli_query($conn, $manifest_check_sql);
+
+        if ($manifest_check_rs && mysqli_num_rows($manifest_check_rs) > 0) {
+            $manifest_data = mysqli_fetch_assoc($manifest_check_rs);
+            $has_manifest = true;
+            $manifest_id = $manifest_data['manifest_id'];
+            $manifest_created_time = $manifest_data['manifest_date'];
+
+            // Get office name
+            if (!empty($manifest_data['to_office'])) {
+                $office_query = "SELECT office_name FROM tbl_offices WHERE office_id='" . $manifest_data['to_office'] . "'";
+                $office_rs = mysqli_query($conn, $office_query);
+                if ($office_row = mysqli_fetch_assoc($office_rs)) {
+                    $manifest_office = $office_row['office_name'];
+                }
             }
         }
     }
@@ -344,7 +349,8 @@ if (!$is_ajax) { ?>
                       if (empty($pod_file)) {
                           echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;">POD Pending</span>';
                       } else {
-                          $pod_path = '/post_img/pod/' . $pod_file; // adjust if needed
+                          // POD path is already complete (uploads/pod/year/month/doc_no/filename.ext)
+                          $pod_path = '/' . $pod_file;
                           echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;">View POD</a>
                           <a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success">Download</a>';
                       }
@@ -374,8 +380,8 @@ if (!$is_ajax) { ?>
                   if (empty($pod_file)) {
                       echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;">POD Pending</span>';
                   } else {
-                      $pod_ext = strtolower(pathinfo($pod_file, PATHINFO_EXTENSION));
-                      $pod_path = '/post_img/pod/' . $pod_file;
+                      // POD path is already complete (uploads/pod/year/month/doc_no/filename.ext)
+                      $pod_path = '/' . $pod_file;
                       echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;">View POD</a> ';
                       echo '<a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success">Download</a>';
                   }
