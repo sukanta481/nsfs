@@ -5,7 +5,10 @@
       "Bash(cat:*)",
       "Bash(echo:*)",
       "Bash(c:/xampp/htdocs/nsfs/admin/view_register.php)",
-      "Bash(c:/xampp/mysql/bin/mysql.exe:*)"
+      "Bash(c:/xampp/mysql/bin/mysql.exe:*)",
+      "Bash(NUL)",
+      "Bash(dir:*)",
+      "Bash(del delivery_status_old_backup.php manifest_old_backup.php manifest_save.php.backup)"
     ],
     "deny": [],
     "ask": []

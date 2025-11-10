@@ -139,8 +139,8 @@ if (file_exists('check_auth.php')) {
           <i class="fa fa-chevron-down submenu-arrow"></i>
         </a>
         <ul class="submenu">
-          <li><a href="delay_reason.php?type=list_delay_reason&lp=ac">Delay Reasons</a></li>
-          <li><a href="contacts.php?type=edit_contact&contact_id=1&lp=ac">Contact Settings</a></li>
+          <li><a href="delay_reason_crud.php">Delay Reasons</a></li>
+          <li><a href="contact_settings.php">Contact Settings</a></li>
           <li><a href="changepassword.php?lp=ad">Change Password</a></li>
         </ul>
       </li>

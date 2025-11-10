@@ -11,5 +11,6 @@ admin/uploads/*/
 files/
 demo/
 
+
 # Composer lock (if you want consistent dependencies, remove this line)
 composer.lock
