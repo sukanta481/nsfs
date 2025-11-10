@@ -15,6 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
     $driver_id = isset($_POST['driver_id']) && !empty($_POST['driver_id']) ? intval($_POST['driver_id']) : NULL;
     $delay_reason = isset($_POST['delay_reason']) ? mysqli_real_escape_string($conn, $_POST['delay_reason']) : NULL;
 
+    // Get manual input for car and driver (for combo box functionality)
+    $manual_car_number = isset($_POST['car_number']) ? mysqli_real_escape_string($conn, trim($_POST['car_number'])) : '';
+    $manual_driver_name = isset($_POST['driver_name']) ? mysqli_real_escape_string($conn, trim($_POST['driver_name'])) : '';
+
     $updated_by = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? 0;
     $updated_by_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Admin';
 
@@ -56,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
             if ($hierarchy['requires_date'] && empty($status_date)) {
                 $error = "Date is required for '$new_status' status.";
             }
-            if ($hierarchy['requires_car_driver'] && (empty($car_id) || empty($driver_id))) {
+            if ($hierarchy['requires_car_driver'] && (empty($manual_car_number) || empty($manual_driver_name))) {
                 $error = "Both car and driver are required for '$new_status' status.";
             }
             if ($hierarchy['requires_delay_reason'] && empty($delay_reason)) {
@@ -97,11 +101,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
         mysqli_begin_transaction($conn);
 
         try {
-            // Get car and driver details if provided
-            $car_number = NULL;
-            $driver_name = NULL;
+            // Get car and driver details - prioritize manual input, fallback to database
+            $car_number = $manual_car_number; // Use manual input first
+            $driver_name = $manual_driver_name; // Use manual input first
 
-            if ($car_id) {
+            // If car_id is provided but no manual input, get from database
+            if ($car_id && empty($car_number)) {
                 $car_query = "SELECT car_number FROM tbl_car WHERE car_id = $car_id";
                 $car_result = mysqli_query($conn, $car_query);
                 if ($car_row = mysqli_fetch_assoc($car_result)) {
@@ -109,11 +114,45 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
                 }
             }
 
-            if ($driver_id) {
+            // If driver_id is provided but no manual input, get from database
+            if ($driver_id && empty($driver_name)) {
                 $driver_query = "SELECT staff_name FROM tbl_staff WHERE staff_id = $driver_id AND staff_role = 'Driver'";
                 $driver_result = mysqli_query($conn, $driver_query);
                 if ($driver_row = mysqli_fetch_assoc($driver_result)) {
                     $driver_name = mysqli_real_escape_string($conn, $driver_row['staff_name']);
+                }
+            }
+
+            // Auto-add car to database if it's a new manual entry
+            if (!empty($car_number) && !$car_id) {
+                // Check if car already exists
+                $check_car = mysqli_query($conn, "SELECT car_id FROM tbl_car WHERE car_number = '$car_number' LIMIT 1");
+                if ($check_car && mysqli_num_rows($check_car) > 0) {
+                    $car_row = mysqli_fetch_assoc($check_car);
+                    $car_id = $car_row['car_id'];
+                } else {
+                    // Insert new car
+                    $insert_car = mysqli_query($conn, "INSERT INTO tbl_car (car_number, car_details, active_status) VALUES ('$car_number', 'External Vehicle', 1)");
+                    if ($insert_car) {
+                        $car_id = mysqli_insert_id($conn);
+                    }
+                }
+            }
+
+            // Auto-add driver to staff if it's a new manual entry
+            if (!empty($driver_name) && !$driver_id) {
+                // Check if driver already exists
+                $check_driver = mysqli_query($conn, "SELECT staff_id FROM tbl_staff WHERE staff_name = '$driver_name' AND staff_role = 'Driver' LIMIT 1");
+                if ($check_driver && mysqli_num_rows($check_driver) > 0) {
+                    $driver_row = mysqli_fetch_assoc($check_driver);
+                    $driver_id = $driver_row['staff_id'];
+                } else {
+                    // Insert new driver (external driver with minimal info)
+                    $insert_driver = mysqli_query($conn, "INSERT INTO tbl_staff (staff_name, staff_role, staff_phone, office_id, branch_office, active_status)
+                                                          VALUES ('$driver_name', 'Driver', 'N/A', 1, 'External', 1)");
+                    if ($insert_driver) {
+                        $driver_id = mysqli_insert_id($conn);
+                    }
                 }
             }
 

@@ -91,7 +91,6 @@ if (file_exists('check_auth.php')) {
         <ul class="submenu">
           <?php if (hasPermission('vehicle_view')): ?>
           <li><a href="car_crud.php">Cars</a></li>
-          <li><a href="driver_crud.php">Drivers</a></li>
           <?php endif; ?>
           <?php if (hasPermission('staff_view')): ?>
           <li><a href="staff_crud.php">Staff</a></li>
