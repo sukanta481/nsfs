@@ -145,32 +145,46 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
     <div style="background: #f5f7fa; padding: 25px; border-radius: 12px; margin-bottom: 25px; border: 2px solid #e0e0e0;">
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
         
-        <!-- Car Dropdown -->
+        <!-- Car Combo Box -->
         <div>
           <label style="display: block; font-weight: 700; color: #333; margin-bottom: 8px; font-size: 1.05rem;">
             <i class="fa fa-car" style="color: #2196f3;"></i> Select Car
           </label>
-          <select name="car_id" id="carSelect" class="form-control" required style="height: 45px; font-size: 1.05rem; font-weight: 600;">
-            <option value="">-- Select Car --</option>
-            <?php while($car = mysqli_fetch_assoc($cars_result)): ?>
-              <option value="<?= $car['car_id'] ?>"><?= htmlspecialchars($car['car_number']) ?></option>
+          <input type="text" name="car_number" id="carNumberInput" class="form-control" list="carList"
+                 placeholder="Type or select car number" autocomplete="off" required
+                 style="height: 45px; font-size: 1.05rem; font-weight: 600;">
+          <datalist id="carList">
+            <?php
+            mysqli_data_seek($cars_result, 0);
+            while($car = mysqli_fetch_assoc($cars_result)):
+            ?>
+              <option value="<?= htmlspecialchars($car['car_number']) ?>" data-id="<?= $car['car_id'] ?>">
             <?php endwhile; ?>
-          </select>
+          </datalist>
+          <input type="hidden" name="car_id" id="carIdHidden">
+          <small style="color: #7f8c8d; font-size: 12px;">Type manually for external vehicles or select from dropdown</small>
         </div>
 
-        <!-- Driver Dropdown -->
+        <!-- Driver Combo Box -->
         <div>
           <label style="display: block; font-weight: 700; color: #333; margin-bottom: 8px; font-size: 1.05rem;">
             <i class="fa fa-user" style="color: #ff9800;"></i> Select Driver
           </label>
-          <select name="driver_id" id="driverSelect" class="form-control" required style="height: 45px; font-size: 1.05rem; font-weight: 600;">
-            <option value="">-- Select Driver --</option>
-            <?php while ($driver = mysqli_fetch_assoc($drivers_result)): ?>
-              <option value="<?= $driver['staff_id'] ?>" data-license="<?= htmlspecialchars($driver['driving_license'] ?? '') ?>">
-                <?= htmlspecialchars($driver['staff_name']) ?>
-              </option>
+          <input type="text" name="driver_name" id="driverNameInput" class="form-control" list="driverList"
+                 placeholder="Type or select driver name" autocomplete="off" required
+                 style="height: 45px; font-size: 1.05rem; font-weight: 600;">
+          <datalist id="driverList">
+            <?php
+            mysqli_data_seek($drivers_result, 0);
+            while ($driver = mysqli_fetch_assoc($drivers_result)):
+            ?>
+              <option value="<?= htmlspecialchars($driver['staff_name']) ?>"
+                      data-id="<?= $driver['staff_id'] ?>"
+                      data-license="<?= htmlspecialchars($driver['driving_license'] ?? '') ?>">
             <?php endwhile; ?>
-          </select>
+          </datalist>
+          <input type="hidden" name="driver_id" id="driverIdHidden">
+          <small style="color: #7f8c8d; font-size: 12px;">Type manually for external drivers or select from dropdown</small>
         </div>
 
         <!-- Driver License (Auto-populated) -->
@@ -310,7 +324,10 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
   
   // DOM element references
   const form = document.getElementById('manifestForm');
-  const driverSelect = document.getElementById('driverSelect');
+  const carNumberInput = document.getElementById('carNumberInput');
+  const carIdHidden = document.getElementById('carIdHidden');
+  const driverNameInput = document.getElementById('driverNameInput');
+  const driverIdHidden = document.getElementById('driverIdHidden');
   const driverLicense = document.getElementById('driverLicense');
   const manualCheckbox = document.getElementById('manualModeCheckbox');
   const saveResult = document.getElementById('manifest_save_result');
@@ -344,8 +361,11 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
       });
     }
     
-    // Driver selection - auto-populate license
-    driverSelect.addEventListener('change', handleDriverChange);
+    // Car combo box - auto-populate car ID
+    carNumberInput.addEventListener('input', handleCarInput);
+
+    // Driver combo box - auto-populate driver ID and license
+    driverNameInput.addEventListener('input', handleDriverInput);
     
     // Manual mode toggle
     manualCheckbox.addEventListener('change', handleManualModeToggle);
@@ -374,12 +394,51 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
   }
   
   /**
-   * Handle driver selection change
+   * Handle car combo box input
    */
-  function handleDriverChange(e) {
-    const selectedOption = e.target.options[e.target.selectedIndex];
-    const license = selectedOption.dataset.license || '';
-    driverLicense.value = license;
+  function handleCarInput(e) {
+    const carNumber = e.target.value.trim();
+    const datalist = document.getElementById('carList');
+    const options = datalist.querySelectorAll('option');
+
+    // Check if the entered value matches any option
+    let matchFound = false;
+    options.forEach(option => {
+      if (option.value === carNumber) {
+        carIdHidden.value = option.getAttribute('data-id') || '';
+        matchFound = true;
+      }
+    });
+
+    // If no match, clear the hidden ID (manual input)
+    if (!matchFound) {
+      carIdHidden.value = '';
+    }
+  }
+
+  /**
+   * Handle driver combo box input
+   */
+  function handleDriverInput(e) {
+    const driverName = e.target.value.trim();
+    const datalist = document.getElementById('driverList');
+    const options = datalist.querySelectorAll('option');
+
+    // Check if the entered value matches any option
+    let matchFound = false;
+    options.forEach(option => {
+      if (option.value === driverName) {
+        driverIdHidden.value = option.getAttribute('data-id') || '';
+        driverLicense.value = option.getAttribute('data-license') || '';
+        matchFound = true;
+      }
+    });
+
+    // If no match, clear the hidden fields (manual input)
+    if (!matchFound) {
+      driverIdHidden.value = '';
+      driverLicense.value = '';
+    }
   }
   
   /**
@@ -763,11 +822,11 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
     e.preventDefault();
     
     // Validate car and driver selection
-    const carId = document.getElementById('carSelect').value;
-    const driverId = document.getElementById('driverSelect').value;
-    
-    if (!carId || !driverId) {
-      showAlert('⚠️ Please select both Car and Driver before saving!', 'danger');
+    const carNumber = carNumberInput.value.trim();
+    const driverName = driverNameInput.value.trim();
+
+    if (!carNumber || !driverName) {
+      showAlert('⚠️ Please enter both Car and Driver before saving!', 'danger');
       return;
     }
     

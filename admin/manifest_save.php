@@ -14,6 +14,11 @@ $car_id = intval($_POST['car_id'] ?? 0);
 $driver_id = intval($_POST['driver_id'] ?? 0);
 $driver_license = trim($_POST['driver_license'] ?? '');
 $is_manual = intval($_POST['is_manual'] ?? 0);
+
+// Get manual input for car and driver (combo box functionality)
+$manual_car_number = isset($_POST['car_number']) ? mysqli_real_escape_string($conn, trim($_POST['car_number'])) : '';
+$manual_driver_name = isset($_POST['driver_name']) ? mysqli_real_escape_string($conn, trim($_POST['driver_name'])) : '';
+
 $doc_nos = $_POST['doc_no'] ?? [];
 $client_names = $_POST['client_name'] ?? [];
 $items = $_POST['item'] ?? [];
@@ -30,6 +35,52 @@ if (!$office_id) {
     exit;
 }
 
+// Validate car and driver (check manual input or IDs)
+if (empty($manual_car_number) || empty($manual_driver_name)) {
+    echo "<div class='alert alert-danger' style='font-size:1.2rem;padding:20px;'><i class='fa fa-exclamation-triangle'></i> Please enter both Car and Driver!</div>";
+    exit;
+}
+
+// Auto-add car to database if it's a new manual entry
+if (!empty($manual_car_number) && !$car_id) {
+    // Check if car already exists
+    $check_car = mysqli_query($conn, "SELECT car_id FROM tbl_car WHERE car_number = '$manual_car_number' LIMIT 1");
+    if ($check_car && mysqli_num_rows($check_car) > 0) {
+        $car_row = mysqli_fetch_assoc($check_car);
+        $car_id = $car_row['car_id'];
+    } else {
+        // Insert new car
+        $insert_car = mysqli_query($conn, "INSERT INTO tbl_car (car_number, car_details, active_status) VALUES ('$manual_car_number', 'External Vehicle', 1)");
+        if ($insert_car) {
+            $car_id = mysqli_insert_id($conn);
+        } else {
+            echo "<div class='alert alert-danger' style='font-size:1.2rem;padding:20px;'><i class='fa fa-exclamation-triangle'></i> Failed to add new car.</div>";
+            exit;
+        }
+    }
+}
+
+// Auto-add driver to staff if it's a new manual entry
+if (!empty($manual_driver_name) && !$driver_id) {
+    // Check if driver already exists
+    $check_driver = mysqli_query($conn, "SELECT staff_id FROM tbl_staff WHERE staff_name = '$manual_driver_name' AND staff_role = 'Driver' LIMIT 1");
+    if ($check_driver && mysqli_num_rows($check_driver) > 0) {
+        $driver_row = mysqli_fetch_assoc($check_driver);
+        $driver_id = $driver_row['staff_id'];
+    } else {
+        // Insert new driver (external driver with minimal info)
+        $insert_driver = mysqli_query($conn, "INSERT INTO tbl_staff (staff_name, staff_role, staff_phone, office_id, branch_office, active_status)
+                                              VALUES ('$manual_driver_name', 'Driver', 'N/A', 1, 'External', 1)");
+        if ($insert_driver) {
+            $driver_id = mysqli_insert_id($conn);
+        } else {
+            echo "<div class='alert alert-danger' style='font-size:1.2rem;padding:20px;'><i class='fa fa-exclamation-triangle'></i> Failed to add new driver.</div>";
+            exit;
+        }
+    }
+}
+
+// Final validation - ensure we have both IDs now
 if (!$car_id || !$driver_id) {
     echo "<div class='alert alert-danger' style='font-size:1.2rem;padding:20px;'><i class='fa fa-exclamation-triangle'></i> Please select both Car and Driver!</div>";
     exit;

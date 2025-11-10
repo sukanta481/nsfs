@@ -510,36 +510,47 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                         <div class="form-group">
                             <label>
                                 <i class="fas fa-car"></i>
-                                Select Car <span class="required">*</span>
+                                Car Number <span class="required">*</span>
                             </label>
-                            <select name="car_id" class="form-control" required style="color: #000 !important; background: #fff !important;">
-                                <option value="" style="color: #000 !important;">Choose Car</option>
-                                <?php while ($car = mysqli_fetch_assoc($cars)): ?>
-                                    <option value="<?= $car['car_id'] ?>" style="color: #000 !important;">
-                                        <?= htmlspecialchars($car['car_number'] ?? 'N/A') ?>
+                            <input type="text" name="car_number" id="carNumberInput" class="form-control" list="carList" placeholder="Type or select car number" autocomplete="off" required style="color: #000 !important; background: #fff !important;">
+                            <datalist id="carList">
+                                <?php
+                                mysqli_data_seek($cars, 0);
+                                while ($car = mysqli_fetch_assoc($cars)):
+                                ?>
+                                    <option value="<?= htmlspecialchars($car['car_number']) ?>" data-id="<?= $car['car_id'] ?>">
+                                        <?= htmlspecialchars($car['car_number']) ?>
                                         <?php if (isset($car['car_model']) && !empty($car['car_model'])): ?>
                                             - <?= htmlspecialchars($car['car_model']) ?>
                                         <?php endif; ?>
                                     </option>
                                 <?php endwhile; ?>
-                            </select>
+                            </datalist>
+                            <input type="hidden" name="car_id" id="carIdHidden">
+                            <small style="color: #7f8c8d; font-size: 12px;">Type manually for external vehicles or select from dropdown</small>
                         </div>
 
                         <div class="form-group">
                             <label>
                                 <i class="fas fa-user-tie"></i>
-                                Select Driver <span class="required">*</span>
+                                Driver Name <span class="required">*</span>
                             </label>
-                            <select name="driver_id" id="driver_select" class="form-control" required style="color: #000 !important; background: #fff !important;">
-                                <option value="">Choose Driver</option>
-                                <?php while ($driver = mysqli_fetch_assoc($drivers)): ?>
-                                    <option value="<?= $driver['staff_id'] ?>" 
+                            <input type="text" name="driver_name" id="driverNameInput" class="form-control" list="driverList" placeholder="Type or select driver name" autocomplete="off" required style="color: #000 !important; background: #fff !important;">
+                            <datalist id="driverList">
+                                <?php
+                                mysqli_data_seek($drivers, 0);
+                                while ($driver = mysqli_fetch_assoc($drivers)):
+                                ?>
+                                    <option value="<?= htmlspecialchars($driver['staff_name']) ?>"
+                                            data-id="<?= $driver['staff_id'] ?>"
                                             data-phone="<?= htmlspecialchars($driver['staff_phone'] ?? '') ?>"
                                             data-license="<?= htmlspecialchars($driver['driving_license'] ?? '') ?>">
-                                        <?= htmlspecialchars($driver['staff_name']) ?>
+                                        <?= htmlspecialchars($driver['staff_name']) ?> - <?= htmlspecialchars($driver['staff_phone'] ?? '') ?>
                                     </option>
                                 <?php endwhile; ?>
-                            </select>
+                            </datalist>
+                            <input type="hidden" name="driver_id" id="driverIdHidden">
+                            <small style="color: #7f8c8d; font-size: 12px;">Type manually for external drivers or select from dropdown</small>
                         </div>
 
                         <div class="form-group">
