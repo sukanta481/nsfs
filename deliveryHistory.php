@@ -46,20 +46,20 @@ if ($get_shipping_details_row) {
     $manifest_created_time = null;
     $manifest_office = '';
     
-    // Check in manifest_dockets table
-    $manifest_check_sql = "SELECT md.*, m.manifest_id, m.manifest_no, m.to_office, m.created_at as manifest_date 
-                          FROM manifest_dockets md 
-                          LEFT JOIN manifest m ON md.manifest_id = m.manifest_id 
-                          WHERE md.docket_id = '$docket_id' 
+    // Check in manifest_dockets table (if exists)
+    $manifest_check_sql = "SELECT md.*, m.manifest_id, m.manifest_no, m.to_office, m.created_at as manifest_date
+                          FROM manifest_dockets md
+                          LEFT JOIN manifest m ON md.manifest_id = m.manifest_id
+                          WHERE md.docket_id = '$docket_id'
                           LIMIT 1";
     $manifest_check_rs = @mysqli_query($conn, $manifest_check_sql);
-    
+
     if ($manifest_check_rs && mysqli_num_rows($manifest_check_rs) > 0) {
         $manifest_data = mysqli_fetch_assoc($manifest_check_rs);
         $has_manifest = true;
         $manifest_id = $manifest_data['manifest_id'];
         $manifest_created_time = $manifest_data['manifest_date'];
-        
+
         // Get office name
         if (!empty($manifest_data['to_office'])) {
             $office_query = "SELECT office_name FROM tbl_offices WHERE office_id='" . $manifest_data['to_office'] . "'";
@@ -70,11 +70,11 @@ if ($get_shipping_details_row) {
         }
     }
 
-    // Fetch tracking history
-    $tracking_history_query = "SELECT status, notes, location, created_at as updateddate, delay_reason_id 
-                               FROM tbl_tracking_history 
-                               WHERE docket_id='$docket_id' 
-                               ORDER BY created_at ASC";
+    // Fetch tracking history from docket_status_history (new table)
+    $tracking_history_query = "SELECT new_status as status, notes, location, changed_at as updateddate, delay_reason
+                               FROM docket_status_history
+                               WHERE docket_id='$docket_id'
+                               ORDER BY changed_at ASC";
     $tracking_history_rs = @mysqli_query($conn, $tracking_history_query);
     
     // Group all status+note under each status
@@ -85,24 +85,20 @@ if ($get_shipping_details_row) {
         while ($row = mysqli_fetch_assoc($tracking_history_rs)) {
             $status = $row['status'];
             if (!isset($status_notes[$status])) $status_notes[$status] = [];
-            
+
             $note_data = [
                 'note' => $row['notes'],
                 'date' => date('d M Y, h:i A', strtotime($row['updateddate'])),
-                'delay_reason_id' => $row['delay_reason_id']
+                'delay_reason' => $row['delay_reason']
             ];
-            
-            // Fetch delay reason if exists
-            if (!empty($row['delay_reason_id'])) {
-                $delay_sql = "SELECT reason_title, reason_description FROM tbl_delay_reason WHERE delay_reason_id='" . $row['delay_reason_id'] . "'";
-                $delay_rs = mysqli_query($conn, $delay_sql);
-                if ($delay_row = mysqli_fetch_assoc($delay_rs)) {
-                    $note_data['delay_title'] = $delay_row['reason_title'];
-                    $note_data['delay_desc'] = $delay_row['reason_description'];
-                    $delay_info[$status] = $note_data;
-                }
+
+            // If delay reason exists, store it
+            if (!empty($row['delay_reason'])) {
+                $note_data['delay_title'] = $row['delay_reason'];
+                $note_data['delay_desc'] = ''; // No description in new table
+                $delay_info[$status] = $note_data;
             }
-            
+
             $status_notes[$status][] = $note_data;
         }
     }
