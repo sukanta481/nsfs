@@ -28,6 +28,12 @@ error_reporting(E_ALL);
     <meta name="description" content="">
     <meta name="author" content="">
     <title>North Super Fast Service</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="<?= SITE_URL; ?>assets/images/logo.png">
+    <link rel="shortcut icon" type="image/png" href="<?= SITE_URL; ?>assets/images/logo.png">
+    <link rel="apple-touch-icon" href="<?= SITE_URL; ?>assets/images/logo.png">
+
     <link href="<?= SITE_URL; ?>assets/css/bootstrap.css" rel="stylesheet">
     <link href="<?= SITE_URL; ?>assets/css/fonts.css" rel="stylesheet">
 	<link href="<?= SITE_URL; ?>assets/css/doc.css" rel="stylesheet">
