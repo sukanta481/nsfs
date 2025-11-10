@@ -9,14 +9,64 @@ require 'conn.php';
 
 // Validate office selection
 $office_id = intval($_GET['office_id'] ?? 0);
+
+// If no office selected, show office selection form
 if (!$office_id) {
-    echo "<div class='alert alert-danger'>Invalid office selection.</div>";
-    exit;
+    $offices_query = "SELECT office_id, office_name FROM tbl_offices ORDER BY office_name ASC";
+    $offices_result = mysqli_query($conn, $offices_query);
+    ?>
+    <div class="x_panel" style="border-radius: 20px; background: white; padding: 35px; box-shadow: 0 6px 25px rgba(0,0,0,0.1); max-width: 600px; margin: 50px auto;">
+        <div class="x_title" style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 3px solid #e3f2fd;">
+            <h2 style="font-size: 2rem; font-weight: 800; color: #1a1a1a;">
+                <i class="fa fa-plus-circle" style="color: #4caf50;"></i>
+                Create New Manifest
+            </h2>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <p style="font-size: 1.1rem; color: #666;">Please select the destination office for this manifest:</p>
+        </div>
+
+        <form method="get" action="">
+            <input type="hidden" name="type" value="create_manifest">
+
+            <div class="form-group">
+                <label style="display: block; font-weight: 700; color: #333; margin-bottom: 10px; font-size: 1.1rem;">
+                    <i class="fa fa-building" style="color: #2196f3;"></i> Destination Office
+                </label>
+                <select name="office_id" class="form-control" required style="height: 50px; font-size: 1.1rem; font-weight: 600;">
+                    <option value="">-- Select Destination Office --</option>
+                    <?php while ($office = mysqli_fetch_assoc($offices_result)): ?>
+                        <option value="<?= $office['office_id'] ?>">
+                            <?= htmlspecialchars($office['office_name']) ?>
+                        </option>
+                    <?php endwhile; ?>
+                </select>
+            </div>
+
+            <div style="margin-top: 25px; display: flex; gap: 15px;">
+                <button type="submit" class="btn btn-success btn-lg" style="flex: 1; font-weight: 800; font-size: 1.2rem; padding: 14px;">
+                    <i class="fa fa-arrow-right"></i> Continue
+                </button>
+                <a href="manifest.php?type=list_manifest" class="btn btn-default btn-lg" style="padding: 14px 25px; font-weight: 700; font-size: 1.1rem;">
+                    <i class="fa fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+    <?php
+    return; // Stop execution here
 }
 
 // Fetch office details
 $office_result = mysqli_query($conn, "SELECT office_name FROM tbl_offices WHERE office_id = $office_id");
 $office = mysqli_fetch_assoc($office_result);
+
+if (!$office) {
+    echo "<div class='alert alert-danger'>Office not found. Please select a valid office.</div>";
+    echo "<div style='margin-top: 15px;'><a href='manifest.php?type=create_manifest' class='btn btn-primary'>Back to Office Selection</a></div>";
+    return;
+}
 
 // Fetch active cars
 $cars_result = mysqli_query($conn, "SELECT car_id, car_number FROM tbl_car WHERE active_status = 1 ORDER BY car_number ASC");

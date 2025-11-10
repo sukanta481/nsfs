@@ -4,7 +4,8 @@
       "Bash(/c/xampp/mysql/bin/mysql.exe:*)",
       "Bash(cat:*)",
       "Bash(echo:*)",
-      "Bash(c:/xampp/htdocs/nsfs/admin/view_register.php)"
+      "Bash(c:/xampp/htdocs/nsfs/admin/view_register.php)",
+      "Bash(c:/xampp/mysql/bin/mysql.exe:*)"
     ],
     "deny": [],
     "ask": []

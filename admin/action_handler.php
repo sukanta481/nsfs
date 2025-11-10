@@ -60,6 +60,42 @@ switch($action) {
         break;
 
 
+    case 'delete_manifest':
+        $manifest_id = intval($_GET['manifest_id'] ?? 0);
+
+        if ($manifest_id > 0) {
+            // Get manifest number before deleting
+            $check_query = mysqli_query($conn, "SELECT manifest_no FROM tbl_manifest WHERE manifest_id=$manifest_id");
+            $manifest_data = mysqli_fetch_assoc($check_query);
+
+            if($manifest_data) {
+                $manifest_no = $manifest_data['manifest_no'];
+
+                // First delete all docket details associated with this manifest
+                mysqli_query($conn, "DELETE FROM tbl_manifest_details WHERE manifest_id=$manifest_id");
+
+                // Then delete the manifest itself
+                if(mysqli_query($conn, "DELETE FROM tbl_manifest WHERE manifest_id=$manifest_id")) {
+                    // Success - redirect with deleted message
+                    header("Location: manifest.php?type=list_manifest&msg=deleted&manifest_no=" . urlencode($manifest_no));
+                    exit;
+                } else {
+                    // Error - redirect with error message
+                    header("Location: manifest.php?type=list_manifest&error=" . urlencode('Failed to delete manifest'));
+                    exit;
+                }
+            } else {
+                // Manifest not found
+                header("Location: manifest.php?type=list_manifest&error=" . urlencode('Manifest not found'));
+                exit;
+            }
+        } else {
+            // Invalid ID
+            header("Location: manifest.php?type=list_manifest&error=" . urlencode('Invalid manifest ID'));
+            exit;
+        }
+        break;
+
     // Add more cases for other actions (edit, update, etc)
     default:
         header("Location: index.php");
