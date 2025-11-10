@@ -46,36 +46,57 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
                 $error = "Your account is inactive. Please contact the administrator.";
             }
             // Verify password
-            elseif (password_verify($password, $user['password'])) {
-                // Password is correct - create session
-                $_SESSION['user_id'] = $user['user_id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['full_name'] = $user['full_name'];
-                $_SESSION['email'] = $user['email'];
-                $_SESSION['role_id'] = $user['role_id'];
-                $_SESSION['role_name'] = $user['role_name'];
-                $_SESSION['staff_id'] = $user['staff_id'];
-                
-                // Set legacy session variables for compatibility with old system
-                $_SESSION['admin'] = $user['username'];
-                $_SESSION['admin_id'] = $user['user_id'];
-                $_SESSION['adminname'] = $user['full_name'];
-                
-                // Clear legacy admin flag
-                unset($_SESSION['is_legacy_admin']);
-                
-                // Update last login
-                mysqli_query($conn, "UPDATE tbl_users SET last_login = NOW() WHERE user_id = " . $user['user_id']);
-                
-                // Force session write
-                session_write_close();
-                session_start();
-                
-                // Redirect to dashboard
-                header('Location: index.php');
-                exit;
-            } else {
-                $error = "Invalid password. Please check your password and try again.";
+            else {
+                $password_valid = false;
+
+                // Check if password needs MD5 migration
+                if (substr($user['password'], 0, 19) === 'MD5_UPGRADE_NEEDED:') {
+                    // Extract the MD5 hash
+                    $md5_hash = substr($user['password'], 19);
+                    $input_md5 = md5($password);
+
+                    if ($input_md5 === $md5_hash) {
+                        $password_valid = true;
+                        // Upgrade to bcrypt immediately
+                        $new_bcrypt_hash = password_hash($password, PASSWORD_DEFAULT);
+                        mysqli_query($conn, "UPDATE tbl_users SET password='" . mysqli_real_escape_string($conn, $new_bcrypt_hash) . "' WHERE user_id=" . $user['user_id']);
+                    }
+                } elseif (password_verify($password, $user['password'])) {
+                    // Normal bcrypt verification
+                    $password_valid = true;
+                }
+
+                if ($password_valid) {
+                    // Password is correct - create session
+                    $_SESSION['user_id'] = $user['user_id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['full_name'] = $user['full_name'];
+                    $_SESSION['email'] = $user['email'];
+                    $_SESSION['role_id'] = $user['role_id'];
+                    $_SESSION['role_name'] = $user['role_name'];
+                    $_SESSION['staff_id'] = $user['staff_id'];
+
+                    // Set legacy session variables for compatibility with old system
+                    $_SESSION['admin'] = $user['username'];
+                    $_SESSION['admin_id'] = $user['user_id'];
+                    $_SESSION['adminname'] = $user['full_name'];
+
+                    // Clear legacy admin flag
+                    unset($_SESSION['is_legacy_admin']);
+
+                    // Update last login
+                    mysqli_query($conn, "UPDATE tbl_users SET last_login = NOW() WHERE user_id = " . $user['user_id']);
+
+                    // Force session write
+                    session_write_close();
+                    session_start();
+
+                    // Redirect to dashboard
+                    header('Location: index.php');
+                    exit;
+                } else {
+                    $error = "Invalid password. Please check your password and try again.";
+                }
             }
         }
     }

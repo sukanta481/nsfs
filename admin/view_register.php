@@ -1203,6 +1203,316 @@ function confirmDelete(docketId) {
 .btn-view-pod i {
     font-size: 14px;
 }
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+/* Tablets and smaller (max-width: 1024px) */
+@media (max-width: 1024px) {
+    .docket-view-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .view-docket-container {
+        padding: 15px;
+    }
+
+    .card-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .status-badge-large {
+        align-self: flex-start;
+    }
+
+    .detail-row-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .detail-row-grid.triple {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Mobile devices (max-width: 768px) */
+@media (max-width: 768px) {
+    .view-docket-container {
+        padding: 12px;
+    }
+
+    .btn-back {
+        padding: 10px 18px;
+        font-size: 14px;
+    }
+
+    .card-header {
+        padding: 15px 18px;
+    }
+
+    .header-left h3 {
+        font-size: 1.1rem;
+    }
+
+    .header-left i {
+        font-size: 1.2rem;
+    }
+
+    .status-badge-large {
+        padding: 6px 16px;
+        font-size: 0.8rem;
+    }
+
+    .card-body {
+        padding: 18px;
+    }
+
+    .detail-item {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .detail-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+
+    .detail-content strong {
+        font-size: 1rem;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .section-divider {
+        font-size: 1rem;
+        margin: 20px 0 15px 0;
+    }
+
+    .action-button {
+        padding: 12px;
+        font-size: 0.95rem;
+        margin-bottom: 10px;
+    }
+
+    .timeline-item {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .timeline-item:not(:last-child)::after {
+        display: none;
+    }
+
+    .timeline-badge {
+        min-width: auto;
+        width: fit-content;
+    }
+
+    .qr-section {
+        padding: 15px;
+    }
+
+    .qr-code-container {
+        width: 180px;
+        height: 180px;
+    }
+}
+
+/* Small mobile devices (max-width: 576px) */
+@media (max-width: 576px) {
+    .view-docket-container {
+        padding: 10px;
+        min-height: auto;
+    }
+
+    .back-button-section {
+        margin-bottom: 15px;
+    }
+
+    .btn-back {
+        padding: 8px 15px;
+        font-size: 13px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .detail-card {
+        border-radius: 12px;
+        margin-bottom: 15px;
+    }
+
+    .card-header {
+        padding: 12px 15px;
+    }
+
+    .header-left h3 {
+        font-size: 1rem;
+    }
+
+    .header-left i {
+        font-size: 1.1rem;
+    }
+
+    .status-badge-large {
+        padding: 5px 12px;
+        font-size: 0.75rem;
+    }
+
+    .card-body {
+        padding: 15px;
+    }
+
+    .detail-item {
+        padding: 10px;
+        gap: 10px;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .detail-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+        align-self: center;
+    }
+
+    .detail-content {
+        text-align: center;
+    }
+
+    .detail-content label {
+        font-size: 0.8rem;
+    }
+
+    .detail-content strong {
+        font-size: 0.95rem;
+    }
+
+    .section-divider {
+        font-size: 0.95rem;
+        margin: 15px 0 12px 0;
+    }
+
+    .info-item label {
+        font-size: 0.8rem;
+    }
+
+    .info-item span {
+        font-size: 0.9rem;
+    }
+
+    .action-button {
+        padding: 10px;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+    }
+
+    .timeline-badge {
+        font-size: 0.7rem;
+        padding: 6px 12px;
+    }
+
+    .timeline-text {
+        font-size: 0.9rem;
+    }
+
+    .timeline-date {
+        font-size: 0.8rem;
+    }
+
+    .qr-section {
+        padding: 12px;
+    }
+
+    .qr-code-container {
+        width: 150px;
+        height: 150px;
+    }
+
+    .qr-title {
+        font-size: 0.9rem;
+    }
+
+    .tracking-link {
+        font-size: 0.8rem;
+        word-break: break-all;
+    }
+
+    .btn-download-qr {
+        padding: 8px 15px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Extra small devices (max-width: 400px) */
+@media (max-width: 400px) {
+    .view-docket-container {
+        padding: 8px;
+    }
+
+    .btn-back {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    .card-header {
+        padding: 10px 12px;
+    }
+
+    .header-left h3 {
+        font-size: 0.95rem;
+    }
+
+    .status-badge-large {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+    }
+
+    .card-body {
+        padding: 12px;
+    }
+
+    .detail-item {
+        padding: 8px;
+    }
+
+    .detail-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.85rem;
+    }
+
+    .detail-content strong {
+        font-size: 0.9rem;
+    }
+
+    .section-divider {
+        font-size: 0.9rem;
+    }
+
+    .action-button {
+        padding: 8px;
+        font-size: 0.85rem;
+    }
+
+    .qr-code-container {
+        width: 130px;
+        height: 130px;
+    }
+
+    .btn-view-pod {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+}
 </style>
 
 <?php

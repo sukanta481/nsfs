@@ -58,6 +58,7 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
 }
 
 require_file_or_die('check_auth.php');
+require_file_or_die('includes/csrf_helper.php');
 
 if (isset($_GET['debug']) && $_GET['debug'] === '1') {
   echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ check_auth.php loaded successfully</div>";
@@ -74,6 +75,10 @@ $success = '';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
+    // CSRF Protection
+    if (!csrf_verify_request('add_user')) {
+        csrf_error_exit();
+    }
     $username = mysqli_real_escape_string($conn, trim($_POST['username']));
     $email = mysqli_real_escape_string($conn, trim($_POST['email']));
     $password = $_POST['password'];
@@ -82,17 +87,50 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
     $role_id = intval($_POST['role_id']);
     $staff_id = !empty($_POST['staff_id']) ? intval($_POST['staff_id']) : NULL;
     $active_status = isset($_POST['active_status']) ? 1 : 0;
-    
-    // Validation
+
+    // Enhanced Validation
     if (empty($username) || empty($email) || empty($password) || empty($full_name) || empty($role_id)) {
         $error = "Please fill in all required fields";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    }
+    // Username validation
+    elseif (strlen($username) < 3) {
+        $error = "Username must be at least 3 characters long";
+    }
+    elseif (strlen($username) > 50) {
+        $error = "Username must not exceed 50 characters";
+    }
+    elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
+        $error = "Username can only contain letters, numbers, and underscores";
+    }
+    // Email validation
+    elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Please enter a valid email address";
-    } elseif (strlen($password) < 6) {
+    }
+    elseif (strlen($email) > 100) {
+        $error = "Email address is too long";
+    }
+    // Full name validation
+    elseif (strlen($full_name) < 2) {
+        $error = "Full name must be at least 2 characters long";
+    }
+    elseif (strlen($full_name) > 100) {
+        $error = "Full name is too long";
+    }
+    // Password validation
+    elseif (strlen($password) < 6) {
         $error = "Password must be at least 6 characters long";
-    } elseif ($password !== $confirm_password) {
+    }
+    elseif (strlen($password) > 255) {
+        $error = "Password is too long";
+    }
+    elseif ($password !== $confirm_password) {
         $error = "Passwords do not match";
-    } else {
+    }
+    // Role validation
+    elseif ($role_id <= 0) {
+        $error = "Please select a valid role";
+    }
+    else {
         // Check if username already exists
         $check_username = mysqli_query($conn, "SELECT user_id FROM tbl_users WHERE username='$username'");
         if (mysqli_num_rows($check_username) > 0) {
@@ -365,6 +403,156 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
     font-size: 14px;
     color: #0c5460;
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .user-form-container {
+        padding: 20px 15px;
+        margin: 15px 10px;
+    }
+
+    .form-header {
+        padding: 15px;
+    }
+
+    .form-header h2 {
+        font-size: 20px;
+    }
+
+    .form-header p {
+        font-size: 13px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control {
+        font-size: 14px;
+        padding: 10px 12px;
+    }
+
+    .form-control.with-icon {
+        padding-left: 40px;
+    }
+
+    .input-wrapper i {
+        font-size: 14px;
+        left: 12px;
+    }
+
+    .toggle-password {
+        right: 12px;
+        font-size: 16px;
+    }
+
+    .btn-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+
+    .alert {
+        padding: 12px 15px;
+        font-size: 13px;
+    }
+
+    .info-box {
+        padding: 12px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 576px) {
+    .user-form-container {
+        padding: 15px 10px;
+        margin: 10px 5px;
+        border-radius: 10px;
+    }
+
+    .form-header {
+        padding: 12px;
+    }
+
+    .form-header h2 {
+        font-size: 18px;
+    }
+
+    .form-header p {
+        font-size: 12px;
+    }
+
+    .form-group label {
+        font-size: 13px;
+    }
+
+    .form-control {
+        font-size: 13px;
+        padding: 10px;
+    }
+
+    .form-control.with-icon {
+        padding-left: 35px;
+    }
+
+    .input-wrapper i {
+        font-size: 13px;
+        left: 10px;
+    }
+
+    .toggle-password {
+        right: 10px;
+        font-size: 15px;
+    }
+
+    .btn {
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+
+    .checkbox-group {
+        font-size: 14px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+@media (max-width: 400px) {
+    .user-form-container {
+        padding: 12px 8px;
+        margin: 8px 3px;
+    }
+
+    .form-header h2 {
+        font-size: 16px;
+    }
+
+    .form-header p {
+        font-size: 11px;
+    }
+
+    .form-control {
+        font-size: 12px;
+    }
+
+    .btn {
+        font-size: 13px;
+    }
+}
 </style>
 
 <body class="nav-md">
@@ -422,7 +610,8 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
           </div>
 
           <form method="POST" action="" id="userForm">
-            
+            <?php echo csrf_token_field('add_user'); ?>
+
             <div class="form-row">
               <div class="form-group">
                 <label for="username">
@@ -623,21 +812,126 @@ document.getElementById('password').addEventListener('input', function() {
     }
 });
 
-// Form validation
+// Enhanced form validation
 document.getElementById('userForm').addEventListener('submit', function(e) {
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const fullName = document.getElementById('full_name').value.trim();
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirm_password').value;
-    
-    if (password !== confirmPassword) {
+    const roleId = document.getElementById('role_id').value;
+
+    // Username validation
+    if (username.length < 3) {
         e.preventDefault();
-        alert('Passwords do not match!');
+        alert('Username must be at least 3 characters long');
+        document.getElementById('username').focus();
         return false;
     }
-    
+
+    if (username.length > 50) {
+        e.preventDefault();
+        alert('Username must not exceed 50 characters');
+        document.getElementById('username').focus();
+        return false;
+    }
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        e.preventDefault();
+        alert('Username can only contain letters, numbers, and underscores');
+        document.getElementById('username').focus();
+        return false;
+    }
+
+    // Email validation
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+        e.preventDefault();
+        alert('Please enter a valid email address');
+        document.getElementById('email').focus();
+        return false;
+    }
+
+    if (email.length > 100) {
+        e.preventDefault();
+        alert('Email address is too long');
+        document.getElementById('email').focus();
+        return false;
+    }
+
+    // Full name validation
+    if (fullName.length < 2) {
+        e.preventDefault();
+        alert('Full name must be at least 2 characters long');
+        document.getElementById('full_name').focus();
+        return false;
+    }
+
+    if (fullName.length > 100) {
+        e.preventDefault();
+        alert('Full name is too long');
+        document.getElementById('full_name').focus();
+        return false;
+    }
+
+    // Password validation
     if (password.length < 6) {
         e.preventDefault();
-        alert('Password must be at least 6 characters long!');
+        alert('Password must be at least 6 characters long');
+        document.getElementById('password').focus();
         return false;
+    }
+
+    if (password.length > 255) {
+        e.preventDefault();
+        alert('Password is too long');
+        document.getElementById('password').focus();
+        return false;
+    }
+
+    if (password !== confirmPassword) {
+        e.preventDefault();
+        alert('Passwords do not match');
+        document.getElementById('confirm_password').focus();
+        return false;
+    }
+
+    // Role validation
+    if (!roleId || roleId === '') {
+        e.preventDefault();
+        alert('Please select a role');
+        document.getElementById('role_id').focus();
+        return false;
+    }
+
+    return true;
+});
+
+// Real-time username validation
+document.getElementById('username').addEventListener('input', function() {
+    const username = this.value;
+    const usernamePattern = /^[a-zA-Z0-9_]+$/;
+
+    if (username.length > 0 && !usernamePattern.test(username)) {
+        this.style.borderColor = '#dc3545';
+    } else if (username.length >= 3) {
+        this.style.borderColor = '#28a745';
+    } else {
+        this.style.borderColor = '#e1e1e1';
+    }
+});
+
+// Real-time email validation
+document.getElementById('email').addEventListener('input', function() {
+    const email = this.value;
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (email.length > 0 && emailPattern.test(email)) {
+        this.style.borderColor = '#28a745';
+    } else if (email.length > 0) {
+        this.style.borderColor = '#dc3545';
+    } else {
+        this.style.borderColor = '#e1e1e1';
     }
 });
 </script>

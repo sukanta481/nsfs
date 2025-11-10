@@ -754,7 +754,7 @@ require 'top_header.php';
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
-    padding: 91px 15px 0 15px;
+    padding: 20px 15px 0 15px;
     gap: 15px;
     margin-bottom: 25px;
   }
@@ -821,7 +821,7 @@ require 'top_header.php';
 
 @media (max-width: 576px) {
   .stats-grid {
-    padding: 91px 12px 0 12px;
+    padding: 15px 12px 0 12px;
     gap: 12px;
   }
 
@@ -896,7 +896,7 @@ require 'top_header.php';
 /* Extra small devices (phones in portrait, less than 400px) */
 @media (max-width: 400px) {
   .stats-grid {
-    padding: 85px 10px 0 10px;
+    padding: 123px 10px 10px;
     gap: 10px;
   }
 
