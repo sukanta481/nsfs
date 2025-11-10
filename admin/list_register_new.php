@@ -108,11 +108,11 @@ $hasFilters = !empty($fromdate) || !empty($todate) || !empty($status) ||
               !empty($searchValue) || !empty($consignor) || !empty($consignee);
 
 // Fetch cars for status update modal
-$cars_query = "SELECT car_id, car_number, car_details FROM tbl_car WHERE status = 'Active' ORDER BY car_number";
+$cars_query = "SELECT car_id, car_number, car_details FROM tbl_car ORDER BY car_number";
 $cars_result = mysqli_query($conn, $cars_query);
 
 // Fetch drivers for status update modal
-$drivers_query = "SELECT staff_id, staff_name, staff_phone FROM tbl_staff WHERE role = 'Driver' AND status = 'Active' ORDER BY staff_name";
+$drivers_query = "SELECT staff_id, staff_name, staff_phone FROM tbl_staff WHERE role = 'Driver' ORDER BY staff_name";
 $drivers_result = mysqli_query($conn, $drivers_query);
 
 // Fetch delay reasons for status update modal
@@ -1139,15 +1139,19 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
     </script>
 
     <!-- Status Update Modal -->
-    <div id="statusModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
-        <div style="background: white; border-radius: 12px; width: 90%; max-width: 550px; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px 12px 0 0;">
-                <h2 style="margin: 0; color: white; font-size: 22px; font-weight: 700;">
-                    <i class="fa fa-refresh"></i> Update Status
+    <div id="statusModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; width: 90%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+
+            <!-- Modal Header -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 12px 12px 0 0; flex-shrink: 0;">
+                <h2 style="margin: 0; color: white; font-size: 20px; font-weight: 600; display: flex; align-items: center;">
+                    <i class="fa fa-refresh" style="margin-right: 10px;"></i> Update Status
                 </h2>
             </div>
 
-            <div style="padding: 25px;">
+            <!-- Modal Body (Scrollable) -->
+            <div style="padding: 25px; overflow-y: auto; flex: 1;">
+                <!-- Selected Docket Info -->
                 <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">
                     <p style="color: #7f8c8d; margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase;">Selected Docket(s)</p>
                     <p style="margin: 5px 0 0 0; font-size: 15px; font-weight: 600;">
@@ -1168,11 +1172,12 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                         <span id="statusErrorText"></span>
                     </div>
 
-                    <div class="form-group-modal">
-                        <label class="label-modal">
+                    <!-- Status Dropdown -->
+                    <div class="form-group">
+                        <label>
                             <i class="fa fa-flag"></i> Status <span style="color: #dc3545;">*</span>
                         </label>
-                        <select name="status" id="statusSelect" class="input-modal" required onchange="handleStatusChange()">
+                        <select name="status" id="statusSelect" class="form-control-modern" required onchange="handleStatusChange()">
                             <option value="">-- Select Status --</option>
                             <option value="Pending" data-order="1">Pending</option>
                             <option value="Confirmed" data-order="2">Confirmed</option>
@@ -1184,24 +1189,26 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                             <option value="Failed" data-order="6" data-final="true">Failed Delivery</option>
                             <option value="Cancelled" data-order="6" data-final="true">Cancelled</option>
                         </select>
-                        <small id="currentStatusSmall" class="text-muted-modal" style="display: none;">Current: <strong id="currentStatusStrong"></strong></small>
+                        <small id="currentStatusSmall" style="color: #7f8c8d; display: none;">Current: <strong id="currentStatusStrong"></strong></small>
                     </div>
 
                     <!-- Conditional: Date Field -->
-                    <div id="dateField" style="display: none; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 8px; font-size: 14px;">
-                            <i class="fa fa-calendar"></i> <span id="dateLabelText">Date</span> <span style="color: #dc3545;">*</span>
-                        </label>
-                        <input type="datetime-local" name="status_date" style="width: 100%; padding: 10px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px;" value="<?= date('Y-m-d\TH:i') ?>">
+                    <div id="dateField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div class="form-group">
+                            <label>
+                                <i class="fa fa-calendar"></i> <span id="dateLabelText">Date</span> <span style="color: #dc3545;">*</span>
+                            </label>
+                            <input type="datetime-local" name="status_date" class="form-control-modern" value="<?= date('Y-m-d\TH:i') ?>">
+                        </div>
                     </div>
 
                     <!-- Conditional: Car and Driver Fields -->
-                    <div id="carDriverField" style="display: none; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 8px; font-size: 14px;">
+                    <div id="carDriverField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div class="form-group">
+                            <label>
                                 <i class="fa fa-car"></i> Vehicle Number <span style="color: #dc3545;">*</span>
                             </label>
-                            <input type="text" name="car_number" id="carNumberInput" list="carList" placeholder="Type or select vehicle number" autocomplete="off" style="width: 100%; padding: 10px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px;">
+                            <input type="text" name="car_number" id="carNumberInput" class="form-control-modern" list="carList" placeholder="Type or select vehicle number" autocomplete="off">
                             <datalist id="carList">
                                 <?php
                                 mysqli_data_seek($cars_result, 0);
@@ -1213,14 +1220,14 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                                 <?php endwhile; ?>
                             </datalist>
                             <input type="hidden" name="car_id" id="carIdHidden">
-                            <small style="color: #7f8c8d; font-size: 12px;">Type manually for external vehicles or select from dropdown</small>
+                            <small style="color: #7f8c8d;">Type manually for external vehicles or select from dropdown</small>
                         </div>
 
-                        <div style="margin-bottom: 0;">
-                            <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 8px; font-size: 14px;">
+                        <div class="form-group">
+                            <label>
                                 <i class="fa fa-user"></i> Driver Name <span style="color: #dc3545;">*</span>
                             </label>
-                            <input type="text" name="driver_name" id="driverNameInput" list="driverList" placeholder="Type or select driver name" autocomplete="off" style="width: 100%; padding: 10px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px;">
+                            <input type="text" name="driver_name" id="driverNameInput" class="form-control-modern" list="driverList" placeholder="Type or select driver name" autocomplete="off">
                             <datalist id="driverList">
                                 <?php
                                 mysqli_data_seek($drivers_result, 0);
@@ -1232,65 +1239,72 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                                 <?php endwhile; ?>
                             </datalist>
                             <input type="hidden" name="driver_id" id="driverIdHidden">
-                            <small style="color: #7f8c8d; font-size: 12px;">Type manually for external drivers or select from dropdown</small>
+                            <small style="color: #7f8c8d;">Type manually for external drivers or select from dropdown</small>
                         </div>
                     </div>
 
                     <!-- Conditional: Delay Reason -->
-                    <div id="delayReasonField" style="display: none; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 8px; font-size: 14px;">
-                            <i class="fa fa-exclamation-triangle"></i> Delay Reason <span style="color: #dc3545;">*</span>
-                        </label>
-                        <select name="delay_reason" style="width: 100%; padding: 10px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px;">
-                            <option value="">-- Select Delay Reason --</option>
-                            <?php
-                            $current_category = '';
-                            mysqli_data_seek($delay_reasons_result, 0);
-                            while ($reason = mysqli_fetch_assoc($delay_reasons_result)):
-                                if ($current_category != $reason['reason_category']) {
-                                    if ($current_category != '') echo '</optgroup>';
-                                    echo '<optgroup label="' . htmlspecialchars($reason['reason_category']) . '">';
-                                    $current_category = $reason['reason_category'];
-                                }
-                            ?>
-                            <option value="<?= htmlspecialchars($reason['reason_text']) ?>">
-                                <?= htmlspecialchars($reason['reason_text']) ?>
-                            </option>
-                            <?php
-                            endwhile;
-                            if ($current_category != '') echo '</optgroup>';
-                            ?>
-                        </select>
+                    <div id="delayReasonField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div class="form-group">
+                            <label>
+                                <i class="fa fa-exclamation-triangle"></i> Delay Reason <span style="color: #dc3545;">*</span>
+                            </label>
+                            <select name="delay_reason" class="form-control-modern">
+                                <option value="">-- Select Delay Reason --</option>
+                                <?php
+                                $current_category = '';
+                                mysqli_data_seek($delay_reasons_result, 0);
+                                while ($reason = mysqli_fetch_assoc($delay_reasons_result)):
+                                    if ($current_category != $reason['reason_category']) {
+                                        if ($current_category != '') echo '</optgroup>';
+                                        echo '<optgroup label="' . htmlspecialchars($reason['reason_category']) . '">';
+                                        $current_category = $reason['reason_category'];
+                                    }
+                                ?>
+                                <option value="<?= htmlspecialchars($reason['reason_text']) ?>">
+                                    <?= htmlspecialchars($reason['reason_text']) ?>
+                                </option>
+                                <?php
+                                endwhile;
+                                if ($current_category != '') echo '</optgroup>';
+                                ?>
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Conditional: POD Upload -->
-                    <div id="podField" style="display: none; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 8px; font-size: 14px;">
-                            <i class="fa fa-file-upload"></i> Proof of Delivery (POD) <span style="color: #dc3545;">*</span>
-                        </label>
-                        <input type="file" name="pod_file" accept=".jpg,.jpeg,.png,.pdf" style="width: 100%; padding: 10px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px;">
-                        <small style="color: #7f8c8d; font-size: 12px;">Accepted: JPG, PNG, PDF (Max 5MB)</small>
+                    <div id="podField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div class="form-group">
+                            <label>
+                                <i class="fa fa-file-image-o"></i> Proof of Delivery (POD) <span style="color: #dc3545;">*</span>
+                            </label>
+                            <input type="file" name="pod_file" accept=".jpg,.jpeg,.png,.pdf" class="form-control-modern">
+                            <small style="color: #7f8c8d;">Accepted: JPG, PNG, PDF (Max 5MB)</small>
+                        </div>
                     </div>
 
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 8px; font-size: 14px;">
-                            <i class="fa fa-map-marker-alt"></i> Current Location (Optional)
+                    <!-- Location -->
+                    <div class="form-group">
+                        <label>
+                            <i class="fa fa-map-marker"></i> Current Location (Optional)
                         </label>
-                        <input type="text" name="location" placeholder="e.g., Mumbai Warehouse, Delhi Hub" style="width: 100%; padding: 10px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px;">
+                        <input type="text" name="location" class="form-control-modern" placeholder="e.g., Mumbai Warehouse, Delhi Hub">
                     </div>
 
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; font-weight: 600; color: #34495e; margin-bottom: 8px; font-size: 14px;">
+                    <!-- Remarks -->
+                    <div class="form-group">
+                        <label>
                             <i class="fa fa-comment"></i> Remarks (Optional)
                         </label>
-                        <textarea name="remarks" rows="3" placeholder="Add any notes or comments..." style="width: 100%; padding: 10px 12px; border: 2px solid #e1e8ed; border-radius: 6px; font-size: 14px; resize: vertical;"></textarea>
+                        <textarea name="remarks" rows="3" class="form-control-modern" placeholder="Add any notes or comments..."></textarea>
                     </div>
 
-                    <div style="display: flex; gap: 12px;">
-                        <button type="submit" name="update_status" style="flex: 1; padding: 12px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                    <!-- Buttons -->
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" name="update_status" class="btn-update-status">
                             <i class="fa fa-check"></i> Update Status
                         </button>
-                        <button type="button" onclick="closeStatusModal()" style="flex: 1; padding: 12px; background: #6c757d; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                        <button type="button" onclick="closeStatusModal()" class="btn-cancel">
                             <i class="fa fa-times"></i> Cancel
                         </button>
                     </div>
@@ -1301,11 +1315,12 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
 
     <!-- Modal Specific Styles -->
     <style>
-        .form-group-modal {
+        /* Form Groups */
+        .form-group {
             margin-bottom: 15px;
         }
 
-        .label-modal {
+        .form-group label {
             display: block;
             font-weight: 600;
             color: #34495e;
@@ -1313,12 +1328,13 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
             font-size: 14px;
         }
 
-        .label-modal i {
+        .form-group label i {
             margin-right: 5px;
             color: #667eea;
         }
 
-        .input-modal {
+        /* Form Controls */
+        .form-control-modern {
             width: 100%;
             padding: 10px 12px;
             border: 2px solid #e1e8ed;
@@ -1327,25 +1343,23 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
             transition: all 0.3s;
         }
 
-        .input-modal:focus {
+        .form-control-modern:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        textarea.input-modal {
+        .form-control-modern option {
+            padding: 10px;
+        }
+
+        textarea.form-control-modern {
             resize: vertical;
             font-family: inherit;
         }
 
-        .text-muted-modal {
-            color: #7f8c8d;
-            font-size: 13px;
-            display: block;
-            margin-top: 5px;
-        }
-
-        .conditional-field-modal {
+        /* Conditional Fields Animation */
+        .conditional-field {
             animation: slideDown 0.3s ease-out;
         }
 
@@ -1358,6 +1372,41 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        /* Buttons */
+        .btn-update-status {
+            flex: 1;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-update-status:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-cancel {
+            padding: 12px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-cancel:hover {
+            background: #5a6268;
         }
     </style>
 
