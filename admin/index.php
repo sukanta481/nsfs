@@ -754,74 +754,187 @@ require 'top_header.php';
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
-    padding: 0 15px;
+    padding: 91px 15px 0 15px;
     gap: 15px;
+    margin-bottom: 25px;
   }
-  
+
   .stat-card {
     padding: 22px 20px;
+    border-radius: 16px;
   }
-  
+
   .stat-icon {
     width: 65px;
     height: 65px;
     font-size: 2rem;
   }
-  
+
   .stat-label {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
+    letter-spacing: 1.2px;
   }
-  
+
   .stat-value {
-    font-size: 2.8rem;
+    font-size: 3rem;
   }
-  
+
   .search-section {
     flex-direction: column;
     padding: 20px;
     margin: 0 15px 15px 15px;
   }
-  
+
   .search-input {
     width: 100%;
     min-width: auto;
     font-size: 1rem;
+    padding: 14px 18px;
   }
-  
+
   .status-filter, .btn-search, .btn-reset {
     width: 100%;
     font-size: 1rem;
+    padding: 14px 18px;
   }
-  
+
   .dockets-section {
     margin: 0 15px 15px 15px;
   }
-  
+
   .dockets-header {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     padding: 18px 20px;
+    letter-spacing: 1px;
   }
-  
+
   .dockets-table thead th,
   .dockets-table tbody td {
     padding: 14px 12px;
     font-size: 0.95rem;
   }
+
+  .action-buttons {
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 576px) {
-  .stat-icon { width: 60px; height: 60px; font-size: 1.8rem; }
-  .stat-value { font-size: 2.4rem; }
-  .stat-label { font-size: 0.7rem; }
-  .dockets-table { font-size: 0.9rem; }
+  .stats-grid {
+    padding: 91px 12px 0 12px;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 18px 16px;
+  }
+
+  .stat-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 1.8rem;
+  }
+
+  .stat-value {
+    font-size: 2.6rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+  }
+
+  .search-section {
+    padding: 15px;
+    margin: 0 12px 12px 12px;
+  }
+
+  .search-input,
+  .status-filter,
+  .btn-search,
+  .btn-reset {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+
+  .dockets-section {
+    margin: 0 12px 12px 12px;
+  }
+
+  .dockets-header {
+    font-size: 1rem;
+    padding: 15px 18px;
+  }
+
+  .dockets-table {
+    font-size: 0.9rem;
+  }
+
   .dockets-table thead th,
   .dockets-table tbody td {
-    font-size: 0.9rem;
-    padding: 12px 10px;
+    font-size: 0.85rem;
+    padding: 12px 8px;
   }
-  .status-badge { font-size: 0.85rem; padding: 6px 14px; }
-  .action-buttons { flex-direction: column; gap: 5px; }
-  .action-btn { width: 32px; height: 32px; }
+
+  .status-badge {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+
+  .action-buttons {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .action-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Extra small devices (phones in portrait, less than 400px) */
+@media (max-width: 400px) {
+  .stats-grid {
+    padding: 85px 10px 0 10px;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 16px 14px;
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .stat-icon {
+    width: 55px;
+    height: 55px;
+    font-size: 1.6rem;
+  }
+
+  .stat-value {
+    font-size: 2.2rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+
+  .search-section {
+    padding: 12px;
+    margin: 0 10px 10px 10px;
+  }
+
+  .dockets-section {
+    margin: 0 10px 10px 10px;
+  }
+
+  .dockets-table thead th,
+  .dockets-table tbody td {
+    font-size: 0.8rem;
+    padding: 10px 6px;
+  }
 }
   </style>
 </body>

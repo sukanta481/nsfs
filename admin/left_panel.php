@@ -109,10 +109,7 @@ if (file_exists('check_auth.php')) {
           <i class="fa fa-chevron-down submenu-arrow"></i>
         </a>
         <ul class="submenu">
-          <li><a href="company.php?type=list_company&lp=ac">All Consignors</a></li>
-          <?php if (hasPermission('client_create')): ?>
-          <li><a href="company.php?type=add_company&lp=ac">Add Consignor</a></li>
-          <?php endif; ?>
+          <li><a href="consignors.php">All Consignors</a></li>
           <li><a href="offices.php">Office</a></li>
         </ul>
       </li>

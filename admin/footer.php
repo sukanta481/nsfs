@@ -5,7 +5,7 @@
       <p>&copy; <?php echo date('Y'); ?> <strong>North Super Fast Service</strong>. All rights reserved.</p>
     </div>
     <div class="footer-center">
-      <p>Developed by <a href="#" target="_blank"><strong>Next Screen Infotech</strong></a></p>
+      <p>Developed by <a href="https://www.dawntoweb.com" target="_blank"><strong>Dawn To Web</strong></a></p>
     </div>
     <div class="footer-right">
       <p>Version 2.0</p>
