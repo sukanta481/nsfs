@@ -112,7 +112,7 @@ $cars_query = "SELECT car_id, car_number, car_details FROM tbl_car ORDER BY car_
 $cars_result = mysqli_query($conn, $cars_query);
 
 // Fetch drivers for status update modal
-$drivers_query = "SELECT staff_id, staff_name, staff_phone FROM tbl_staff WHERE role = 'Driver' ORDER BY staff_name";
+$drivers_query = "SELECT staff_id, staff_name, staff_phone FROM tbl_staff ORDER BY staff_name";
 $drivers_result = mysqli_query($conn, $drivers_query);
 
 // Fetch delay reasons for status update modal
