@@ -177,13 +177,13 @@ if (file_exists('check_auth.php')) {
           <i class="fa fa-chevron-down submenu-arrow"></i>
         </a>
         <ul class="submenu">
-          <li><a href="site_feature.php?type=list_site_feature&lp=ac">Site Features</a></li>
+          <li><a href="site_features_crud.php">Site Features</a></li>
           <li><a href="testimonials_crud.php">Testimonials</a></li>
           <li><a href="services_crud.php">Services</a></li>
-          <li><a href="gallery.php?type=list_gallery&lp=ac">Gallery</a></li>
+          <li><a href="gallery_crud.php">Gallery</a></li>
           <li><a href="team_crud.php">Team</a></li>
           <li><a href="cmspage.php?type=edit_cms&lp=ord&select=managepage">CMS Pages</a></li>
-          <li><a href="social.php?type=edit_social&lp=ac">Social Links</a></li>
+          <li><a href="social_links_modern.php">Social Links</a></li>
         </ul>
       </li>
       <?php endif; ?>
