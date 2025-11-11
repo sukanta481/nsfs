@@ -179,7 +179,7 @@ if (file_exists('check_auth.php')) {
         <ul class="submenu">
           <li><a href="site_feature.php?type=list_site_feature&lp=ac">Site Features</a></li>
           <li><a href="testimonials_crud.php">Testimonials</a></li>
-          <li><a href="service.php?type=list_service&lp=ac">Services</a></li>
+          <li><a href="services_crud.php">Services</a></li>
           <li><a href="gallery.php?type=list_gallery&lp=ac">Gallery</a></li>
           <li><a href="team_crud.php">Team</a></li>
           <li><a href="cmspage.php?type=edit_cms&lp=ord&select=managepage">CMS Pages</a></li>
