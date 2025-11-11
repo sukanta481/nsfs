@@ -40,9 +40,45 @@ $get_page_row=mysqli_fetch_array($get_page_rs);
 		<div class="cntner">
 			<div class="banSosBx">
 				<ul class="banSos">
-					<li><a href="<?= $social_res['social_linkedin'];?>" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a></li>
+					<?php if (!empty($social_res['social_facebook'])): ?>
+					<li><a href="<?= $social_res['social_facebook'];?>" target="_blank"><i class="fa-brands fa-facebook-f"></i></a></li>
+					<?php endif; ?>
+
+					<?php if (!empty($social_res['social_twitter'])): ?>
 					<li><a href="<?= $social_res['social_twitter'];?>" target="_blank"><i class="fa-brands fa-x-twitter"></i></a></li>
+					<?php endif; ?>
+
+					<?php if (!empty($social_res['social_linkedin'])): ?>
+					<li><a href="<?= $social_res['social_linkedin'];?>" target="_blank"><i class="fa-brands fa-linkedin-in"></i></a></li>
+					<?php endif; ?>
+
+					<?php if (!empty($social_res['social_instagram'])): ?>
 					<li><a href="<?= $social_res['social_instagram'];?>" target="_blank"><i class="fa-brands fa-instagram"></i></a></li>
+					<?php endif; ?>
+
+					<?php if (!empty($social_res['social_youtube'])): ?>
+					<li><a href="<?= $social_res['social_youtube'];?>" target="_blank"><i class="fa-brands fa-youtube"></i></a></li>
+					<?php endif; ?>
+
+					<?php if (!empty($social_res['social_whatsapp'])): ?>
+					<li><a href="<?= $social_res['social_whatsapp'];?>" target="_blank"><i class="fa-brands fa-whatsapp"></i></a></li>
+					<?php endif; ?>
+
+					<?php if (!empty($social_res['social_pinterest'])): ?>
+					<li><a href="<?= $social_res['social_pinterest'];?>" target="_blank"><i class="fa-brands fa-pinterest-p"></i></a></li>
+					<?php endif; ?>
+
+					<?php if (!empty($social_res['social_tiktok'])): ?>
+					<li><a href="<?= $social_res['social_tiktok'];?>" target="_blank"><i class="fa-brands fa-tiktok"></i></a></li>
+					<?php endif; ?>
+
+					<?php if (!empty($social_res['social_telegram'])): ?>
+					<li><a href="<?= $social_res['social_telegram'];?>" target="_blank"><i class="fa-brands fa-telegram"></i></a></li>
+					<?php endif; ?>
+
+					<?php if (!empty($social_res['social_snapchat'])): ?>
+					<li><a href="<?= $social_res['social_snapchat'];?>" target="_blank"><i class="fa-brands fa-snapchat-ghost"></i></a></li>
+					<?php endif; ?>
 				</ul>
 			</div>
 		</div>
