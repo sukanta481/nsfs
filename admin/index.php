@@ -43,8 +43,8 @@ require 'top_header.php';
         // 6. Delayed
         $delayed = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Delayed'");
 
-        // 7. Pending POD (Delivered but proof_of_delivery empty)
-        $pending_pod = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Delivered' AND (proof_of_delivery IS NULL OR proof_of_delivery='')");
+        // 7. Pending POD (status='Pending POD' OR Delivered but proof_of_delivery empty)
+        $pending_pod = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Pending POD' OR (status='Delivered' AND (proof_of_delivery IS NULL OR proof_of_delivery=''))");
 
         // 8. Manifest Count from tbl_manifest
         $manifest_count = fetch_count("SELECT COUNT(*) as c FROM tbl_manifest");
@@ -87,7 +87,25 @@ require 'top_header.php';
               <div class="stat-value"><?= $delivered ?></div>
             </div>
           </a>
-          
+
+          <!-- Pending POD Card -->
+          <a href="register.php?type=list_register&status=Pending%20POD" class="stat-card stat-card-pending-pod">
+            <div class="stat-icon"><i class="fa fa-file-image-o"></i></div>
+            <div class="stat-content">
+              <div class="stat-label">PENDING POD</div>
+              <div class="stat-value"><?= $pending_pod ?></div>
+            </div>
+          </a>
+
+          <!-- Delayed Card -->
+          <a href="register.php?type=list_register&status=Delayed" class="stat-card stat-card-danger">
+            <div class="stat-icon"><i class="fa fa-exclamation-triangle"></i></div>
+            <div class="stat-content">
+              <div class="stat-label">DELAYED</div>
+              <div class="stat-value"><?= $delayed ?></div>
+            </div>
+          </a>
+
           <!-- Manifest Card -->
           <a href="manifest.php" class="stat-card stat-card-manifest">
             <div class="stat-icon"><i class="fa fa-file-text"></i></div>
@@ -382,6 +400,46 @@ require 'top_header.php';
 }
 
 .stat-card-success:hover .stat-icon {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+.stat-card-danger {
+  border-left-color: #e74c3c;
+  background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+}
+
+.stat-card-danger:hover {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: #fff;
+}
+
+.stat-card-danger:hover .stat-label,
+.stat-card-danger:hover .stat-value {
+  color: #fff;
+}
+
+.stat-card-danger:hover .stat-icon {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+.stat-card-pending-pod {
+  border-left-color: #ff9800;
+  background: linear-gradient(135deg, #fff 0%, #fff8f0 100%);
+}
+
+.stat-card-pending-pod:hover {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: #fff;
+}
+
+.stat-card-pending-pod:hover .stat-label,
+.stat-card-pending-pod:hover .stat-value {
+  color: #fff;
+}
+
+.stat-card-pending-pod:hover .stat-icon {
   background: rgba(255,255,255,0.2);
   color: #fff;
 }

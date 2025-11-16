@@ -123,8 +123,11 @@ if (!$error) {
     }
 }
 
-// Handle POD file upload
+// Handle POD file upload (now optional)
 $pod_file = NULL;
+$pod_uploaded = false;
+
+// If status is "Delivered", check if POD file is provided
 if (!$error && $new_status === 'Delivered' && isset($_FILES['pod_file']) && $_FILES['pod_file']['error'] === UPLOAD_ERR_OK) {
     $upload_dir = __DIR__ . '/../uploads/pod/' . date('Y') . '/' . date('m') . '/' . $doc_no . '/';
 
@@ -144,10 +147,17 @@ if (!$error && $new_status === 'Delivered' && isset($_FILES['pod_file']) && $_FI
 
         if (move_uploaded_file($_FILES['pod_file']['tmp_name'], $pod_path)) {
             $pod_file = 'uploads/pod/' . date('Y') . '/' . date('m') . '/' . $doc_no . '/' . $pod_filename;
+            $pod_uploaded = true;
         } else {
             $error = "Failed to upload POD file. Please try again.";
         }
     }
+}
+
+// Auto-adjust status if "Delivered" selected but no POD uploaded
+if (!$error && $new_status === 'Delivered' && !$pod_uploaded) {
+    // Change status to "Pending POD" if no POD file was provided
+    $new_status = 'Pending POD';
 }
 
 // Return error if validation failed
@@ -196,6 +206,11 @@ try {
             $delivery_date = $status_date ?? date('Y-m-d H:i:s');
             $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
             if ($pod_file) $update_query .= ", proof_of_delivery = '$pod_file'";
+        } elseif ($new_status === 'Pending POD') {
+            // Delivered without POD - mark as pending POD
+            $delivery_date = $status_date ?? date('Y-m-d H:i:s');
+            $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
+            $update_query .= ", proof_of_delivery = NULL"; // No POD yet
         } elseif ($new_status === 'Delayed' && $status_date) {
             $update_query .= ", delay_date = '$status_date'";
             if ($delay_reason) $update_query .= ", current_delay_reason = '$delay_reason', reason_of_delay = '$delay_reason'";

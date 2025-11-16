@@ -976,6 +976,10 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                 document.getElementById('dateLabelText').textContent = 'Delivery Date';
                 document.getElementById('dateField').style.display = 'block';
                 document.getElementById('podField').style.display = 'block';
+            } else if (status === 'Pending POD') {
+                // Pending POD status - no special fields required
+                document.getElementById('dateLabelText').textContent = 'Delivery Date';
+                document.getElementById('dateField').style.display = 'block';
             } else if (status === 'Delayed') {
                 document.getElementById('dateLabelText').textContent = 'Delay Date';
                 document.getElementById('dateField').style.display = 'block';
@@ -1074,10 +1078,11 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
 
             // Form validation
             document.getElementById('statusForm').addEventListener('submit', function(e) {
+                e.preventDefault(); // Always prevent default for AJAX submission
+
                 const status = document.getElementById('statusSelect').value;
 
                 if (!status) {
-                    e.preventDefault();
                     showError('Please select a status');
                     return false;
                 }
@@ -1086,7 +1091,6 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                     const carNumber = document.getElementById('carNumberInput').value;
                     const driverName = document.getElementById('driverNameInput').value;
                     if (!carNumber || !driverName) {
-                        e.preventDefault();
                         showError('Vehicle number and Driver name are required for Out for Delivery status');
                         return false;
                     }
@@ -1095,20 +1099,16 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                 if (status === 'Delayed') {
                     const delayReason = document.querySelector('[name="delay_reason"]').value;
                     if (!delayReason) {
-                        e.preventDefault();
                         showError('Delay reason is required for Delayed status');
                         return false;
                     }
                 }
 
-                if (status === 'Delivered') {
-                    const podFile = document.querySelector('[name="pod_file"]').files.length;
-                    if (!podFile) {
-                        e.preventDefault();
-                        showError('POD file is required for Delivered status');
-                        return false;
-                    }
-                }
+                // POD is now optional - will auto-set to "Pending POD" if no file uploaded
+                // No validation needed for Delivered status anymore
+
+                // Submit form via AJAX for faster response
+                submitStatusFormAjax(this);
             });
 
             // Check for error/success in URL
@@ -1129,6 +1129,55 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                 window.history.replaceState({}, document.title, cleanUrl);
             }
         });
+
+        // AJAX form submission for faster response
+        function submitStatusFormAjax(form) {
+            const formData = new FormData(form);
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+
+            // Disable submit button and show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Updating...';
+
+            fetch('update_docket_status.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                // Check if response contains error or success
+                if (data.includes('error') || data.includes('Error') || data.includes('failed') || data.includes('Failed')) {
+                    // Extract error message if possible
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data, 'text/html');
+                    const errorText = doc.body.textContent || 'Failed to update status';
+                    showError(errorText.substring(0, 200)); // Limit error message length
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                } else {
+                    // Success - close modal and reload page
+                    closeStatusModal();
+
+                    // Show success message
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'alert alert-success';
+                    successDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; padding: 15px 20px; background: #d4edda; color: #155724; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+                    successDiv.innerHTML = '<i class="fa fa-check-circle"></i> Status updated successfully!';
+                    document.body.appendChild(successDiv);
+
+                    // Reload page after short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 800);
+                }
+            })
+            .catch(error => {
+                showError('Network error: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            });
+        }
 
         // Close modal on outside click
         document.addEventListener('click', function(e) {
@@ -1185,6 +1234,7 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                             <option value="In Transit" data-order="4">In Transit</option>
                             <option value="Delayed" data-order="4" data-allow-anytime="true">Delayed</option>
                             <option value="Out for Delivery" data-order="5">Out for Delivery</option>
+                            <option value="Pending POD" data-order="6">Pending POD (Delivered without POD)</option>
                             <option value="Delivered" data-order="6" data-final="true">Delivered</option>
                             <option value="Failed" data-order="6" data-final="true">Failed Delivery</option>
                             <option value="Cancelled" data-order="6" data-final="true">Cancelled</option>
@@ -1276,10 +1326,10 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                     <div id="podField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                         <div class="form-group">
                             <label>
-                                <i class="fa fa-file-image-o"></i> Proof of Delivery (POD) <span style="color: #dc3545;">*</span>
+                                <i class="fa fa-file-image-o"></i> Proof of Delivery (POD) <span style="color: #28a745;">(Optional)</span>
                             </label>
-                            <input type="file" name="pod_file" accept=".jpg,.jpeg,.png,.pdf" class="form-control-modern">
-                            <small style="color: #7f8c8d;">Accepted: JPG, PNG, PDF (Max 5MB)</small>
+                            <input type="file" name="pod_file" id="podFileInput" accept=".jpg,.jpeg,.png,.pdf" class="form-control-modern">
+                            <small style="color: #7f8c8d;">Accepted: JPG, PNG, PDF (Max 5MB). Leave empty to mark as "Pending POD"</small>
                         </div>
                     </div>
 
