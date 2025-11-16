@@ -72,8 +72,8 @@ if (empty($new_status)) {
     $error = 'Status is required';
 }
 
-// Get doc_no if not provided
-if (empty($doc_no)) {
+// Get doc_no if not provided (only for single update)
+if (!$is_bulk && empty($doc_no)) {
     $doc_query = "SELECT doc_no, status FROM docket_details WHERE docket_id = $docket_id";
     $doc_result = mysqli_query($conn, $doc_query);
     if ($doc_result && $doc_row = mysqli_fetch_assoc($doc_result)) {
@@ -86,8 +86,11 @@ if (empty($doc_no)) {
     }
 }
 
-// Validate status hierarchy - no reverse updates allowed
-if (!$error) {
+// For bulk updates, doc_no will be fetched individually in the loop
+
+// Validate status hierarchy - no reverse updates allowed (only for single updates)
+// For bulk updates, validation happens in the loop for each docket
+if (!$error && !$is_bulk) {
     $hierarchy_query = "SELECT old.status_order as old_order, new.status_order as new_order,
                                new.requires_date, new.requires_pod, new.requires_car_driver,
                                new.requires_delay_reason, new.is_final
@@ -126,6 +129,17 @@ if (!$error) {
                 $error = "Delay reason is required for '$new_status' status.";
             }
         }
+    }
+}
+
+// For bulk updates, validate required fields based on new status only
+if (!$error && $is_bulk) {
+    // Check required fields for the new status
+    if ($new_status === 'Out for Delivery' && (empty($car_number) || empty($driver_name))) {
+        $error = "Both vehicle number and driver name are required for 'Out for Delivery' status.";
+    }
+    if ($new_status === 'Delayed' && empty($delay_reason)) {
+        $error = "Delay reason is required for 'Delayed' status.";
     }
 }
 
