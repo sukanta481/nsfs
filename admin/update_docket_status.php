@@ -1,6 +1,8 @@
 <?php
 require 'check_auth.php';
 require 'conn.php';
+require 'email_config_smtp.php';
+require 'email_templates.php';
 
 // Handle both JSON API requests and regular form submissions
 $is_json_request = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
@@ -241,6 +243,59 @@ try {
     }
 
     mysqli_commit($conn);
+
+    // ========================================
+    // SEND EMAIL NOTIFICATIONS
+    // ========================================
+
+    // Only send emails for single updates (not bulk) and for specific statuses
+    if (!$is_bulk && $updated_count > 0) {
+        // Get full docket details for email
+        $email_query = "SELECT * FROM docket_details WHERE docket_id = $docket_id";
+        $email_result = mysqli_query($conn, $email_query);
+        $docket_data = mysqli_fetch_assoc($email_result);
+
+        if ($docket_data) {
+            $client_email = $docket_data['client_email'] ?? '';
+            $company_email = $docket_data['company_email'] ?? '';
+
+            // Send email to CLIENT (Consignee/Receiver) for specific statuses
+            if (!empty($client_email) && filter_var($client_email, FILTER_VALIDATE_EMAIL)) {
+
+                // Email for "Out for Delivery" status
+                if ($new_status === 'Out for Delivery' && !empty($car_number) && !empty($driver_name)) {
+                    $email_subject = "🚚 Your Shipment is Out for Delivery - Docket #" . $docket_data['doc_no'];
+                    $email_body = getOutForDeliveryEmailTemplate($docket_data, $car_number, $driver_name);
+                    sendEmail($client_email, $email_subject, $email_body, $docket_data['client_name']);
+                    error_log("Out for Delivery email sent to client: $client_email");
+                }
+
+                // Email for "Delivered" status
+                elseif ($new_status === 'Delivered') {
+                    $email_subject = "✅ Your Shipment Has Been Delivered - Docket #" . $docket_data['doc_no'];
+                    $email_body = getDeliveredEmailTemplate($docket_data);
+                    sendEmail($client_email, $email_subject, $email_body, $docket_data['client_name']);
+                    error_log("Delivered email sent to client: $client_email");
+                }
+
+                // Email for "Delayed" status
+                elseif ($new_status === 'Delayed' && !empty($delay_reason)) {
+                    $email_subject = "⏰ Shipment Delayed - Docket #" . $docket_data['doc_no'];
+                    $email_body = getDelayedEmailTemplate($docket_data, $delay_reason);
+                    sendEmail($client_email, $email_subject, $email_body, $docket_data['client_name']);
+                    error_log("Delayed email sent to client: $client_email");
+                }
+            }
+
+            // Send email to COMPANY (Consignor/Sender) for "Delivered" status
+            if ($new_status === 'Delivered' && !empty($company_email) && filter_var($company_email, FILTER_VALIDATE_EMAIL)) {
+                $email_subject = "✅ Delivery Completed - Docket #" . $docket_data['doc_no'];
+                $email_body = getCompanyDeliveredEmailTemplate($docket_data);
+                sendEmail($company_email, $email_subject, $email_body, $docket_data['company_name']);
+                error_log("Delivered email sent to company: $company_email");
+            }
+        }
+    }
 
     // Return success
     $success_message = $is_bulk ? "Successfully updated $updated_count docket(s)" : "Status updated successfully!";

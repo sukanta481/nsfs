@@ -1,6 +1,8 @@
 <?php
 require_once 'includes/top.php';
 require_once 'DocketDetailsManager.php';
+require_once 'email_config_smtp.php';
+require_once 'email_templates.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: add_trip_modern.php');
@@ -194,7 +196,29 @@ try {
     if ($success_count > 0) {
         // Commit transaction
         mysqli_commit($conn);
-        
+
+        // ========================================
+        // SEND EMAIL NOTIFICATIONS TO COMPANY (Consignor/Sender) - DOCKET CREATED
+        // ========================================
+
+        // Send email for each successfully created docket
+        foreach ($dockets as $docket) {
+            $doc_no = trim($docket['doc_no'] ?? '');
+            if (empty($doc_no)) continue;
+
+            // Get full docket details from database
+            $email_query = "SELECT * FROM docket_details WHERE doc_no = '".mysqli_real_escape_string($conn, $doc_no)."' LIMIT 1";
+            $email_result = mysqli_query($conn, $email_query);
+            $docket_data = mysqli_fetch_assoc($email_result);
+
+            if ($docket_data && !empty($docket_data['company_email']) && filter_var($docket_data['company_email'], FILTER_VALIDATE_EMAIL)) {
+                $email_subject = "📝 Docket Created - #" . $docket_data['doc_no'];
+                $email_body = getDocketCreatedEmailTemplate($docket_data);
+                @sendEmail($docket_data['company_email'], $email_subject, $email_body, $docket_data['company_name']);
+                error_log("Docket created email sent to company: " . $docket_data['company_email'] . " for docket: " . $doc_no);
+            }
+        }
+
         $_SESSION['success_msg'] = "Trip created successfully with $success_count docket(s) in docket_details table! All details auto-synced from car, staff (drivers & helpers), and company tables.";
         header('Location: add_trip_modern.php?msg=success');
         exit;
