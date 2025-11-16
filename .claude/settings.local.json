@@ -8,7 +8,17 @@
       "Bash(c:/xampp/mysql/bin/mysql.exe:*)",
       "Bash(NUL)",
       "Bash(dir:*)",
-      "Bash(del delivery_status_old_backup.php manifest_old_backup.php manifest_save.php.backup)"
+      "Bash(del delivery_status_old_backup.php manifest_old_backup.php manifest_save.php.backup)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd modern CRUD systems for Team and Testimonials management\n\nNew Features:\n- team_crud.php: Modern unified CRUD for team members with photo upload\n- testimonials_crud.php: Modern unified CRUD for customer testimonials with star ratings\n- Updated left_panel.php: Links to new modern pages\n\nFeatures Included:\n- Modern UI/UX with gradient themes and animations\n- Responsive grid layouts (form + table side-by-side)\n- Image upload with live preview\n- Star rating system with visual feedback\n- Auto-hide success messages (3 seconds)\n- Form validation (client-side)\n- Confirmation dialogs for delete actions\n- Mobile-responsive design\n- DataTables for better data management\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit -m \"$(cat <<''EOF''\nComplete Website section modernization - Gallery, Site Features, Social Links\n\nNew Features:\n- gallery_crud.php: Modern gallery management with grid view\n- site_features_crud.php: Modern site features with card layout\n- social_links_modern.php: Modern social media links manager with preview\n- Updated left_panel.php: All Website links now point to modern pages\n\nGallery Features:\n- Beautiful grid layout for images\n- Image upload with preview\n- Category support\n- Hover effects and animations\n\nSite Features Features:\n- Card-based layout\n- Icon upload\n- Feature title and description\n- Modern hover effects\n\nSocial Links Features:\n- Twitter, LinkedIn, Instagram support\n- URL validation\n- Live preview of social icons\n- Brand-colored icons\n\nAll pages include:\n- Modern gradient UI\n- Responsive design\n- Auto-hide success messages\n- Form validation\n- Mobile-friendly interface\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(copy:*)",
+      "Bash(del \"c:\\xampp\\htdocs\\nsfs\\admin\\manifest_save_fixed.php\")",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(php:*)"
     ],
     "deny": [],
     "ask": []

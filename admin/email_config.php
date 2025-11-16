@@ -1,37 +1,19 @@
 <?php
 /**
- * SMTP Email Configuration for Docket Notifications
- * Using PHPMailer with SMTP authentication
+ * Email Configuration for Docket Notifications
+ * Using PHP's built-in mail() function
  */
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-// Load PHPMailer (adjust path if needed)
-require_once __DIR__ . '/PHPMailer/src/Exception.php';
-require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
-require_once __DIR__ . '/PHPMailer/src/SMTP.php';
-
-// ========================================
-// SMTP CONFIGURATION
-// ========================================
-
-// SMTP Server Settings (Hostinger)
-define('SMTP_HOST', 'smtp.hostinger.com');
-define('SMTP_PORT', 465); // SSL port
-define('SMTP_USERNAME', 'onestepup@northsuperfastservice.com');
-define('SMTP_PASSWORD', 'Tanmoy@0050'); // ⚠️ REPLACE WITH ACTUAL PASSWORD
-
-// Email Settings
+// Email settings
 define('EMAIL_FROM', 'onestepup@northsuperfastservice.com');
 define('EMAIL_FROM_NAME', 'North Super Fast Service');
 define('EMAIL_REPLY_TO', 'onestepup@northsuperfastservice.com');
 
 // Website URL for tracking links
-define('TRACKING_BASE_URL', 'http://' . ($_SERVER['HTTP_HOST'] ?? 'www.northsuperfastservice.com') . '/nsfs/deliveryHistory.php?doc_no=');
+define('TRACKING_BASE_URL', 'http://' . $_SERVER['HTTP_HOST'] . '/nsfs/track.php?doc_no=');
 
 /**
- * Send email using PHPMailer with SMTP
+ * Send email using PHP mail() function
  *
  * @param string $to Recipient email address
  * @param string $subject Email subject
@@ -46,48 +28,28 @@ function sendEmail($to, $subject, $html_body, $recipient_name = '') {
         return false;
     }
 
-    $mail = new PHPMailer(true);
+    // Email headers
+    $headers = "MIME-Version: 1.0" . "\r\n";
+    $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+    $headers .= "From: " . EMAIL_FROM_NAME . " <" . EMAIL_FROM . ">" . "\r\n";
+    $headers .= "Reply-To: " . EMAIL_REPLY_TO . "\r\n";
+    $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
 
-    try {
-        // Server settings
-        $mail->isSMTP();
-        $mail->Host       = SMTP_HOST;
-        $mail->SMTPAuth   = true;
-        $mail->Username   = SMTP_USERNAME;
-        $mail->Password   = SMTP_PASSWORD;
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
-        $mail->Port       = SMTP_PORT;
-        $mail->CharSet    = 'UTF-8';
-
-        // Disable certificate verification (for local testing)
-        $mail->SMTPOptions = array(
-            'ssl' => array(
-                'verify_peer' => false,
-                'verify_peer_name' => false,
-                'allow_self_signed' => true
-            )
-        );
-
-        // Recipients
-        $mail->setFrom(EMAIL_FROM, EMAIL_FROM_NAME);
-        $mail->addAddress($to, $recipient_name);
-        $mail->addReplyTo(EMAIL_REPLY_TO, EMAIL_FROM_NAME);
-
-        // Content
-        $mail->isHTML(true);
-        $mail->Subject = $subject;
-        $mail->Body    = $html_body;
-        $mail->AltBody = strip_tags($html_body); // Plain text version
-
-        // Send email
-        $mail->send();
-        error_log("Email sent successfully via SMTP to: $to - Subject: $subject");
-        return true;
-
-    } catch (Exception $e) {
-        error_log("Email sending failed to: $to - Error: {$mail->ErrorInfo}");
-        return false;
+    // Add recipient name to "To" header if provided
+    if (!empty($recipient_name)) {
+        $headers .= "To: " . $recipient_name . " <" . $to . ">" . "\r\n";
     }
+
+    // Send email
+    $result = mail($to, $subject, $html_body, $headers);
+
+    if ($result) {
+        error_log("Email sent successfully to: $to - Subject: $subject");
+    } else {
+        error_log("Failed to send email to: $to - Subject: $subject");
+    }
+
+    return $result;
 }
 
 /**
