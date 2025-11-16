@@ -1,9 +1,8 @@
 <?php
-// 1. Set custom session name (do this BEFORE session_start)
-session_name('pro');
-
-// 2. Start session FIRST, before ANY output!
+// Start session FIRST, before ANY output!
 if (session_status() == PHP_SESSION_NONE) {
+    // Set custom session name only if session not started yet
+    session_name('pro');
     session_start();
 }
 
