@@ -4,16 +4,22 @@ require 'conn.php';
 require 'email_config_smtp.php';
 require 'email_templates.php';
 
-// Handle both JSON API requests and regular form submissions
-$is_json_request = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+// Handle both AJAX/JSON API requests and regular form submissions
+// Check for AJAX request via XMLHttpRequest header or fetch API
+$is_ajax_request = (
+    (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') ||
+    (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) ||
+    (isset($_POST['ajax']) && $_POST['ajax'] == '1')
+);
 
-if ($is_json_request) {
-    header('Content-Type: application/json');
+// For AJAX requests, return plain text or JSON (no HTML page layout)
+if ($is_ajax_request) {
+    header('Content-Type: text/plain; charset=UTF-8');
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    if ($is_json_request) {
-        echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+    if ($is_ajax_request) {
+        echo 'Error: Invalid request method';
     } else {
         header("Location: delivery_status.php?error=Invalid request method");
     }
@@ -162,8 +168,8 @@ if (!$error && $new_status === 'Delivered' && !$pod_uploaded) {
 
 // Return error if validation failed
 if ($error) {
-    if ($is_json_request) {
-        echo json_encode(['success' => false, 'message' => $error]);
+    if ($is_ajax_request) {
+        echo 'Error: ' . $error;
     } else {
         header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'delivery_status.php') . "?error=" . urlencode($error));
     }
@@ -315,16 +321,16 @@ try {
     // Return success
     $success_message = $is_bulk ? "Successfully updated $updated_count docket(s)" : "Status updated successfully!";
 
-    if ($is_json_request) {
-        echo json_encode(['success' => true, 'message' => $success_message]);
+    if ($is_ajax_request) {
+        echo 'Success: ' . $success_message;
     } else {
         header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'delivery_status.php') . "?success=" . urlencode($success_message));
     }
 
 } catch (Exception $e) {
     mysqli_rollback($conn);
-    if ($is_json_request) {
-        echo json_encode(['success' => false, 'message' => 'Error updating status: ' . $e->getMessage()]);
+    if ($is_ajax_request) {
+        echo 'Error: Error updating status - ' . $e->getMessage();
     } else {
         header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'delivery_status.php') . "?error=" . urlencode('Error updating status: ' . $e->getMessage()));
     }

@@ -1133,6 +1133,9 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
         // AJAX form submission for faster response
         function submitStatusFormAjax(form) {
             const formData = new FormData(form);
+            // Add AJAX indicator
+            formData.append('ajax', '1');
+
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalBtnText = submitBtn.innerHTML;
 
@@ -1146,16 +1149,19 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
             })
             .then(response => response.text())
             .then(data => {
-                // Check if response contains error or success
-                if (data.includes('error') || data.includes('Error') || data.includes('failed') || data.includes('Failed')) {
-                    // Extract error message if possible
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(data, 'text/html');
-                    const errorText = doc.body.textContent || 'Failed to update status';
-                    showError(errorText.substring(0, 200)); // Limit error message length
+                // Check response - should start with "Success:" or "Error:"
+                const cleanData = data.trim();
+
+                if (cleanData.startsWith('Error:')) {
+                    // Extract error message
+                    const errorMsg = cleanData.replace('Error:', '').trim();
+                    showError(errorMsg);
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalBtnText;
-                } else {
+                } else if (cleanData.startsWith('Success:')) {
+                    // Extract success message
+                    const successMsg = cleanData.replace('Success:', '').trim();
+
                     // Success - close modal and reload page
                     closeStatusModal();
 
@@ -1163,13 +1169,19 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                     const successDiv = document.createElement('div');
                     successDiv.className = 'alert alert-success';
                     successDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 10000; padding: 15px 20px; background: #d4edda; color: #155724; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
-                    successDiv.innerHTML = '<i class="fa fa-check-circle"></i> Status updated successfully!';
+                    successDiv.innerHTML = '<i class="fa fa-check-circle"></i> ' + successMsg;
                     document.body.appendChild(successDiv);
 
                     // Reload page after short delay
                     setTimeout(() => {
                         window.location.reload();
                     }, 800);
+                } else {
+                    // Unexpected response - probably HTML error
+                    showError('Unexpected response from server. Please try again.');
+                    console.error('Server response:', cleanData);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
                 }
             })
             .catch(error => {
