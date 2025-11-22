@@ -344,15 +344,16 @@ if (!$is_ajax) { ?>
                   <?php
                   $status = $get_shipping_details_row['status'] ?? '';
                   $pod_file = $get_shipping_details_row['proof_of_delivery'] ?? '';
-                  if ($status === 'Delivered') {
+                  // Show POD row for "Delivered" or "Pending POD" status
+                  if ($status === 'Delivered' || $status === 'Pending POD') {
                       echo '<tr><td>Proof of Delivery (POD)</td><td>';
                       if (empty($pod_file)) {
-                          echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;">POD Pending</span>';
+                          echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;"><i class="fa fa-clock"></i> POD Pending</span>';
                       } else {
-                          // POD path is already complete (uploads/pod/year/month/doc_no/filename.ext)
-                          $pod_path = '/' . $pod_file;
-                          echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;">View POD</a>
-                          <a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success">Download</a>';
+                          // POD path is relative to project root (uploads/pod/year/month/doc_no/filename.ext)
+                          $pod_path = '/nsfs/' . $pod_file;
+                          echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;"><i class="fa fa-eye"></i> View POD</a> ';
+                          echo '<a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success"><i class="fa fa-download"></i> Download</a>';
                       }
                       echo '</td></tr>';
                   }
@@ -375,19 +376,19 @@ if (!$is_ajax) { ?>
                   <?php
                   $status = $get_shipping_details_row['status'] ?? '';
                   $pod_file = $get_shipping_details_row['proof_of_delivery'] ?? '';
-                  if ($status === 'Delivered') {
-                  echo '<tr><td>Proof of Delivery (POD)</td><td>';
-                  if (empty($pod_file)) {
-                      echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;">POD Pending</span>';
-                  } else {
-                      // POD path is already complete (uploads/pod/year/month/doc_no/filename.ext)
-                      $pod_path = '/' . $pod_file;
-                      echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;">View POD</a> ';
-                      echo '<a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success">Download</a>';
+                  // Show POD row for "Delivered" or "Pending POD" status
+                  if ($status === 'Delivered' || $status === 'Pending POD') {
+                      echo '<tr><td>Proof of Delivery (POD)</td><td>';
+                      if (empty($pod_file)) {
+                          echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;"><i class="fa fa-clock"></i> POD Pending</span>';
+                      } else {
+                          // POD path is relative to project root (uploads/pod/year/month/doc_no/filename.ext)
+                          $pod_path = '/nsfs/' . $pod_file;
+                          echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;"><i class="fa fa-eye"></i> View POD</a> ';
+                          echo '<a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success"><i class="fa fa-download"></i> Download</a>';
+                      }
+                      echo '</td></tr>';
                   }
-                  echo '</td></tr>';
-              }
-
                   ?>
                   <!-- POD row end -->
                 </table>

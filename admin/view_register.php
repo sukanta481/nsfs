@@ -236,15 +236,15 @@ if ($is_standalone) {
                             <div class="timeline-text"><?= htmlspecialchars($history['notes'] ?? 'Status updated') ?></div>
                             <div class="timeline-date"><?= date('M d, Y g:i A', strtotime($history['changed_at'])) ?></div>
 
-                            <?php if ($history['new_status'] === 'Delivered'): ?>
+                            <?php if ($history['new_status'] === 'Delivered' || $history['new_status'] === 'Pending POD'): ?>
                               <div class="timeline-pod" style="margin-top: 10px;">
                                 <?php if (!empty($history['pod_file'])): ?>
                                   <a href="../<?= htmlspecialchars($history['pod_file']) ?>" target="_blank" class="btn-view-pod">
                                     <i class="fa fa-file-image-o"></i> View POD
                                   </a>
                                 <?php else: ?>
-                                  <span style="color: #dc3545; font-size: 13px;">
-                                    <i class="fa fa-exclamation-circle"></i> POD not available
+                                  <span style="color: #ff9800; font-size: 13px;">
+                                    <i class="fa fa-clock"></i> POD Pending
                                   </span>
                                 <?php endif; ?>
                               </div>
