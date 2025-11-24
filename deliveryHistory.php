@@ -350,10 +350,12 @@ if (!$is_ajax) { ?>
                       if (empty($pod_file)) {
                           echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;"><i class="fa fa-clock"></i> POD Pending</span>';
                       } else {
-                          // POD path uses SITE_URL for proper URL on both localhost and live server
-                          $pod_path = SITE_URL . $pod_file;
-                          echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;"><i class="fa fa-eye"></i> View POD</a> ';
-                          echo '<a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success"><i class="fa fa-download"></i> Download</a>';
+                          // Use PHP viewer for View POD (bypasses server restrictions)
+                          $view_path = SITE_URL . 'view_pod.php?file=' . urlencode($pod_file);
+                          // Use direct path for download
+                          $download_path = SITE_URL . $pod_file;
+                          echo '<a href="' . htmlspecialchars($view_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;"><i class="fa fa-eye"></i> View POD</a> ';
+                          echo '<a href="' . htmlspecialchars($download_path) . '" download class="btn btn-sm btn-success"><i class="fa fa-download"></i> Download</a>';
                       }
                       echo '</td></tr>';
                   }
@@ -382,10 +384,12 @@ if (!$is_ajax) { ?>
                       if (empty($pod_file)) {
                           echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;"><i class="fa fa-clock"></i> POD Pending</span>';
                       } else {
-                          // POD path uses SITE_URL for proper URL on both localhost and live server
-                          $pod_path = SITE_URL . $pod_file;
-                          echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;"><i class="fa fa-eye"></i> View POD</a> ';
-                          echo '<a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success"><i class="fa fa-download"></i> Download</a>';
+                          // Use PHP viewer for View POD (bypasses server restrictions)
+                          $view_path = SITE_URL . 'view_pod.php?file=' . urlencode($pod_file);
+                          // Use direct path for download
+                          $download_path = SITE_URL . $pod_file;
+                          echo '<a href="' . htmlspecialchars($view_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;"><i class="fa fa-eye"></i> View POD</a> ';
+                          echo '<a href="' . htmlspecialchars($download_path) . '" download class="btn btn-sm btn-success"><i class="fa fa-download"></i> Download</a>';
                       }
                       echo '</td></tr>';
                   }
