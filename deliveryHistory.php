@@ -350,8 +350,8 @@ if (!$is_ajax) { ?>
                       if (empty($pod_file)) {
                           echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;"><i class="fa fa-clock"></i> POD Pending</span>';
                       } else {
-                          // POD path is relative to project root (uploads/pod/year/month/doc_no/filename.ext)
-                          $pod_path = '/nsfs/' . $pod_file;
+                          // POD path uses SITE_URL for proper URL on both localhost and live server
+                          $pod_path = SITE_URL . $pod_file;
                           echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;"><i class="fa fa-eye"></i> View POD</a> ';
                           echo '<a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success"><i class="fa fa-download"></i> Download</a>';
                       }
@@ -382,8 +382,8 @@ if (!$is_ajax) { ?>
                       if (empty($pod_file)) {
                           echo '<span class="btn btn-sm btn-warning" style="pointer-events:none;opacity:0.7;"><i class="fa fa-clock"></i> POD Pending</span>';
                       } else {
-                          // POD path is relative to project root (uploads/pod/year/month/doc_no/filename.ext)
-                          $pod_path = '/nsfs/' . $pod_file;
+                          // POD path uses SITE_URL for proper URL on both localhost and live server
+                          $pod_path = SITE_URL . $pod_file;
                           echo '<a href="' . htmlspecialchars($pod_path) . '" target="_blank" class="btn btn-sm btn-primary" style="margin-bottom:4px;"><i class="fa fa-eye"></i> View POD</a> ';
                           echo '<a href="' . htmlspecialchars($pod_path) . '" download class="btn btn-sm btn-success"><i class="fa fa-download"></i> Download</a>';
                       }
