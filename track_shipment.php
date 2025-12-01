@@ -879,7 +879,6 @@ document.addEventListener('keydown', function(e) {
 });
 
 // AJAX form submission (optional)
-<?php if (!$is_ajax): ?>
 document.getElementById('trackingSearchForm')?.addEventListener('submit', function(e) {
     // For now, use normal form submission
     // You can implement AJAX here if needed
@@ -889,3 +888,4 @@ document.getElementById('trackingSearchForm')?.addEventListener('submit', functi
 <?php 
 include("include/footer.php");
 ?>
+<?php endif; ?>

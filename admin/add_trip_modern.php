@@ -1,4 +1,4 @@
-<?php 
+﻿<?php 
 require 'check_auth.php';
 requirePermission('docket_create');
 require 'top_header.php'; 
@@ -677,15 +677,45 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                 });
             }
             
-            // Setup driver phone auto-fill
-            const driverSelect = document.getElementById('driver_select');
+            // Setup driver phone auto-fill for datalist input
+            const driverNameInput = document.getElementById('driverNameInput');
             const driverPhoneInput = document.getElementById('driver_phone');
+            const driverIdHidden = document.getElementById('driverIdHidden');
+            const driverList = document.getElementById('driverList');
             
-            if (driverSelect && driverPhoneInput) {
-                driverSelect.addEventListener('change', function() {
-                    const selectedOption = this.options[this.selectedIndex];
-                    const phone = selectedOption.getAttribute('data-phone') || '';
-                    driverPhoneInput.value = phone;
+            if (driverNameInput && driverPhoneInput && driverList) {
+                driverNameInput.addEventListener('input', function() {
+                    const value = this.value;
+                    const options = driverList.querySelectorAll('option');
+                    
+                    // Find matching option from datalist
+                    for (let option of options) {
+                        if (option.value === value) {
+                            const phone = option.getAttribute('data-phone') || '';
+                            const driverId = option.getAttribute('data-id') || '';
+                            driverPhoneInput.value = phone;
+                            driverIdHidden.value = driverId;
+                            break;
+                        }
+                    }
+                });
+                
+                // Clear driver ID if manually typed name not in list
+                driverNameInput.addEventListener('blur', function() {
+                    const value = this.value;
+                    const options = driverList.querySelectorAll('option');
+                    let found = false;
+                    
+                    for (let option of options) {
+                        if (option.value === value) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!found) {
+                        driverIdHidden.value = '';
+                    }
                 });
             }
             

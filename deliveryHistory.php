@@ -137,6 +137,11 @@ if ($get_shipping_details_row) {
     
     // Attach time and delay info to timeline from tracking history
     foreach ($timeline as $k => $step) {
+        // Fix: Map "Pending POD" to "Delivered" for timeline display
+        if ($step['db_status'] === 'Delivered' && isset($status_notes['Pending POD']) && !isset($status_notes['Delivered'])) {
+            $status_notes['Delivered'] = $status_notes['Pending POD'];
+        }
+
         if (isset($status_notes[$step['db_status']])) {
             $most_recent = end($status_notes[$step['db_status']]);
             $timeline[$k]['time'] = $most_recent['date'];
@@ -417,6 +422,10 @@ if (!$is_ajax) { ?>
               <div class="modal-body" style="padding: 28px;">
                 <?php 
                 $current_status = $get_shipping_details_row['status'] ?? 'Unknown';
+                // Normalize Pending POD to Delivered for display
+                if ($current_status === 'Pending POD') {
+                    $current_status = 'Delivered';
+                }
                 $current_location = $get_shipping_details_row['current_location'] ?? 'N/A';
                 $estimated_delivery = $get_shipping_details_row['estimated_delivery'] ?? null;
                 
