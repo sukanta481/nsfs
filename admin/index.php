@@ -79,6 +79,15 @@ require 'top_header.php';
             </div>
           </a>
           
+          <!-- Out for Delivery Card -->
+          <a href="register.php?type=list_register&status=Out%20for%20Delivery" class="stat-card stat-card-out-delivery">
+            <div class="stat-icon"><i class="fa fa-shipping-fast"></i></div>
+            <div class="stat-content">
+              <div class="stat-label">OUT FOR DELIVERY</div>
+              <div class="stat-value"><?= $out_for_delivery ?></div>
+            </div>
+          </a>
+          
           <!-- Delivered Card -->
           <a href="register.php?type=list_register&status=Delivered" class="stat-card stat-card-success">
             <div class="stat-icon"><i class="fa fa-check-circle"></i></div>
@@ -384,6 +393,26 @@ require 'top_header.php';
   color: #fff;
 }
 
+.stat-card-out-delivery {
+  border-left-color: #1abc9c;
+  background: linear-gradient(135deg, #fff 0%, #f0fff8 100%);
+}
+
+.stat-card-out-delivery:hover {
+  background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+  color: #fff;
+}
+
+.stat-card-out-delivery:hover .stat-label,
+.stat-card-out-delivery:hover .stat-value {
+  color: #fff;
+}
+
+.stat-card-out-delivery:hover .stat-icon {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
 .stat-card-success {
   border-left-color: #27ae60;
   background: linear-gradient(135deg, #fff 0%, #f0fff4 100%);
@@ -496,6 +525,11 @@ require 'top_header.php';
 .stat-card-success .stat-icon {
   background: rgba(39,174,96,0.1);
   color: #27ae60;
+}
+
+.stat-card-out-delivery .stat-icon {
+  background: rgba(26,188,156,0.1);
+  color: #1abc9c;
 }
 
 .stat-card-manifest .stat-icon {
