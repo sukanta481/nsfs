@@ -706,25 +706,27 @@ document.getElementById('statusUpdateForm').addEventListener('submit', function(
 });
 </script>
 
-              <!-- QR Code Card -->
+              <!-- Barcode Card -->
               <div class="detail-card">
                 <div class="card-header">
                   <div class="header-left">
-                    <i class="fa fa-qrcode"></i>
-                    <h3>Tracking QR Code</h3>
+                    <i class="fa fa-barcode"></i>
+                    <h3>Tracking Barcode</h3>
                   </div>
                 </div>
                 
-                <div class="card-body qr-body">
-                  <div class="qr-code-container">
-                    <div id="qrcode"></div>
+                <div class="card-body barcode-body">
+                  <div class="barcode-container">
+                    <svg id="barcode"></svg>
                   </div>
-                  <div class="qr-info">
+                  <div class="barcode-info">
                     <p><strong>Scan to Track</strong></p>
-                    <p class="qr-doc-no"><?= htmlspecialchars($data['doc_no']) ?></p>
-                    <button onclick="downloadQR()" class="btn-download-qr">
-                      <i class="fa fa-download"></i> Download QR
-                    </button>
+                    <p class="barcode-doc-no"><?= htmlspecialchars($data['doc_no']) ?></p>
+                    <div class="barcode-buttons">
+                      <button onclick="printSticker()" class="btn-print-sticker">
+                        <i class="fa fa-print"></i> Print Sticker
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -734,28 +736,108 @@ document.getElementById('statusUpdateForm').addEventListener('submit', function(
 
         </div>
 
-<!-- Include QR Code Library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- Include Barcode Library -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 
 <script>
-// Generate QR Code
-var qrcode = new QRCode(document.getElementById("qrcode"), {
-    text: "<?= $tracking_url ?>",
-    width: 200,
-    height: 200,
-    colorDark: "#2c3e50",
-    colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.H
+// Generate Barcode
+JsBarcode("#barcode", "<?= $data['doc_no'] ?>", {
+    format: "CODE128",
+    width: 2,
+    height: 60,
+    displayValue: true,
+    fontSize: 14,
+    margin: 10,
+    background: "#f8f9fa"
 });
 
-// Download QR Code
-function downloadQR() {
-    const canvas = document.querySelector('#qrcode canvas');
-    const url = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = 'QR_<?= $data['doc_no'] ?>.png';
-    link.href = url;
-    link.click();
+// Print Sticker
+function printSticker() {
+    const stickerData = {
+        doc_no: "<?= htmlspecialchars($data['doc_no']) ?>",
+        invoice_no: "<?= htmlspecialchars($data['invoice_no'] ?? $data['doc_no']) ?>",
+        origin: "<?= htmlspecialchars($data['pickup_location'] ?? '-') ?>",
+        destination: "<?= htmlspecialchars($data['delivery_location'] ?? '-') ?>",
+        consignee: "<?= htmlspecialchars($data['client_name'] ?? '-') ?>",
+        service_type: "<?= htmlspecialchars($data['service_type'] ?? 'SURFACE-NORMAL') ?>",
+        box: "<?= htmlspecialchars($data['box'] ?? '1') ?>"
+    };
+    
+    const stickerWindow = window.open('', '_blank', 'width=450,height=400');
+    stickerWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Sticker - ${stickerData.doc_no}</title>
+            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+            <style>
+                @media print {
+                    @page { size: 100mm 70mm; margin: 2mm; }
+                    body { margin: 0; padding: 0; }
+                    .no-print { display: none !important; }
+                }
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: Arial, sans-serif; font-size: 11px; padding: 5px; }
+                .sticker-container {
+                    width: 100mm;
+                    border: 1px solid #000;
+                    padding: 5px;
+                    background: #fff;
+                }
+                .sticker-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-bottom: 1px solid #000;
+                    padding-bottom: 3px;
+                    margin-bottom: 5px;
+                }
+                .company-name { font-weight: bold; font-size: 10px; }
+                .service-type { font-weight: bold; font-size: 11px; }
+                .sticker-table { width: 100%; border-collapse: collapse; }
+                .sticker-table td { padding: 3px 5px; border-bottom: 1px solid #ccc; font-size: 10px; }
+                .sticker-table td:first-child { font-weight: bold; width: 80px; }
+                .barcode-area { text-align: center; padding: 8px 0; border-top: 1px solid #000; margin-top: 5px; }
+                .barcode-area svg { max-width: 100%; }
+                .print-btn { display: block; margin: 15px auto; padding: 10px 30px; background: #4CAF50; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
+                .print-btn:hover { background: #45a049; }
+            </style>
+        </head>
+        <body>
+            <div class="sticker-container">
+                <div class="sticker-header">
+                    <span class="company-name">NSFS</span>
+                    <span class="service-type">${stickerData.service_type}</span>
+                </div>
+                <table class="sticker-table">
+                    <tr><td>Invoice #:</td><td>${stickerData.invoice_no}</td></tr>
+                    <tr><td>Ref #:</td><td>${stickerData.doc_no}</td></tr>
+                    <tr><td>Package Ref#:</td><td></td></tr>
+                    <tr><td>Package:</td><td>${stickerData.box} of ${stickerData.box}</td></tr>
+                    <tr><td>GCN:</td><td>${stickerData.doc_no}</td></tr>
+                    <tr><td>Origin:</td><td>${stickerData.origin}</td></tr>
+                    <tr><td>Destination:</td><td>${stickerData.destination}</td></tr>
+                    <tr><td>Consignee:</td><td>${stickerData.consignee}</td></tr>
+                </table>
+                <div class="barcode-area">
+                    <svg id="sticker-barcode"></svg>
+                </div>
+            </div>
+            <button class="print-btn no-print" onclick="window.print()">Print Sticker</button>
+            <script>
+                JsBarcode("#sticker-barcode", "${stickerData.doc_no}", {
+                    format: "CODE128",
+                    width: 2,
+                    height: 40,
+                    displayValue: true,
+                    fontSize: 12,
+                    margin: 5
+                });
+            <\/script>
+        </body>
+        </html>
+    `);
+    stickerWindow.document.close();
 }
 
 // Confirm Delete
@@ -1108,12 +1190,12 @@ function confirmDelete(docketId) {
     box-shadow: 0 4px 12px rgba(39,174,96,0.3);
 }
 
-/* QR Code */
-.qr-body {
+/* Barcode */
+.barcode-body {
     text-align: center;
 }
 
-.qr-code-container {
+.barcode-container {
     display: flex;
     justify-content: center;
     margin-bottom: 20px;
@@ -1122,29 +1204,35 @@ function confirmDelete(docketId) {
     border-radius: 12px;
 }
 
-#qrcode {
-    display: inline-block;
+#barcode {
+    max-width: 100%;
 }
 
-.qr-info {
+.barcode-info {
     text-align: center;
 }
 
-.qr-info p {
+.barcode-info p {
     margin: 5px 0;
     color: #2c3e50;
 }
 
-.qr-doc-no {
+.barcode-doc-no {
     font-size: 1.2rem;
     font-weight: 700;
     color: #4a90e2;
 }
 
-.btn-download-qr {
+.barcode-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
     margin-top: 15px;
+}
+
+.btn-print-sticker {
     padding: 10px 20px;
-    background: #4a90e2;
+    background: #27ae60;
     color: #fff;
     border: none;
     border-radius: 8px;
@@ -1153,8 +1241,8 @@ function confirmDelete(docketId) {
     transition: all 0.3s;
 }
 
-.btn-download-qr:hover {
-    background: #357abd;
+.btn-print-sticker:hover {
+    background: #229954;
     transform: translateY(-2px);
 }
 
@@ -1428,16 +1516,15 @@ function confirmDelete(docketId) {
         font-size: 0.8rem;
     }
 
-    .qr-section {
+    .barcode-section {
         padding: 12px;
     }
 
-    .qr-code-container {
-        width: 150px;
-        height: 150px;
+    .barcode-container {
+        padding: 15px;
     }
 
-    .qr-title {
+    .barcode-info p {
         font-size: 0.9rem;
     }
 
@@ -1446,7 +1533,7 @@ function confirmDelete(docketId) {
         word-break: break-all;
     }
 
-    .btn-download-qr {
+    .btn-print-sticker {
         padding: 8px 15px;
         font-size: 0.85rem;
     }
@@ -1503,9 +1590,8 @@ function confirmDelete(docketId) {
         font-size: 0.85rem;
     }
 
-    .qr-code-container {
-        width: 130px;
-        height: 130px;
+    .barcode-container {
+        padding: 12px;
     }
 
     .btn-view-pod {
