@@ -772,34 +772,87 @@ function printSticker() {
             <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
             <style>
                 @media print {
-                    @page { size: 100mm 70mm; margin: 2mm; }
-                    body { margin: 0; padding: 0; }
+                    @page { 
+                        size: 70mm 70mm; 
+                        margin: 0; 
+                    }
+                    body { 
+                        margin: 0; 
+                        padding: 0;
+                        width: 70mm;
+                        height: 70mm;
+                    }
                     .no-print { display: none !important; }
+                    .sticker-container {
+                        width: 70mm !important;
+                        height: 70mm !important;
+                        border: none !important;
+                        page-break-after: avoid;
+                        page-break-inside: avoid;
+                    }
                 }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: Arial, sans-serif; font-size: 11px; padding: 5px; }
+                body { 
+                    font-family: Arial, sans-serif; 
+                    font-size: 8px;
+                    width: 70mm;
+                    height: 70mm;
+                }
                 .sticker-container {
-                    width: 100mm;
+                    width: 70mm;
+                    height: 70mm;
                     border: 1px solid #000;
-                    padding: 5px;
+                    padding: 2mm;
                     background: #fff;
+                    display: flex;
+                    flex-direction: column;
                 }
                 .sticker-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     border-bottom: 1px solid #000;
-                    padding-bottom: 3px;
-                    margin-bottom: 5px;
+                    padding-bottom: 1mm;
+                    margin-bottom: 1mm;
                 }
-                .company-name { font-weight: bold; font-size: 10px; }
-                .service-type { font-weight: bold; font-size: 11px; }
-                .sticker-table { width: 100%; border-collapse: collapse; }
-                .sticker-table td { padding: 3px 5px; border-bottom: 1px solid #ccc; font-size: 10px; }
-                .sticker-table td:first-child { font-weight: bold; width: 80px; }
-                .barcode-area { text-align: center; padding: 8px 0; border-top: 1px solid #000; margin-top: 5px; }
-                .barcode-area svg { max-width: 100%; }
-                .print-btn { display: block; margin: 15px auto; padding: 10px 30px; background: #4CAF50; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
+                .company-name { font-weight: bold; font-size: 9px; }
+                .service-type { font-weight: bold; font-size: 8px; }
+                .sticker-table { 
+                    width: 100%; 
+                    border-collapse: collapse;
+                    flex: 1;
+                }
+                .sticker-table td { 
+                    padding: 0.5mm 1mm; 
+                    border-bottom: 1px solid #ddd; 
+                    font-size: 7px;
+                    line-height: 1.2;
+                }
+                .sticker-table td:first-child { 
+                    font-weight: bold; 
+                    width: 25mm;
+                }
+                .barcode-area { 
+                    text-align: center; 
+                    padding: 1mm 0;
+                    border-top: 1px solid #000;
+                    margin-top: auto;
+                }
+                .barcode-area svg { 
+                    max-width: 100%;
+                    height: auto;
+                }
+                .print-btn { 
+                    display: block; 
+                    margin: 15px auto; 
+                    padding: 10px 30px; 
+                    background: #4CAF50; 
+                    color: #fff; 
+                    border: none; 
+                    border-radius: 5px; 
+                    cursor: pointer; 
+                    font-size: 14px; 
+                }
                 .print-btn:hover { background: #45a049; }
             </style>
         </head>
@@ -827,11 +880,11 @@ function printSticker() {
             <script>
                 JsBarcode("#sticker-barcode", "${stickerData.doc_no}", {
                     format: "CODE128",
-                    width: 2,
-                    height: 40,
+                    width: 1.5,
+                    height: 25,
                     displayValue: true,
-                    fontSize: 12,
-                    margin: 5
+                    fontSize: 10,
+                    margin: 2
                 });
             <\/script>
         </body>
