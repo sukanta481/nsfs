@@ -558,22 +558,30 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                                 <i class="fas fa-phone"></i>
                                 Driver Phone
                             </label>
-                            <input type="text" name="driver_phone" id="driver_phone" class="form-control" readonly>
+                            <input type="text" name="driver_phone" id="driver_phone" class="form-control" placeholder="Enter driver phone" style="color: #000 !important;">
+                            <small style="color: #7f8c8d; font-size: 12px;">Auto-filled from dropdown or enter manually</small>
                         </div>
 
                         <div class="form-group">
                             <label>
                                 <i class="fas fa-user"></i>
-                                Select Helper
+                                Helper Name
                             </label>
-                            <select name="helper_id" id="helper_select" class="form-control" style="color: #000 !important; background: #fff !important;">
-                                <option value="">Choose Helper (Optional)</option>
-                                <?php while ($helper = mysqli_fetch_assoc($helpers)): ?>
-                                    <option value="<?= $helper['staff_id'] ?>" data-phone="<?= htmlspecialchars($helper['staff_phone'] ?? '') ?>">
-                                        <?= htmlspecialchars($helper['staff_name']) ?>
+                            <input type="text" name="helper_name" id="helperNameInput" class="form-control" list="helperList" placeholder="Type or select helper name" autocomplete="off" style="color: #000 !important; background: #fff !important;">
+                            <datalist id="helperList">
+                                <?php
+                                mysqli_data_seek($helpers, 0);
+                                while ($helper = mysqli_fetch_assoc($helpers)):
+                                ?>
+                                    <option value="<?= htmlspecialchars($helper['staff_name']) ?>"
+                                            data-id="<?= $helper['staff_id'] ?>"
+                                            data-phone="<?= htmlspecialchars($helper['staff_phone'] ?? '') ?>">
+                                        <?= htmlspecialchars($helper['staff_name']) ?> - <?= htmlspecialchars($helper['staff_phone'] ?? '') ?>
                                     </option>
                                 <?php endwhile; ?>
-                            </select>
+                            </datalist>
+                            <input type="hidden" name="helper_id" id="helperIdHidden">
+                            <small style="color: #7f8c8d; font-size: 12px;">Type manually for external helpers or select from dropdown (Optional)</small>
                         </div>
 
                         <div class="form-group">
@@ -581,7 +589,8 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                                 <i class="fas fa-phone"></i>
                                 Helper Phone
                             </label>
-                            <input type="text" name="helper_phone" id="helper_phone" class="form-control" readonly>
+                            <input type="text" name="helper_phone" id="helper_phone" class="form-control" placeholder="Enter helper phone (optional)" style="color: #000 !important;">
+                            <small style="color: #7f8c8d; font-size: 12px;">Auto-filled from dropdown or enter manually</small>
                         </div>
 
                         <div class="form-group">
@@ -719,15 +728,32 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                 });
             }
             
-            // Setup helper phone auto-fill
-            const helperSelect = document.getElementById('helper_select');
+            // Setup helper phone auto-fill from datalist
+            const helperNameInput = document.getElementById('helperNameInput');
             const helperPhoneInput = document.getElementById('helper_phone');
+            const helperIdHidden = document.getElementById('helperIdHidden');
+            const helperList = document.getElementById('helperList');
             
-            if (helperSelect && helperPhoneInput) {
-                helperSelect.addEventListener('change', function() {
-                    const selectedOption = this.options[this.selectedIndex];
-                    const phone = selectedOption.getAttribute('data-phone') || '';
-                    helperPhoneInput.value = phone;
+            if (helperNameInput && helperPhoneInput && helperIdHidden && helperList) {
+                helperNameInput.addEventListener('input', function() {
+                    const helperName = this.value;
+                    const options = helperList.querySelectorAll('option');
+                    let found = false;
+                    
+                    options.forEach(option => {
+                        if (option.value === helperName) {
+                            const helperId = option.getAttribute('data-id') || '';
+                            const phone = option.getAttribute('data-phone') || '';
+                            helperPhoneInput.value = phone;
+                            helperIdHidden.value = helperId;
+                            found = true;
+                        }
+                    });
+                    
+                    // If manual entry (not in list), clear hidden ID
+                    if (!found) {
+                        helperIdHidden.value = '';
+                    }
                 });
             }
         });
@@ -842,6 +868,10 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                         <div class="form-group">
                             <label>Dimensions (L x W x H)</label>
                             <input type="text" name="dockets[${docketCount}][dimensions]" class="form-control auto-uppercase" placeholder="e.g., 10x20x30 cm" style="color: #000 !important; text-transform: uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label>E-way Bill No. <small style="color: #7f8c8d;">(Optional)</small></label>
+                            <input type="text" name="dockets[${docketCount}][eway_bill]" class="form-control auto-uppercase" placeholder="Enter e-way bill number" style="color: #000 !important; text-transform: uppercase;">
                         </div>
                     </div>
                 </div>

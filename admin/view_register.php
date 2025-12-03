@@ -763,7 +763,7 @@ function printSticker() {
         box: "<?= htmlspecialchars($data['box'] ?? '1') ?>"
     };
     
-    const stickerWindow = window.open('', '_blank', 'width=450,height=400');
+    const stickerWindow = window.open('', '_blank', 'width=280,height=280');
     stickerWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -776,11 +776,12 @@ function printSticker() {
                         size: 70mm 70mm; 
                         margin: 0; 
                     }
-                    body { 
+                    html, body { 
                         margin: 0; 
                         padding: 0;
                         width: 70mm;
                         height: 70mm;
+                        overflow: hidden;
                     }
                     .no-print { display: none !important; }
                     .sticker-container {
@@ -789,14 +790,16 @@ function printSticker() {
                         border: none !important;
                         page-break-after: avoid;
                         page-break-inside: avoid;
+                        overflow: hidden;
                     }
                 }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
+                html, body { 
                     font-family: Arial, sans-serif; 
                     font-size: 8px;
                     width: 70mm;
                     height: 70mm;
+                    overflow: hidden;
                 }
                 .sticker-container {
                     width: 70mm;
@@ -865,7 +868,6 @@ function printSticker() {
                 <table class="sticker-table">
                     <tr><td>Invoice #:</td><td>${stickerData.invoice_no}</td></tr>
                     <tr><td>Ref #:</td><td>${stickerData.doc_no}</td></tr>
-                    <tr><td>Package Ref#:</td><td></td></tr>
                     <tr><td>Package:</td><td>${stickerData.box} of ${stickerData.box}</td></tr>
                     <tr><td>GCN:</td><td>${stickerData.doc_no}</td></tr>
                     <tr><td>Origin:</td><td>${stickerData.origin}</td></tr>

@@ -20,9 +20,12 @@ $helper_id = isset($_POST['helper_id']) ? intval($_POST['helper_id']) : 0;
 $pickup_datetime = isset($_POST['pickup_datetime']) ? mysqli_real_escape_string($conn, $_POST['pickup_datetime']) : '';
 $raw_dockets = isset($_POST['dockets']) ? $_POST['dockets'] : [];
 
-// Get manual input for car and driver (combo box functionality)
+// Get manual input for car, driver and helper (combo box functionality)
 $manual_car_number = isset($_POST['car_number']) ? mysqli_real_escape_string($conn, trim($_POST['car_number'])) : '';
 $manual_driver_name = isset($_POST['driver_name']) ? mysqli_real_escape_string($conn, trim($_POST['driver_name'])) : '';
+$manual_helper_name = isset($_POST['helper_name']) ? mysqli_real_escape_string($conn, trim($_POST['helper_name'])) : '';
+$driver_phone = isset($_POST['driver_phone']) ? mysqli_real_escape_string($conn, trim($_POST['driver_phone'])) : '';
+$helper_phone = isset($_POST['helper_phone']) ? mysqli_real_escape_string($conn, trim($_POST['helper_phone'])) : '';
 
 // Auto-add car to database if it's a new manual entry
 if (!empty($manual_car_number) && !$car_id) {
@@ -48,11 +51,30 @@ if (!empty($manual_driver_name) && !$driver_id) {
         $driver_row = mysqli_fetch_assoc($check_driver);
         $driver_id = $driver_row['staff_id'];
     } else {
-        // Insert new driver (external driver with minimal info)
+        // Insert new driver (external driver with phone if provided)
+        $phone_value = !empty($driver_phone) ? "'$driver_phone'" : "'N/A'";
         $insert_driver = mysqli_query($conn, "INSERT INTO tbl_staff (staff_name, staff_role, staff_phone, office_id, branch_office, active_status)
-                                              VALUES ('$manual_driver_name', 'Driver', 'N/A', 1, 'External', 1)");
+                                              VALUES ('$manual_driver_name', 'Driver', $phone_value, 1, 'External', 1)");
         if ($insert_driver) {
             $driver_id = mysqli_insert_id($conn);
+        }
+    }
+}
+
+// Auto-add helper to staff if it's a new manual entry
+if (!empty($manual_helper_name) && !$helper_id) {
+    // Check if helper already exists
+    $check_helper = mysqli_query($conn, "SELECT staff_id FROM tbl_staff WHERE staff_name = '$manual_helper_name' AND staff_role = 'Helper' LIMIT 1");
+    if ($check_helper && mysqli_num_rows($check_helper) > 0) {
+        $helper_row = mysqli_fetch_assoc($check_helper);
+        $helper_id = $helper_row['staff_id'];
+    } else {
+        // Insert new helper (external helper with phone if provided)
+        $helper_phone_value = !empty($helper_phone) ? "'$helper_phone'" : "'N/A'";
+        $insert_helper = mysqli_query($conn, "INSERT INTO tbl_staff (staff_name, staff_role, staff_phone, office_id, branch_office, active_status)
+                                              VALUES ('$manual_helper_name', 'Helper', $helper_phone_value, 1, 'External', 1)");
+        if ($insert_helper) {
+            $helper_id = mysqli_insert_id($conn);
         }
     }
 }
@@ -80,6 +102,7 @@ if (is_array($raw_dockets)) {
             'weight' => $entry['weight'] ?? 0,
             'box' => $entry['box'] ?? 0,
             'dimensions' => $entry['dimensions'] ?? null,
+            'eway_bill' => $entry['eway_bill'] ?? null,
         ];
     }
 }
@@ -95,9 +118,12 @@ if ($office_id > 0) {
     }
 }
 
-// Validation
-if ($office_id <= 0 || $car_id <= 0 || $driver_id <= 0 || empty($pickup_datetime) || empty($dockets)) {
-    $_SESSION['error_msg'] = 'Please fill all required fields and add at least one docket!';
+// Validation - Allow manual driver/helper names if IDs are not set
+$has_driver = ($driver_id > 0 || !empty($manual_driver_name));
+$has_valid_trip_details = ($office_id > 0 && $car_id > 0 && $has_driver && !empty($pickup_datetime) && !empty($dockets));
+
+if (!$has_valid_trip_details) {
+    $_SESSION['error_msg'] = 'Please fill all required fields (Office, Car, Driver, Pickup Date/Time) and add at least one docket!';
     header('Location: add_trip_modern.php?msg=error');
     exit;
 }
@@ -170,26 +196,39 @@ try {
             
             // Driver data (will auto-sync from tbl_staff WHERE staff_role = 'Driver')
             'driver_id' => $driver_id,
+            'driver_name' => $manual_driver_name ?: null,
+            'driver_phone' => $driver_phone ?: null,
             
             // Helper data (will auto-sync from tbl_staff WHERE staff_role = 'Helper' if provided)
             'helper_id' => ($helper_id > 0) ? $helper_id : null,
+            'helper_name' => $manual_helper_name ?: null,
+            'helper_phone' => $helper_phone ?: null,
             
             // Package information
             'weight' => floatval($docket['weight'] ?? 0),
             'box' => intval($docket['box'] ?? 0),
             'dimensions' => $docket['dimensions'] ?? 'N/A',
+            'eway_bill' => $docket['eway_bill'] ?? null,
             
             // Dates
             'pickup_datetime' => $pickup_datetime,
         ];
+        
+        // Debug log
+        error_log("Attempting to save docket $doc_no with driver_id=$driver_id, manual_driver=$manual_driver_name, helper_id=$helper_id, manual_helper=$manual_helper_name");
         
         // Save docket with auto-sync to docket_details table
         $result = $docketManager->saveDocket($docketData);
         
         if ($result['success']) {
             $success_count++;
+            error_log("Successfully saved docket $doc_no");
         } else {
-            error_log("Failed to save docket $doc_no: " . ($result['error'] ?? 'Unknown error'));
+            // Log detailed error
+            $error_msg = "Failed to save docket $doc_no: " . ($result['error'] ?? 'Unknown error');
+            error_log($error_msg);
+            // Throw exception to rollback transaction
+            throw new Exception($error_msg);
         }
     }
     
