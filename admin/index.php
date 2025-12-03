@@ -134,6 +134,7 @@ require 'top_header.php';
             <option value="In Transit">In Transit</option>
             <option value="Out for Delivery">Out for Delivery</option>
             <option value="Delivered">Delivered</option>
+            <option value="Pending POD">Pending POD</option>
             <option value="Delayed">Delayed</option>
           </select>
           <button class="btn-search" onclick="searchDockets()">

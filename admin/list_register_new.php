@@ -549,7 +549,7 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                             </label>
                             <select name="status" class="form-control">
                                 <option value="">All Status</option>
-                                <option value="Pending" <?= $status == 'Pending' ? 'selected' : '' ?>>Pending</option>
+                                <option value="Pending POD" <?= $status == 'Pending POD' ? 'selected' : '' ?>>Pending POD</option>
                                 <option value="Picked Up" <?= $status == 'Picked Up' ? 'selected' : '' ?>>Picked Up</option>
                                 <option value="In Transit" <?= $status == 'In Transit' ? 'selected' : '' ?>>In Transit</option>
                                 <option value="Out for Delivery" <?= $status == 'Out for Delivery' ? 'selected' : '' ?>>Out for Delivery</option>

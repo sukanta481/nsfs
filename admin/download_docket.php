@@ -586,7 +586,8 @@ $office_email = 'onestepup@northsuperfastservice.com'; // Default email
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <script>
         // Generate Barcode
@@ -599,18 +600,50 @@ $office_email = 'onestepup@northsuperfastservice.com'; // Default email
             margin: 10
         });
         
-        // Download as PDF
+        // Download as PDF (improved: html2canvas + jsPDF to preserve layout and pagination)
         function downloadPDF() {
             const element = document.querySelector('.docket-container');
-            const opt = {
-                margin: 10,
-                filename: 'Docket_<?= $doc_no ?>.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
+            if (!element) return;
+
+            const filename = 'Docket_<?= $doc_no ?>.pdf';
             
-            html2pdf().set(opt).from(element).save();
+            // Access jsPDF from window object
+            const { jsPDF } = window.jspdf;
+
+            // Use html2canvas to render the element to a canvas
+            html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            }).then(function(canvas) {
+                const imgData = canvas.toDataURL('image/png', 1.0);
+
+                // Create jsPDF instance (A4 portrait in mm)
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                // Calculate the image dimensions in mm
+                const imgWidthPx = canvas.width;
+                const imgHeightPx = canvas.height;
+                const imgHeightMm = (imgHeightPx * pdfWidth) / imgWidthPx;
+
+                // Simply add the image to fit the page
+                // If it's larger than one page, scale it down to fit
+                if (imgHeightMm > pdfHeight) {
+                    // Scale down to fit one page
+                    const scaledWidth = (pdfHeight * imgWidthPx) / imgHeightPx;
+                    pdf.addImage(imgData, 'PNG', (pdfWidth - scaledWidth) / 2, 0, scaledWidth, pdfHeight);
+                } else {
+                    // Fits on one page
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeightMm);
+                }
+
+                pdf.save(filename);
+            }).catch(function(err) {
+                console.error('PDF generation error:', err);
+                alert('Failed to generate PDF. Please try printing instead.');
+            });
         }
     </script>
 </body>
