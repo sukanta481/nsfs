@@ -144,14 +144,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
                 // Hash password
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 
-                // Insert user
+                // Get office assignment
+                $office_id = !empty($_POST['office_id']) ? intval($_POST['office_id']) : 'NULL';
+                $can_access_all = isset($_POST['can_access_all_offices']) ? 1 : 0;
+                
+                // Insert user with office info
                 $staff_id_value = $staff_id ? $staff_id : 'NULL';
+                $office_id_value = $office_id !== 'NULL' ? $office_id : 'NULL';
+                
                 $insert_query = "INSERT INTO tbl_users 
-                                (username, email, password, full_name, role_id, staff_id, active_status, created_at) 
+                                (username, email, password, full_name, role_id, staff_id, office_id, can_access_all_offices, active_status, created_at) 
                                 VALUES 
-                                ('$username', '$email', '$hashed_password', '$full_name', $role_id, $staff_id_value, $active_status, NOW())";
+                                ('$username', '$email', '$hashed_password', '$full_name', $role_id, $staff_id_value, $office_id_value, $can_access_all, $active_status, NOW())";
                 
                 if (mysqli_query($conn, $insert_query)) {
+                    $new_user_id = mysqli_insert_id($conn);
+                    
+                    // Insert status permissions if any selected
+                    if (isset($_POST['status_permissions']) && is_array($_POST['status_permissions'])) {
+                        // Check if table exists
+                        $table_check = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_user_status_permissions'");
+                        if ($table_check && mysqli_num_rows($table_check) > 0) {
+                            foreach ($_POST['status_permissions'] as $status_id) {
+                                $status_id = intval($status_id);
+                                mysqli_query($conn, "INSERT INTO tbl_user_status_permissions (user_id, status_id, can_update) VALUES ($new_user_id, $status_id, 1)");
+                            }
+                        }
+                    }
+                    
                     $success = "User created successfully!";
                     // Redirect to users list page after success
                     header("Location: users.php?success=User created successfully");
@@ -180,8 +200,18 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
 $staff_query = "SELECT staff_id, staff_name FROM tbl_staff ORDER BY staff_name";
 $staff_result = mysqli_query($conn, $staff_query);
 
+// Fetch offices for dropdown
+$offices_query = "SELECT office_id, office_name FROM tbl_offices ORDER BY office_name";
+$offices_result = mysqli_query($conn, $offices_query);
+
+// Fetch status hierarchy for permissions
+$statuses_query = "SELECT status_id, status_name, status_order FROM tbl_status_hierarchy ORDER BY status_order";
+$statuses_result = mysqli_query($conn, $statuses_query);
+
 if (isset($_GET['debug']) && $_GET['debug'] === '1') {
   echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ Staff query executed. Rows: " . ($staff_result ? mysqli_num_rows($staff_result) : 'FAILED') . "</div>";
+  echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ Offices query executed. Rows: " . ($offices_result ? mysqli_num_rows($offices_result) : 'FAILED') . "</div>";
+  echo "<div style='background: #d4edda; padding: 10px; margin: 10px; border-left: 4px solid #28a745;'>✓ Statuses query executed. Rows: " . ($statuses_result ? mysqli_num_rows($statuses_result) : 'FAILED') . "</div>";
   echo "<div style='background: #fff3cd; padding: 10px; margin: 10px; border-left: 4px solid #ffc107;'>Now loading template files...</div>";
 }
 
@@ -727,6 +757,90 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
                     ?>
                   </select>
                 </div>
+              </div>
+            </div>
+
+            <!-- OFFICE ACCESS SECTION -->
+            <div class="form-section" style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 20px 0; border-left: 4px solid #3498db;">
+              <h4 style="margin-bottom: 15px; color: #2c3e50;"><i class="fas fa-building"></i> Office/Branch Access</h4>
+              <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Select which branch/office this user belongs to. Users can only see dockets from their assigned office.</p>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="office_id">
+                    <i class="fas fa-map-marker-alt"></i> Assigned Office
+                  </label>
+                  <div class="input-wrapper">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <select name="office_id" id="office_id" class="form-control with-icon">
+                      <option value="">-- All Offices / Head Office --</option>
+                      <?php 
+                      if ($offices_result && mysqli_num_rows($offices_result) > 0):
+                        while ($office = mysqli_fetch_assoc($offices_result)): 
+                      ?>
+                        <option value="<?php echo $office['office_id']; ?>"
+                                <?php echo (!empty($error) && isset($_POST['office_id']) && $_POST['office_id'] == $office['office_id']) ? 'selected' : ''; ?>>
+                          <?php echo htmlspecialchars(ucfirst($office['office_name'])); ?>
+                        </option>
+                      <?php 
+                        endwhile;
+                      endif;
+                      ?>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="checkbox-group" style="margin-top: 10px;">
+                <input type="checkbox" name="can_access_all_offices" id="can_access_all_offices" value="1"
+                       <?php echo (!empty($error) && isset($_POST['can_access_all_offices'])) ? 'checked' : ''; ?>>
+                <label for="can_access_all_offices">
+                  <i class="fas fa-globe"></i> <strong>Access All Offices</strong> - Can view dockets from all branches
+                </label>
+              </div>
+            </div>
+
+            <!-- STATUS UPDATE PERMISSIONS SECTION -->
+            <div class="form-section" style="background: #fff8e6; border-radius: 10px; padding: 20px; margin: 20px 0; border-left: 4px solid #f39c12;">
+              <h4 style="margin-bottom: 15px; color: #2c3e50;"><i class="fas fa-exchange-alt"></i> Status Update Permissions</h4>
+              <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+                <strong>Optional:</strong> Select which statuses this user can update dockets to. 
+                <br>If none selected, user can update to all statuses (based on their role permissions).
+              </p>
+              
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">
+                <?php 
+                if ($statuses_result && mysqli_num_rows($statuses_result) > 0):
+                  mysqli_data_seek($statuses_result, 0);
+                  while ($status = mysqli_fetch_assoc($statuses_result)): 
+                    $status_icon = match($status['status_name']) {
+                      'Pending' => 'fa-clock',
+                      'Confirmed' => 'fa-check-circle',
+                      'Picked Up' => 'fa-box',
+                      'In Transit' => 'fa-truck',
+                      'Out for Delivery' => 'fa-shipping-fast',
+                      'Delivered' => 'fa-check-double',
+                      'Delayed' => 'fa-exclamation-triangle',
+                      'Failed' => 'fa-times-circle',
+                      'Cancelled' => 'fa-ban',
+                      default => 'fa-circle'
+                    };
+                    $is_checked = (!empty($error) && isset($_POST['status_permissions']) && in_array($status['status_id'], $_POST['status_permissions']));
+                ?>
+                  <div class="checkbox-group" style="background: white; padding: 10px; border-radius: 5px; border: 1px solid #eee;">
+                    <input type="checkbox" name="status_permissions[]" 
+                           id="status_<?php echo $status['status_id']; ?>" 
+                           value="<?php echo $status['status_id']; ?>"
+                           <?php echo $is_checked ? 'checked' : ''; ?>>
+                    <label for="status_<?php echo $status['status_id']; ?>" style="font-size: 13px;">
+                      <i class="fas <?php echo $status_icon; ?>"></i>
+                      <?php echo htmlspecialchars($status['status_name']); ?>
+                    </label>
+                  </div>
+                <?php 
+                  endwhile;
+                endif;
+                ?>
               </div>
             </div>
 

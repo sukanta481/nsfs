@@ -5,16 +5,19 @@ ini_set('display_errors', 1);
 
 include('conn.php');
 
-// Fetch companies for dropdown
-$companiesQuery = "SELECT DISTINCT company_name FROM docket_details WHERE company_name IS NOT NULL AND company_name != '' AND company_name != 'N/A' ORDER BY company_name ASC";
+// Get office filter for branch-based access control
+$officeFilter = getOfficeFilter('dd');
+
+// Fetch companies for dropdown (filtered by office if applicable)
+$companiesQuery = "SELECT DISTINCT company_name FROM docket_details dd WHERE company_name IS NOT NULL AND company_name != '' AND company_name != 'N/A' $officeFilter ORDER BY company_name ASC";
 $companiesResult = $conn->query($companiesQuery);
 $companies = [];
 while($row = $companiesResult->fetch_assoc()) {
     $companies[] = $row['company_name'];
 }
 
-// Fetch clients for dropdown
-$clientsQuery = "SELECT DISTINCT client_name FROM docket_details WHERE client_name IS NOT NULL AND client_name != '' AND client_name != 'N/A' ORDER BY client_name ASC";
+// Fetch clients for dropdown (filtered by office if applicable)
+$clientsQuery = "SELECT DISTINCT client_name FROM docket_details dd WHERE client_name IS NOT NULL AND client_name != '' AND client_name != 'N/A' $officeFilter ORDER BY client_name ASC";
 $clientsResult = $conn->query($clientsQuery);
 $clients = [];
 while($row = $clientsResult->fetch_assoc()) {
@@ -86,6 +89,18 @@ if (!empty($consignee)) {
 }
 
 $whereSQL = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
+// Apply office filter for branch-based access control
+// This ensures users only see dockets from their assigned office
+$officeFilterSQL = getOfficeFilter('dd');
+if (!empty($officeFilterSQL)) {
+    if (!empty($whereSQL)) {
+        $whereSQL .= $officeFilterSQL; // Already starts with " AND "
+    } else {
+        // Remove leading " AND " and use as WHERE
+        $whereSQL = "WHERE " . ltrim($officeFilterSQL, ' AND');
+    }
+}
 
 // Build and execute query
 $sql = "SELECT dd.*, 

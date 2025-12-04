@@ -168,6 +168,8 @@ try {
             if ($check_result && mysqli_num_rows($check_result) > 0) {
                 $update_query = "UPDATE docket_details SET 
                     manifest_id = ".intval($manifest_id).",
+                    office_id = ".intval($office_id).",
+                    branch_office = '".mysqli_real_escape_string($conn, $office_name)."',
                     updated_at = NOW()
                     WHERE doc_no='".mysqli_real_escape_string($conn, $d['doc'])."'";
                 mysqli_query($conn, $update_query);

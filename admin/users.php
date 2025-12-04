@@ -15,11 +15,12 @@ if (isset($_GET['error'])) {
     $error_message = htmlspecialchars($_GET['error']);
 }
 
-// Get all users with their roles
-$users_query = "SELECT u.*, r.role_name, s.staff_name 
+// Get all users with their roles and office info
+$users_query = "SELECT u.*, r.role_name, s.staff_name, o.office_name 
                 FROM tbl_users u 
                 LEFT JOIN tbl_roles r ON u.role_id = r.role_id 
                 LEFT JOIN tbl_staff s ON u.staff_id = s.staff_id 
+                LEFT JOIN tbl_offices o ON u.office_id = o.office_id
                 ORDER BY u.created_at DESC";
 $users_result = mysqli_query($conn, $users_query);
 
@@ -138,6 +139,7 @@ require 'top_header.php';
                   <th style="font-weight: 700; padding: 15px;">Full Name</th>
                   <th style="font-weight: 700; padding: 15px;">Email</th>
                   <th style="font-weight: 700; padding: 15px;">Role</th>
+                  <th style="font-weight: 700; padding: 15px;">Office/Branch</th>
                   <th style="font-weight: 700; padding: 15px;">Linked Staff</th>
                   <th style="font-weight: 700; padding: 15px;">Status</th>
                   <th style="font-weight: 700; padding: 15px;">Last Login</th>
@@ -160,6 +162,19 @@ require 'top_header.php';
                     <span style="background: #e3f2fd; color: #1976d2; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">
                       <?= htmlspecialchars($user['role_name'] ?? 'No Role') ?>
                     </span>
+                  </td>
+                  <td style="padding: 15px;">
+                    <?php if (!empty($user['can_access_all_offices']) && $user['can_access_all_offices'] == 1): ?>
+                      <span style="background: #fff3e0; color: #e65100; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                        <i class="fa fa-globe"></i> All Offices
+                      </span>
+                    <?php elseif ($user['office_name']): ?>
+                      <span style="background: #e8f5e9; color: #2e7d32; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                        <i class="fa fa-building"></i> <?= htmlspecialchars($user['office_name']) ?>
+                      </span>
+                    <?php else: ?>
+                      <span style="color: #95a5a6;">-</span>
+                    <?php endif; ?>
                   </td>
                   <td style="padding: 15px;">
                     <?= $user['staff_name'] ? htmlspecialchars($user['staff_name']) : '<span style="color: #95a5a6;">-</span>' ?>

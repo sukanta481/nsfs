@@ -29,7 +29,7 @@ if (file_exists('check_auth.php')) {
       <?php endif; ?>
 
       <!-- Dockets Management -->
-      <?php if (hasPermission('docket_view') || hasPermission('docket_create')): ?>
+      <?php if (hasPermission('docket_view') || hasPermission('docket_create') || hasPermission('docket_status_update')): ?>
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-file-text"></i>

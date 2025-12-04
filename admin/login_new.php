@@ -25,12 +25,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
     if (empty($username) || empty($password)) {
         $error = "Please enter both username and password";
     } else {
-        // Query the new tbl_users table
-        $query = "SELECT u.*, r.role_name 
-                  FROM tbl_users u
-                  LEFT JOIN tbl_roles r ON u.role_id = r.role_id
-                  WHERE u.username = '$username'
-                  LIMIT 1";
+        // Check if office_id column exists in tbl_users (for backward compatibility)
+        $column_check = mysqli_query($conn, "SHOW COLUMNS FROM tbl_users LIKE 'office_id'");
+        $has_office_column = $column_check && mysqli_num_rows($column_check) > 0;
+        
+        // Query the new tbl_users table with office info (if column exists)
+        if ($has_office_column) {
+            $query = "SELECT u.*, r.role_name, o.office_name, o.office_address
+                      FROM tbl_users u
+                      LEFT JOIN tbl_roles r ON u.role_id = r.role_id
+                      LEFT JOIN tbl_offices o ON u.office_id = o.office_id
+                      WHERE u.username = '$username'
+                      LIMIT 1";
+        } else {
+            // Fallback query without office join
+            $query = "SELECT u.*, r.role_name, NULL as office_name, NULL as office_address
+                      FROM tbl_users u
+                      LEFT JOIN tbl_roles r ON u.role_id = r.role_id
+                      WHERE u.username = '$username'
+                      LIMIT 1";
+        }
         
         $result = mysqli_query($conn, $query);
         
@@ -75,6 +89,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['login'])) {
                     $_SESSION['role_id'] = $user['role_id'];
                     $_SESSION['role_name'] = $user['role_name'];
                     $_SESSION['staff_id'] = $user['staff_id'];
+                    
+                    // Office/Branch information for access control
+                    $_SESSION['office_id'] = $user['office_id'];
+                    $_SESSION['office_name'] = $user['office_name'] ?? null;
+                    $_SESSION['can_access_all_offices'] = $user['can_access_all_offices'] ?? 0;
 
                     // Set legacy session variables for compatibility with old system
                     $_SESSION['admin'] = $user['username'];

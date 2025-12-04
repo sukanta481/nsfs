@@ -251,6 +251,8 @@ try {
 
             $update_query = "UPDATE docket_details SET
                 manifest_id = ".intval($manifest_id).",
+                office_id = ".intval($office_id).",
+                branch_office = '".mysqli_real_escape_string($conn, $office_name)."',
                 car_id = ".intval($car_id).",
                 car_number = '".mysqli_real_escape_string($conn, $car_number)."',
                 driver_id = ".intval($driver_id).",

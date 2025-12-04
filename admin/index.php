@@ -15,6 +15,11 @@ require 'top_header.php';
         
         <!-- Stats Cards Grid -->
         <?php
+        // Get office filter for branch-based access control
+        $dashboardOfficeFilter = getOfficeFilter('dd');
+        $officeFilterClause = !empty($dashboardOfficeFilter) ? "WHERE 1=1 $dashboardOfficeFilter" : "";
+        $officeFilterAnd = !empty($dashboardOfficeFilter) ? $dashboardOfficeFilter : "";
+        
         function fetch_count($sql) {
           global $conn;
           $res = @mysqli_query($conn, $sql);
@@ -25,30 +30,46 @@ require 'top_header.php';
           $row = mysqli_fetch_assoc($res);
           return $row['c'] ?? 0;
         }
-        // 1. Total Docket
-        $total_docket = fetch_count("SELECT COUNT(*) as c FROM docket_details");
+        
+        // 1. Total Docket (filtered by office)
+        $total_docket = fetch_count("SELECT COUNT(*) as c FROM docket_details dd $officeFilterClause");
 
         // 2. NON-DRS (Registered, status='Picked Up')
-        $non_drs = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Picked Up'");
+        $non_drs = fetch_count("SELECT COUNT(*) as c FROM docket_details dd WHERE status='Picked Up' $officeFilterAnd");
 
         // 3. In Transit
-        $intransit = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='In Transit'");
+        $intransit = fetch_count("SELECT COUNT(*) as c FROM docket_details dd WHERE status='In Transit' $officeFilterAnd");
 
         // 4. Out For Delivery
-        $out_for_delivery = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Out for Delivery'");
+        $out_for_delivery = fetch_count("SELECT COUNT(*) as c FROM docket_details dd WHERE status='Out for Delivery' $officeFilterAnd");
 
         // 5. Delivered
-        $delivered = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Delivered'");
+        $delivered = fetch_count("SELECT COUNT(*) as c FROM docket_details dd WHERE status='Delivered' $officeFilterAnd");
 
         // 6. Delayed
-        $delayed = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Delayed'");
+        $delayed = fetch_count("SELECT COUNT(*) as c FROM docket_details dd WHERE status='Delayed' $officeFilterAnd");
 
         // 7. Pending POD (status='Pending POD' OR Delivered but proof_of_delivery empty)
-        $pending_pod = fetch_count("SELECT COUNT(*) as c FROM docket_details WHERE status='Pending POD' OR (status='Delivered' AND (proof_of_delivery IS NULL OR proof_of_delivery=''))");
+        $pending_pod = fetch_count("SELECT COUNT(*) as c FROM docket_details dd WHERE (status='Pending POD' OR (status='Delivered' AND (proof_of_delivery IS NULL OR proof_of_delivery=''))) $officeFilterAnd");
 
         // 8. Manifest Count from tbl_manifest
         $manifest_count = fetch_count("SELECT COUNT(*) as c FROM tbl_manifest");
+        
+        // Show office info if user is restricted to specific office
+        $userOffice = getUserOffice();
         ?>
+        
+        <?php if ($userOffice && !isSuperAdmin() && empty($_SESSION['can_access_all_offices'])): ?>
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            <i class="fa fa-building" style="font-size: 18px;"></i>
+            <span>
+                <strong>Viewing data for:</strong> <?php echo htmlspecialchars($userOffice['office_name']); ?>
+                <?php if ($userOffice['office_address']): ?>
+                <span style="opacity: 0.8;"> - <?php echo htmlspecialchars($userOffice['office_address']); ?></span>
+                <?php endif; ?>
+            </span>
+        </div>
+        <?php endif; ?>
         
         <!-- Stats Cards Grid -->
         <div class="stats-grid">

@@ -30,43 +30,53 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
     $doc_row = mysqli_fetch_assoc($doc_result);
     $doc_no = $doc_row['doc_no'] ?? '';
 
-    // Validate status hierarchy - no reverse updates allowed
-    $hierarchy_query = "SELECT old.status_order as old_order, new.status_order as new_order,
-                               new.requires_date, new.requires_pod, new.requires_car_driver,
-                               new.requires_delay_reason, new.is_final
-                        FROM tbl_status_hierarchy old
-                        JOIN tbl_status_hierarchy new
-                        WHERE old.status_name = '$current_status' AND new.status_name = '$new_status'";
-    $hierarchy_result = mysqli_query($conn, $hierarchy_query);
+    // Check if user can access this docket (office-based restriction)
+    if (!canAccessDocket($docket_id)) {
+        $error = "Access denied. You don't have permission to update this docket.";
+    }
+    // Check if user has permission to update to this specific status
+    elseif (!canUpdateToStatus($new_status)) {
+        $error = "You don't have permission to update docket status to '$new_status'.";
+    }
+    else {
+        // Validate status hierarchy - no reverse updates allowed
+        $hierarchy_query = "SELECT old.status_order as old_order, new.status_order as new_order,
+                                   new.requires_date, new.requires_pod, new.requires_car_driver,
+                                   new.requires_delay_reason, new.is_final
+                            FROM tbl_status_hierarchy old
+                            JOIN tbl_status_hierarchy new
+                            WHERE old.status_name = '$current_status' AND new.status_name = '$new_status'";
+        $hierarchy_result = mysqli_query($conn, $hierarchy_query);
 
-    if ($hierarchy_result && mysqli_num_rows($hierarchy_result) > 0) {
-        $hierarchy = mysqli_fetch_assoc($hierarchy_result);
+        if ($hierarchy_result && mysqli_num_rows($hierarchy_result) > 0) {
+            $hierarchy = mysqli_fetch_assoc($hierarchy_result);
 
-        // Check if trying to move backward (reverse update)
-        if ($hierarchy['new_order'] < $hierarchy['old_order'] && $new_status != 'Delayed') {
-            $error = "Cannot reverse status from '$current_status' to '$new_status'. Status updates must move forward only.";
-        }
-        // Check if current status is final
-        else {
-            $final_check = mysqli_query($conn, "SELECT is_final FROM tbl_status_hierarchy WHERE status_name = '$current_status'");
-            if ($final_check) {
-                $final_row = mysqli_fetch_assoc($final_check);
-                if ($final_row['is_final'] == 1) {
-                    $error = "Cannot update status. '$current_status' is a final status and cannot be changed.";
+            // Check if trying to move backward (reverse update)
+            if ($hierarchy['new_order'] < $hierarchy['old_order'] && $new_status != 'Delayed') {
+                $error = "Cannot reverse status from '$current_status' to '$new_status'. Status updates must move forward only.";
+            }
+            // Check if current status is final
+            else {
+                $final_check = mysqli_query($conn, "SELECT is_final FROM tbl_status_hierarchy WHERE status_name = '$current_status'");
+                if ($final_check) {
+                    $final_row = mysqli_fetch_assoc($final_check);
+                    if ($final_row['is_final'] == 1) {
+                        $error = "Cannot update status. '$current_status' is a final status and cannot be changed.";
+                    }
                 }
             }
-        }
 
-        // Validate required fields
-        if (!isset($error)) {
-            if ($hierarchy['requires_date'] && empty($status_date)) {
-                $error = "Date is required for '$new_status' status.";
-            }
-            if ($hierarchy['requires_car_driver'] && (empty($manual_car_number) || empty($manual_driver_name))) {
-                $error = "Both car and driver are required for '$new_status' status.";
-            }
-            if ($hierarchy['requires_delay_reason'] && empty($delay_reason)) {
-                $error = "Delay reason is required for '$new_status' status.";
+            // Validate required fields
+            if (!isset($error)) {
+                if ($hierarchy['requires_date'] && empty($status_date)) {
+                    $error = "Date is required for '$new_status' status.";
+                }
+                if ($hierarchy['requires_car_driver'] && (empty($manual_car_number) || empty($manual_driver_name))) {
+                    $error = "Both car and driver are required for '$new_status' status.";
+                }
+                if ($hierarchy['requires_delay_reason'] && empty($delay_reason)) {
+                    $error = "Delay reason is required for '$new_status' status.";
+                }
             }
         }
     }
@@ -304,6 +314,16 @@ if (!empty($date_to)) {
 
 $where_clause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
+// Apply office filter for branch-based access control
+$officeFilter = getOfficeFilter('d');
+if (!empty($officeFilter)) {
+    if (!empty($where_clause)) {
+        $where_clause .= $officeFilter;
+    } else {
+        $where_clause = "WHERE " . ltrim($officeFilter, ' AND');
+    }
+}
+
 // Get dockets
 $query = "SELECT d.*
           FROM docket_details d
@@ -313,7 +333,7 @@ $query = "SELECT d.*
 
 $result = mysqli_query($conn, $query);
 
-// Get status counts
+// Get status counts (also filtered by office)
 $counts_query = "SELECT
                  COUNT(*) as total,
                  SUM(CASE WHEN status = 'Pending' OR status IS NULL THEN 1 ELSE 0 END) as pending,
@@ -346,6 +366,17 @@ $drivers_result = mysqli_query($conn, $drivers_query);
 // Get delay reasons
 $delay_reasons_query = "SELECT reason_id, reason_text, reason_category FROM tbl_delay_reasons WHERE is_active = 1 ORDER BY reason_category, reason_text";
 $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
+
+// Get allowed statuses for current user
+$allowed_statuses = getAllowedStatuses();
+
+// Get status hierarchy for dropdown rendering
+$status_hierarchy_query = "SELECT status_name, status_order, is_final FROM tbl_status_hierarchy ORDER BY status_order";
+$status_hierarchy_result = mysqli_query($conn, $status_hierarchy_query);
+$all_statuses = [];
+while ($sh = mysqli_fetch_assoc($status_hierarchy_result)) {
+    $all_statuses[$sh['status_name']] = $sh;
+}
 
 require 'top_header.php';
 ?>
@@ -830,16 +861,30 @@ body {
         </label>
         <select name="status" id="newStatus" required class="filter-input" style="width: 100%; font-size: 16px;" onchange="handleStatusChange()">
           <option value="">-- Choose Status --</option>
-          <option value="Pending" data-order="1">Pending</option>
-          <option value="Confirmed" data-order="2">Confirmed</option>
-          <option value="Picked Up" data-order="3">Picked Up</option>
-          <option value="In Transit" data-order="4">In Transit</option>
-          <option value="Delayed" data-order="4" data-allow-anytime="true">Delayed</option>
-          <option value="Out for Delivery" data-order="5">Out for Delivery</option>
-          <option value="Delivered" data-order="6" data-final="true">Delivered</option>
-          <option value="Failed" data-order="6" data-final="true">Failed Delivery</option>
-          <option value="Cancelled" data-order="6" data-final="true">Cancelled</option>
+          <?php 
+          // Only show statuses the user is allowed to update to
+          foreach ($all_statuses as $status_name => $status_info): 
+            if (in_array($status_name, $allowed_statuses)):
+              $is_final = $status_info['is_final'] ? 'true' : 'false';
+              $order = $status_info['status_order'];
+              $allow_anytime = ($status_name === 'Delayed') ? 'true' : 'false';
+          ?>
+          <option value="<?php echo htmlspecialchars($status_name); ?>" 
+                  data-order="<?php echo $order; ?>"
+                  <?php if ($status_name === 'Delayed'): ?>data-allow-anytime="true"<?php endif; ?>
+                  <?php if ($status_info['is_final']): ?>data-final="true"<?php endif; ?>>
+            <?php echo htmlspecialchars($status_name); ?>
+          </option>
+          <?php 
+            endif;
+          endforeach; 
+          ?>
         </select>
+        <?php if (count($allowed_statuses) < count($all_statuses)): ?>
+        <small style="color: #666; display: block; margin-top: 5px;">
+          <i class="fas fa-info-circle"></i> You can only update to statuses assigned to your account.
+        </small>
+        <?php endif; ?>
       </div>
 
       <!-- Conditional: Date Field (for Out for Delivery, Delivered, Delayed) -->

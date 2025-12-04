@@ -186,4 +186,299 @@ function isSuperAdmin() {
     }
     return isset($_SESSION['role_name']) && $_SESSION['role_name'] === 'Super Admin';
 }
+
+/**
+ * Get office filter for SQL queries
+ * Returns WHERE clause fragment to filter by user's office
+ * 
+ * @param string $table_alias - Table alias (e.g., 'dd' for docket_details)
+ * @param string $column - Column name (default: 'office_id')
+ * @return string - SQL WHERE fragment (e.g., " AND dd.office_id = 5")
+ */
+function getOfficeFilter($table_alias = 'dd', $column = 'office_id') {
+    // Super admin or legacy admin sees all
+    if (isSuperAdmin()) {
+        return '';
+    }
+    
+    // User with 'Access All Offices' permission sees all
+    if (isset($_SESSION['can_access_all_offices']) && $_SESSION['can_access_all_offices'] == 1) {
+        return '';
+    }
+    
+    // Check for 'office_view_all' permission
+    if (hasPermission('office_view_all')) {
+        return '';
+    }
+    
+    // If NO office is assigned (NULL), user can see ALL dockets (head office access)
+    if (!isset($_SESSION['office_id']) || empty($_SESSION['office_id']) || $_SESSION['office_id'] === null) {
+        return ''; // No filter = see all
+    }
+    
+    // Restrict to user's assigned office
+    $office_id = intval($_SESSION['office_id']);
+    return " AND {$table_alias}.{$column} = {$office_id}";
+}
+
+/**
+ * Get office filter for branch_office column (string matching)
+ * 
+ * @param string $table_alias - Table alias
+ * @return string - SQL WHERE fragment
+ */
+function getOfficeNameFilter($table_alias = 'dd') {
+    global $conn;
+    
+    // Super admin sees all
+    if (isSuperAdmin()) {
+        return '';
+    }
+    
+    // User with access all offices sees all
+    if (isset($_SESSION['can_access_all_offices']) && $_SESSION['can_access_all_offices'] == 1) {
+        return '';
+    }
+    
+    // Check for 'office_view_all' permission
+    if (hasPermission('office_view_all')) {
+        return '';
+    }
+    
+    // If NO office is assigned (NULL), user can see ALL dockets (head office access)
+    if (!isset($_SESSION['office_id']) || empty($_SESSION['office_id']) || $_SESSION['office_id'] === null) {
+        return ''; // No filter = see all
+    }
+    
+    // Get office name from session or database
+    if (isset($_SESSION['office_name']) && !empty($_SESSION['office_name'])) {
+        $office_name = mysqli_real_escape_string($conn, $_SESSION['office_name']);
+        return " AND {$table_alias}.branch_office = '{$office_name}'";
+    }
+    
+    // If we have office_id, get the name
+    if (!isset($conn)) {
+        require_once 'conn.php';
+    }
+    $office_id = intval($_SESSION['office_id']);
+    $q = mysqli_query($conn, "SELECT office_name FROM tbl_offices WHERE office_id = $office_id");
+    if ($q && $row = mysqli_fetch_assoc($q)) {
+        $_SESSION['office_name'] = $row['office_name'];
+        $office_name = mysqli_real_escape_string($conn, $row['office_name']);
+        return " AND {$table_alias}.branch_office = '{$office_name}'";
+    }
+    
+    return ''; // Fallback to no filter
+}
+
+/**
+ * Check if user can update to a specific status
+ * 
+ * @param string $status_name - The status to check
+ * @return bool
+ */
+function canUpdateToStatus($status_name) {
+    // Super admin can update to any status
+    if (isSuperAdmin()) {
+        return true;
+    }
+    
+    // Check general status update permission first
+    if (!hasPermission('docket_status_update')) {
+        return false;
+    }
+    
+    global $conn;
+    if (!isset($conn)) {
+        require_once 'conn.php';
+    }
+    
+    // Check if status permissions table exists
+    $table_check = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_user_status_permissions'");
+    if (!$table_check || mysqli_num_rows($table_check) == 0) {
+        // Table doesn't exist - allow all statuses for users with docket_status_update permission
+        return true;
+    }
+    
+    // Check if user has any status restrictions defined
+    $user_id = intval($_SESSION['user_id']);
+    $check_query = "SELECT COUNT(*) as cnt FROM tbl_user_status_permissions WHERE user_id = $user_id";
+    $check_result = mysqli_query($conn, $check_query);
+    $check_row = mysqli_fetch_assoc($check_result);
+    
+    if ($check_row['cnt'] == 0) {
+        // No specific restrictions - allow all statuses
+        return true;
+    }
+    
+    // User has specific status permissions - check if this status is allowed
+    // Join with tbl_status_hierarchy to match by status_name
+    $status_escaped = mysqli_real_escape_string($conn, $status_name);
+    $perm_query = "SELECT usp.can_update 
+                   FROM tbl_user_status_permissions usp
+                   JOIN tbl_status_hierarchy sh ON usp.status_id = sh.status_id
+                   WHERE usp.user_id = $user_id AND sh.status_name = '$status_escaped'";
+    $perm_result = mysqli_query($conn, $perm_query);
+    
+    if ($perm_result && $row = mysqli_fetch_assoc($perm_result)) {
+        return $row['can_update'] == 1;
+    }
+    
+    return false; // Status not in user's allowed list
+}
+
+/**
+ * Get list of statuses user can update to
+ * 
+ * @return array - List of status names
+ */
+function getAllowedStatuses() {
+    global $conn;
+    if (!isset($conn)) {
+        require_once 'conn.php';
+    }
+    
+    // Super admin can update to all statuses
+    if (isSuperAdmin()) {
+        $q = mysqli_query($conn, "SELECT status_name FROM tbl_status_hierarchy ORDER BY status_order");
+        $statuses = [];
+        while ($row = mysqli_fetch_assoc($q)) {
+            $statuses[] = $row['status_name'];
+        }
+        return $statuses;
+    }
+    
+    // Check if user has status update permission at all
+    if (!hasPermission('docket_status_update')) {
+        return [];
+    }
+    
+    // Check if status permissions table exists
+    $table_check = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_user_status_permissions'");
+    
+    if ($table_check && mysqli_num_rows($table_check) > 0) {
+        // Check if user has specific status restrictions
+        $user_id = intval($_SESSION['user_id']);
+        $check_query = "SELECT COUNT(*) as cnt FROM tbl_user_status_permissions WHERE user_id = $user_id";
+        $check_result = mysqli_query($conn, $check_query);
+        $check_row = mysqli_fetch_assoc($check_result);
+        
+        if ($check_row['cnt'] > 0) {
+            // User has specific restrictions - only return allowed statuses
+            $perm_query = "SELECT sh.status_name 
+                           FROM tbl_user_status_permissions usp
+                           JOIN tbl_status_hierarchy sh ON usp.status_id = sh.status_id
+                           WHERE usp.user_id = $user_id AND usp.can_update = 1
+                           ORDER BY sh.status_order";
+            $result = mysqli_query($conn, $perm_query);
+            
+            $statuses = [];
+            if ($result) {
+                while ($row = mysqli_fetch_assoc($result)) {
+                    $statuses[] = $row['status_name'];
+                }
+            }
+            return $statuses;
+        }
+    }
+    
+    // No specific restrictions - return all statuses
+    $q = mysqli_query($conn, "SELECT status_name FROM tbl_status_hierarchy ORDER BY status_order");
+    $statuses = [];
+    while ($row = mysqli_fetch_assoc($q)) {
+        $statuses[] = $row['status_name'];
+    }
+    return $statuses;
+}
+
+/**
+ * Check if user can access a specific docket
+ * 
+ * @param int $docket_id - Docket ID
+ * @return bool
+ */
+function canAccessDocket($docket_id) {
+    // Super admin can access all
+    if (isSuperAdmin()) {
+        return true;
+    }
+    
+    // Users with all office access can access all
+    if (isset($_SESSION['can_access_all_offices']) && $_SESSION['can_access_all_offices'] == 1) {
+        return true;
+    }
+    
+    global $conn;
+    if (!isset($conn)) {
+        require_once 'conn.php';
+    }
+    
+    $docket_id = intval($docket_id);
+    $office_filter = getOfficeFilter('dd');
+    
+    $query = "SELECT docket_id FROM docket_details dd WHERE docket_id = $docket_id $office_filter";
+    $result = mysqli_query($conn, $query);
+    
+    return $result && mysqli_num_rows($result) > 0;
+}
+
+/**
+ * Get user's office info
+ * 
+ * @return array|null - Office info or null if not assigned
+ */
+function getUserOffice() {
+    if (isset($_SESSION['office_id']) && !empty($_SESSION['office_id'])) {
+        global $conn;
+        if (!isset($conn)) {
+            require_once 'conn.php';
+        }
+        
+        $office_id = intval($_SESSION['office_id']);
+        $q = mysqli_query($conn, "SELECT * FROM tbl_offices WHERE office_id = $office_id");
+        
+        if ($q && $row = mysqli_fetch_assoc($q)) {
+            return $row;
+        }
+    }
+    return null;
+}
+
+/**
+ * Log user action for audit
+ * 
+ * @param string $action_type - 'login', 'logout', 'view', 'create', 'update', 'delete'
+ * @param string $module - 'docket', 'manifest', 'user', etc.
+ * @param string $record_id - ID of the record
+ * @param array $details - Additional details (will be JSON encoded)
+ */
+function logUserAction($action_type, $module = null, $record_id = null, $details = []) {
+    global $conn;
+    if (!isset($conn)) {
+        require_once 'conn.php';
+    }
+    
+    // Check if log table exists
+    $table_check = mysqli_query($conn, "SHOW TABLES LIKE 'tbl_user_access_log'");
+    if (!$table_check || mysqli_num_rows($table_check) == 0) {
+        return false;
+    }
+    
+    $user_id = intval($_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? 0);
+    $action_type = mysqli_real_escape_string($conn, $action_type);
+    $module = $module ? mysqli_real_escape_string($conn, $module) : 'NULL';
+    $record_id = $record_id ? mysqli_real_escape_string($conn, $record_id) : 'NULL';
+    $details_json = mysqli_real_escape_string($conn, json_encode($details));
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $user_agent = mysqli_real_escape_string($conn, $_SERVER['HTTP_USER_AGENT'] ?? '');
+    
+    $module_val = $module !== 'NULL' ? "'$module'" : 'NULL';
+    $record_val = $record_id !== 'NULL' ? "'$record_id'" : 'NULL';
+    
+    $query = "INSERT INTO tbl_user_access_log 
+              (user_id, action_type, module, record_id, details, ip_address, user_agent) 
+              VALUES ($user_id, '$action_type', $module_val, $record_val, '$details_json', '$ip', '$user_agent')";
+    
+    return mysqli_query($conn, $query);
+}
 ?>
