@@ -12,8 +12,17 @@ error_reporting(E_ALL);
 echo "<html><head><title>Edit User Diagnostic</title></head><body>";
 echo "<h1>Edit User Diagnostic</h1>";
 
-// Test 1: Load conn.php
-echo "<h3>Test 1: Database Connection</h3>";
+// Test 1: PHP Version
+echo "<h3>Test 1: PHP Version</h3>";
+echo "<p>PHP Version: <strong>" . phpversion() . "</strong></p>";
+if (version_compare(PHP_VERSION, '8.0.0', '<')) {
+    echo "<p style='color:orange;'>⚠ PHP 7.x detected - match() syntax NOT supported</p>";
+} else {
+    echo "<p style='color:green;'>✓ PHP 8.x - match() syntax supported</p>";
+}
+
+// Test 2: Load conn.php
+echo "<h3>Test 2: Database Connection</h3>";
 try {
     require 'conn.php';
     if (isset($conn) && $conn instanceof mysqli) {
@@ -24,6 +33,70 @@ try {
 } catch (Exception $e) {
     echo "<p style='color:red;'>✗ Error loading conn.php: " . $e->getMessage() . "</p>";
 }
+
+// Test 3: Check if edit_user.php has match() syntax
+echo "<h3>Test 3: Check edit_user.php for PHP 8 syntax</h3>";
+$content = file_get_contents(__DIR__ . '/edit_user.php');
+if (strpos($content, 'match($status') !== false || strpos($content, "match(\$status") !== false) {
+    echo "<p style='color:red;'>✗ PROBLEM: edit_user.php still contains PHP 8 match() syntax!</p>";
+    echo "<p>The file needs to be updated from GitHub.</p>";
+} else {
+    echo "<p style='color:green;'>✓ No match() syntax found - file is PHP 7 compatible</p>";
+}
+
+// Check for the PHP 7 compatible array
+if (strpos($content, '$status_icons = [') !== false) {
+    echo "<p style='color:green;'>✓ PHP 7 compatible \$status_icons array found</p>";
+} else {
+    echo "<p style='color:red;'>✗ PHP 7 compatible code NOT found - file is OLD version!</p>";
+}
+
+// Test 4: Try to include edit_user.php safely
+echo "<h3>Test 4: Try Loading edit_user.php</h3>";
+echo "<p>Attempting to parse edit_user.php...</p>";
+
+// Check for syntax errors by tokenizing
+$file_content = file_get_contents(__DIR__ . '/edit_user.php');
+$tokens = @token_get_all($file_content);
+if ($tokens === false) {
+    echo "<p style='color:red;'>✗ Failed to tokenize file - syntax error likely</p>";
+} else {
+    echo "<p style='color:green;'>✓ File tokenized successfully (" . count($tokens) . " tokens)</p>";
+}
+
+// Test 5: File info
+echo "<h3>Test 5: File Info</h3>";
+$edit_user_path = __DIR__ . '/edit_user.php';
+$size = filesize($edit_user_path);
+$modified = date('Y-m-d H:i:s', filemtime($edit_user_path));
+echo "<p>File size: " . number_format($size) . " bytes (expected: ~27,000+ bytes for updated version)</p>";
+echo "<p>Last modified: $modified</p>";
+
+// Show first 20 lines
+echo "<h3>First 20 lines of edit_user.php:</h3>";
+$lines = file($edit_user_path, FILE_IGNORE_NEW_LINES);
+echo "<pre style='background:#f5f5f5; padding:10px; font-size:12px;'>";
+for ($i = 0; $i < min(20, count($lines)); $i++) {
+    echo ($i+1) . ": " . htmlspecialchars($lines[$i]) . "\n";
+}
+echo "</pre>";
+
+// Check around line 589 where match() was
+echo "<h3>Lines 580-610 of edit_user.php (where match() issue was):</h3>";
+echo "<pre style='background:#f5f5f5; padding:10px; font-size:12px;'>";
+for ($i = 579; $i < min(610, count($lines)); $i++) {
+    $line = htmlspecialchars($lines[$i]);
+    if (strpos($lines[$i], 'match(') !== false) {
+        echo "<span style='background:red;color:white;'>" . ($i+1) . ": " . $line . "</span>\n";
+    } else {
+        echo ($i+1) . ": " . $line . "\n";
+    }
+}
+echo "</pre>";
+
+echo "<hr><p style='color:red;'><strong>DELETE THIS FILE after debugging!</strong></p>";
+echo "</body></html>";
+?>
 
 // Test 2: Check tables
 echo "<h3>Test 2: Required Tables</h3>";
