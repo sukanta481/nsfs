@@ -85,40 +85,39 @@ if (!isset($_GET['confirm'])) {
         // Step 2: Insert new permissions
         $permissions = [
             // Access Control
-            ['office_view_all', 'Access All Offices', 'Access Control', 'Can access data from all offices/branches'],
+            ['office_view_all', 'Access All Offices', 'Access Control'],
             
             // Dockets
-            ['docket_create', 'Create New Docket/Trip', 'Dockets', 'Create new dockets and trips'],
-            ['docket_status_update', 'Update Docket Status', 'Dockets', 'Update delivery status of dockets'],
-            ['docket_view_all', 'View All Dockets', 'Dockets', 'View all dockets regardless of assignment'],
+            ['docket_create', 'Create New Docket/Trip', 'Dockets'],
+            ['docket_status_update', 'Update Docket Status', 'Dockets'],
+            ['docket_view_all', 'View All Dockets', 'Dockets'],
             
             // Fleet
-            ['staff_manage', 'Staff Management', 'Fleet', 'Manage staff/drivers'],
-            ['vehicle_manage', 'Vehicle Management', 'Fleet', 'Manage vehicles'],
+            ['staff_manage', 'Staff Management', 'Fleet'],
+            ['vehicle_manage', 'Vehicle Management', 'Fleet'],
             
             // Pages
-            ['client_manage', 'Client/Company Management', 'Pages', 'Access clients and companies'],
-            ['dashboard_view', 'Dashboard', 'Pages', 'View dashboard'],
-            ['manifest_manage', 'Manifest Management', 'Pages', 'Create and manage manifests'],
-            ['settings_view', 'Settings & Website', 'Pages', 'Access settings and website management'],
-            ['tracking_management', 'Tracking Management', 'Pages', 'Access tracking features'],
+            ['client_manage', 'Client/Company Management', 'Pages'],
+            ['dashboard_view', 'Dashboard', 'Pages'],
+            ['manifest_manage', 'Manifest Management', 'Pages'],
+            ['settings_view', 'Settings & Website', 'Pages'],
+            ['tracking_management', 'Tracking Management', 'Pages'],
             
             // User Management
-            ['user_create', 'Create Users', 'User Management', 'Create new users'],
-            ['user_delete', 'Delete Users', 'User Management', 'Delete users'],
-            ['user_edit', 'Edit Users', 'User Management', 'Edit user details'],
-            ['role_manage', 'Manage Roles', 'User Management', 'Create and edit roles'],
-            ['user_view', 'View Users', 'User Management', 'View user list'],
+            ['user_create', 'Create Users', 'User Management'],
+            ['user_delete', 'Delete Users', 'User Management'],
+            ['user_edit', 'Edit Users', 'User Management'],
+            ['role_manage', 'Manage Roles', 'User Management'],
+            ['user_view', 'View Users', 'User Management'],
         ];
         
         foreach ($permissions as $p) {
             $key = mysqli_real_escape_string($conn, $p[0]);
             $name = mysqli_real_escape_string($conn, $p[1]);
             $module = mysqli_real_escape_string($conn, $p[2]);
-            $desc = mysqli_real_escape_string($conn, $p[3]);
             
-            $sql = "INSERT INTO tbl_permissions (permission_key, permission_name, module_name, description) 
-                    VALUES ('$key', '$name', '$module', '$desc')";
+            $sql = "INSERT INTO tbl_permissions (permission_key, permission_name, module_name) 
+                    VALUES ('$key', '$name', '$module')";
             
             if (!mysqli_query($conn, $sql)) {
                 throw new Exception("Failed to insert permission: $key - " . mysqli_error($conn));
