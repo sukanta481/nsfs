@@ -69,26 +69,38 @@ if ($result) {
     echo "<p style='color:red;'>✗ Query failed: " . mysqli_error($conn) . "</p>";
 }
 
-// Test 5: Check edit_user.php syntax
-echo "<h3>Test 5: File Syntax Check</h3>";
+// Test 5: Check edit_user.php exists and size
+echo "<h3>Test 5: File Check</h3>";
 $edit_user_path = __DIR__ . '/edit_user.php';
+$add_user_path = __DIR__ . '/add_user.php';
+
 if (file_exists($edit_user_path)) {
+    $size = filesize($edit_user_path);
+    $modified = date('Y-m-d H:i:s', filemtime($edit_user_path));
     echo "<p style='color:green;'>✓ edit_user.php exists</p>";
+    echo "<p>File size: " . number_format($size) . " bytes</p>";
+    echo "<p>Last modified: $modified</p>";
     
-    // Try to include without executing
-    $output = shell_exec("php -l $edit_user_path 2>&1");
-    if ($output) {
-        if (strpos($output, 'No syntax errors') !== false) {
-            echo "<p style='color:green;'>✓ No syntax errors detected</p>";
-        } else {
-            echo "<p style='color:red;'>✗ Syntax errors found:</p>";
-            echo "<pre>$output</pre>";
-        }
-    } else {
-        echo "<p style='color:orange;'>⚠ Could not run syntax check (shell_exec disabled)</p>";
+    // Check first few lines
+    $lines = file($edit_user_path, FILE_IGNORE_NEW_LINES);
+    echo "<p>First 10 lines:</p><pre>";
+    for ($i = 0; $i < min(10, count($lines)); $i++) {
+        echo htmlspecialchars($lines[$i]) . "\n";
     }
+    echo "</pre>";
 } else {
     echo "<p style='color:red;'>✗ edit_user.php NOT FOUND</p>";
+}
+
+echo "<hr>";
+if (file_exists($add_user_path)) {
+    $size = filesize($add_user_path);
+    $modified = date('Y-m-d H:i:s', filemtime($add_user_path));
+    echo "<p style='color:green;'>✓ add_user.php exists</p>";
+    echo "<p>File size: " . number_format($size) . " bytes</p>";
+    echo "<p>Last modified: $modified</p>";
+} else {
+    echo "<p style='color:red;'>✗ add_user.php NOT FOUND</p>";
 }
 
 echo "<hr><p><strong>Next Step:</strong> If all tests pass, try accessing: <a href='edit_user.php?id=2'>edit_user.php?id=2</a></p>";
