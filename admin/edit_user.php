@@ -586,7 +586,8 @@ require 'top_header.php';
                 if ($statuses_result && mysqli_num_rows($statuses_result) > 0):
                   mysqli_data_seek($statuses_result, 0);
                   while ($status = mysqli_fetch_assoc($statuses_result)): 
-                    $status_icon = match($status['status_name']) {
+                    // PHP 7 compatible status icon mapping
+                    $status_icons = [
                       'Pending' => 'fa-clock',
                       'Confirmed' => 'fa-check-circle',
                       'Picked Up' => 'fa-box',
@@ -595,9 +596,9 @@ require 'top_header.php';
                       'Delivered' => 'fa-check-double',
                       'Delayed' => 'fa-exclamation-triangle',
                       'Failed' => 'fa-times-circle',
-                      'Cancelled' => 'fa-ban',
-                      default => 'fa-circle'
-                    };
+                      'Cancelled' => 'fa-ban'
+                    ];
+                    $status_icon = isset($status_icons[$status['status_name']]) ? $status_icons[$status['status_name']] : 'fa-circle';
                     $is_checked = in_array($status['status_id'], $user_status_perms);
                 ?>
                   <div class="checkbox-group" style="background: white; padding: 10px; border-radius: 5px; border: 1px solid #eee;">
