@@ -127,7 +127,7 @@ $roles_query = "SELECT role_id, role_name FROM tbl_roles ORDER BY role_name";
 $roles_result = mysqli_query($conn, $roles_query);
 
 // Fetch staff for dropdown
-$staff_query = "SELECT staff_id, CONCAT(first_name, ' ', last_name) as staff_name FROM tbl_staff ORDER BY first_name";
+$staff_query = "SELECT staff_id, staff_name FROM tbl_staff ORDER BY staff_name";
 $staff_result = mysqli_query($conn, $staff_query);
 
 // Fetch offices for dropdown
