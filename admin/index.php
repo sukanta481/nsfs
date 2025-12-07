@@ -52,8 +52,10 @@ require 'top_header.php';
         // 7. Pending POD (status='Pending POD' OR Delivered but proof_of_delivery empty)
         $pending_pod = fetch_count("SELECT COUNT(*) as c FROM docket_details dd WHERE (status='Pending POD' OR (status='Delivered' AND (proof_of_delivery IS NULL OR proof_of_delivery=''))) $officeFilterAnd");
 
-        // 8. Manifest Count from tbl_manifest
-        $manifest_count = fetch_count("SELECT COUNT(*) as c FROM tbl_manifest");
+        // 8. Manifest Count from tbl_manifest (filtered by office)
+        $manifestOfficeFilter = getOfficeFilter('m');
+        $manifestFilterClause = !empty($manifestOfficeFilter) ? "WHERE 1=1 $manifestOfficeFilter" : "";
+        $manifest_count = fetch_count("SELECT COUNT(*) as c FROM tbl_manifest m $manifestFilterClause");
         
         // Show office info if user is restricted to specific office
         $userOffice = getUserOffice();
@@ -73,6 +75,7 @@ require 'top_header.php';
         
         <!-- Stats Cards Grid -->
         <div class="stats-grid">
+          <?php if (hasPermission('dashboard_view_total_dockets')): ?>
           <!-- Total Dockets Card -->
           <a href="register.php?type=list_register" class="stat-card stat-card-dark">
             <div class="stat-icon"><i class="fa fa-th-list"></i></div>
@@ -81,8 +84,10 @@ require 'top_header.php';
               <div class="stat-value"><?= $total_docket ?></div>
             </div>
           </a>
-          
-          <!-- Pending Card -->
+          <?php endif; ?>
+
+          <?php if (hasPermission('dashboard_view_picked_up')): ?>
+          <!-- Picked Up Card -->
           <a href="register.php?type=list_register&status=Picked%20Up" class="stat-card stat-card-warning">
             <div class="stat-icon"><i class="fa fa-clock-o"></i></div>
             <div class="stat-content">
@@ -90,7 +95,9 @@ require 'top_header.php';
               <div class="stat-value"><?= $non_drs ?></div>
             </div>
           </a>
-          
+          <?php endif; ?>
+
+          <?php if (hasPermission('dashboard_view_in_transit')): ?>
           <!-- In Transit Card -->
           <a href="register.php?type=list_register&status=In%20Transit" class="stat-card stat-card-info">
             <div class="stat-icon"><i class="fa fa-truck"></i></div>
@@ -99,7 +106,9 @@ require 'top_header.php';
               <div class="stat-value"><?= $intransit ?></div>
             </div>
           </a>
-          
+          <?php endif; ?>
+
+          <?php if (hasPermission('dashboard_view_out_for_delivery')): ?>
           <!-- Out for Delivery Card -->
           <a href="register.php?type=list_register&status=Out%20for%20Delivery" class="stat-card stat-card-out-delivery">
             <div class="stat-icon"><i class="fa fa-shipping-fast"></i></div>
@@ -108,7 +117,9 @@ require 'top_header.php';
               <div class="stat-value"><?= $out_for_delivery ?></div>
             </div>
           </a>
-          
+          <?php endif; ?>
+
+          <?php if (hasPermission('dashboard_view_delivered')): ?>
           <!-- Delivered Card -->
           <a href="register.php?type=list_register&status=Delivered" class="stat-card stat-card-success">
             <div class="stat-icon"><i class="fa fa-check-circle"></i></div>
@@ -117,7 +128,9 @@ require 'top_header.php';
               <div class="stat-value"><?= $delivered ?></div>
             </div>
           </a>
+          <?php endif; ?>
 
+          <?php if (hasPermission('dashboard_view_pending_pod')): ?>
           <!-- Pending POD Card -->
           <a href="register.php?type=list_register&status=Pending%20POD" class="stat-card stat-card-pending-pod">
             <div class="stat-icon"><i class="fa fa-file-image-o"></i></div>
@@ -126,7 +139,9 @@ require 'top_header.php';
               <div class="stat-value"><?= $pending_pod ?></div>
             </div>
           </a>
+          <?php endif; ?>
 
+          <?php if (hasPermission('dashboard_view_delayed')): ?>
           <!-- Delayed Card -->
           <a href="register.php?type=list_register&status=Delayed" class="stat-card stat-card-danger">
             <div class="stat-icon"><i class="fa fa-exclamation-triangle"></i></div>
@@ -135,7 +150,9 @@ require 'top_header.php';
               <div class="stat-value"><?= $delayed ?></div>
             </div>
           </a>
+          <?php endif; ?>
 
+          <?php if (hasPermission('dashboard_view_manifest')): ?>
           <!-- Manifest Card -->
           <a href="manifest.php" class="stat-card stat-card-manifest">
             <div class="stat-icon"><i class="fa fa-file-text"></i></div>
@@ -144,6 +161,7 @@ require 'top_header.php';
               <div class="stat-value"><?= $manifest_count ?></div>
             </div>
           </a>
+          <?php endif; ?>
         </div>
 
         <!-- Search and Filter Section -->
@@ -186,10 +204,11 @@ require 'top_header.php';
               </thead>
               <tbody id="docketsTableBody">
                 <?php
-                // Use docket_details table with LEFT JOIN to tbl_offices
-                $sql = "SELECT dd.*, o.office_name 
+                // Use docket_details table with LEFT JOIN to tbl_offices (filtered by office)
+                $sql = "SELECT dd.*, o.office_name
                         FROM docket_details dd
                         LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
+                        $officeFilterClause
                         ORDER BY dd.docket_id DESC LIMIT 20";
                 
                 $result = mysqli_query($conn, $sql);

@@ -3,7 +3,8 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-include('conn.php');
+include_once('conn.php');
+require_once 'check_auth.php'; // Required for getOfficeFilter() and access control functions
 
 // Check if database connection exists
 if(!isset($conn) || !$conn) {
@@ -63,6 +64,13 @@ if (!empty($consignee)) {
     $where[] = "dd.client_name LIKE '%" . mysqli_real_escape_string($conn, $consignee) . "%'";
 }
 
+// Apply office filter for branch-based access control
+$officeFilter = getOfficeFilter('dd');
+if (!empty($officeFilter)) {
+    // Remove the leading " AND " from the filter since we're adding it to the array
+    $where[] = ltrim($officeFilter, ' AND');
+}
+
 $whereSQL = "WHERE " . implode(" AND ", $where);
 
 // Fetch dockets for this trip
@@ -82,14 +90,14 @@ if(!$result) {
 $totalRecords = $result ? mysqli_num_rows($result) : 0;
 
 // Get trip info
-$trip_info_sql = "SELECT 
+$trip_info_sql = "SELECT
                     dd.trip_group_id,
                     dd.car_number,
                     dd.driver_name,
                     dd.driver_phone,
                     MIN(dd.created_at) as created_at
                   FROM docket_details dd
-                  WHERE dd.trip_group_id = '" . mysqli_real_escape_string($conn, $trip_id) . "'
+                  WHERE dd.trip_group_id = '" . mysqli_real_escape_string($conn, $trip_id) . "'" . $officeFilter . "
                   GROUP BY dd.trip_group_id
                   LIMIT 1";
 $trip_info_result = mysqli_query($conn, $trip_info_sql);

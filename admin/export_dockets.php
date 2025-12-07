@@ -1,7 +1,8 @@
 <?php
 session_name('pro');
 session_start();
-include('conn.php');
+include_once('conn.php');
+require_once 'check_auth.php'; // Required for getOfficeFilter() and access control functions
 
 // Check if user is logged in (check both possible session variables)
 if(!isset($_SESSION['aid']) && !isset($_SESSION['admin'])) {
@@ -73,6 +74,16 @@ if (!empty($consignee)) {
 }
 
 $whereSQL = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
+// Apply office filter for branch-based access control
+$officeFilter = getOfficeFilter('dd');
+if (!empty($officeFilter)) {
+    if (!empty($whereSQL)) {
+        $whereSQL .= $officeFilter;
+    } else {
+        $whereSQL = "WHERE " . ltrim($officeFilter, ' AND');
+    }
+}
 
 // Build query
 $sql = "SELECT 

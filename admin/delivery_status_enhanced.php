@@ -741,7 +741,11 @@ body {
           <option value="Pending">Pending</option>
           <option value="Confirmed">Confirmed</option>
           <option value="Picked Up">Picked Up</option>
+          <option value="Manifest Created">Manifest Created</option>
           <option value="In Transit">In Transit</option>
+          <option value="In Transit to Branch">In Transit to Branch</option>
+          <option value="Received">Received at Branch</option>
+          <option value="Arrived at Branch">Arrived at Branch</option>
           <option value="Out for Delivery">Out for Delivery</option>
           <option value="Delivered">Delivered</option>
           <option value="Delayed">Delayed</option>

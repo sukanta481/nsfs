@@ -3,7 +3,8 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-include('conn.php');
+include_once('conn.php');
+require_once 'check_auth.php'; // Required for getOfficeFilter() and access control functions
 
 // Get office filter for branch-based access control
 $officeFilter = getOfficeFilter('dd');
@@ -122,11 +123,19 @@ $totalRecords = $result->num_rows;
 $hasFilters = !empty($fromdate) || !empty($todate) || !empty($status) ||
               !empty($searchValue) || !empty($consignor) || !empty($consignee);
 
-// Fetch cars for status update modal
+// Define main office (Barasat) ID - only main office uses database cars/drivers
+define('BARASAT_OFFICE_ID', 12);
+
+// Check if user is from main office (Barasat) - only they see dropdown from database
+$isMainOffice = ($_SESSION['office_id'] == BARASAT_OFFICE_ID) ||
+                isSuperAdmin() ||
+                (empty($_SESSION['office_id'])); // NULL office_id = head office
+
+// Fetch cars for status update modal (only for main office)
 $cars_query = "SELECT car_id, car_number, car_details FROM tbl_car ORDER BY car_number";
 $cars_result = mysqli_query($conn, $cars_query);
 
-// Fetch drivers for status update modal
+// Fetch drivers for status update modal (only for main office)
 $drivers_query = "SELECT staff_id, staff_name, staff_phone FROM tbl_staff ORDER BY staff_name";
 $drivers_result = mysqli_query($conn, $drivers_query);
 
@@ -786,6 +795,9 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
     </div>
 
     <script>
+        // Office type flag for JavaScript validation
+        const isMainOffice = <?= $isMainOffice ? 'true' : 'false' ?>;
+
         // Reset filters
         function resetFilters() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -1109,6 +1121,14 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                         showError('Vehicle number and Driver name are required for Out for Delivery status');
                         return false;
                     }
+                    // For branch offices, driver phone is also required
+                    if (!isMainOffice) {
+                        const driverPhone = document.getElementById('driverPhoneInput');
+                        if (driverPhone && !driverPhone.value.trim()) {
+                            showError('Driver phone number is required for branch offices');
+                            return false;
+                        }
+                    }
                 }
 
                 if (status === 'Delayed') {
@@ -1281,6 +1301,8 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
 
                     <!-- Conditional: Car and Driver Fields -->
                     <div id="carDriverField" class="conditional-field" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <?php if ($isMainOffice): ?>
+                        <!-- Main Office (Barasat) - Show dropdown with database vehicles/drivers -->
                         <div class="form-group">
                             <label>
                                 <i class="fa fa-car"></i> Vehicle Number <span style="color: #dc3545;">*</span>
@@ -1318,6 +1340,37 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                             <input type="hidden" name="driver_id" id="driverIdHidden">
                             <small style="color: #7f8c8d;">Type manually for external drivers or select from dropdown</small>
                         </div>
+                        <?php else: ?>
+                        <!-- Branch Office - Manual entry only (no database dropdown) -->
+                        <div style="background: #e7f3ff; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #2196F3;">
+                            <small style="color: #1565C0;"><i class="fa fa-info-circle"></i> Enter your branch vehicle and driver details manually</small>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <i class="fa fa-car"></i> Vehicle Number <span style="color: #dc3545;">*</span>
+                            </label>
+                            <input type="text" name="car_number" id="carNumberInput" class="form-control-modern" placeholder="Enter vehicle number (e.g., WB05A7798)" autocomplete="off">
+                            <input type="hidden" name="car_id" id="carIdHidden" value="">
+                            <small style="color: #7f8c8d;">Enter your branch vehicle number</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <i class="fa fa-user"></i> Driver Name <span style="color: #dc3545;">*</span>
+                            </label>
+                            <input type="text" name="driver_name" id="driverNameInput" class="form-control-modern" placeholder="Enter driver name" autocomplete="off">
+                            <input type="hidden" name="driver_id" id="driverIdHidden" value="">
+                            <small style="color: #7f8c8d;">Enter your branch driver name</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <i class="fa fa-phone"></i> Driver Phone <span style="color: #dc3545;">*</span>
+                            </label>
+                            <input type="text" name="driver_phone" id="driverPhoneInput" class="form-control-modern" placeholder="Enter driver phone number" autocomplete="off">
+                            <small style="color: #7f8c8d;">Required for branch offices</small>
+                        </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Conditional: Delay Reason -->

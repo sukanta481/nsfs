@@ -18,7 +18,8 @@
       "Bash(del \"c:\\xampp\\htdocs\\nsfs\\admin\\manifest_save_fixed.php\")",
       "Bash(cp:*)",
       "Bash(rm:*)",
-      "Bash(php:*)"
+      "Bash(php:*)",
+      "Bash(powershell -Command \"(Get-Content ''c:/xampp/htdocs/nsfs/admin/delivery_status_enhanced.php'' -Raw) -replace ''<option value=\"\"Picked Up\"\">Picked Up</option>\\s+<option value=\"\"In Transit\"\">In Transit</option>'', ''<option value=\"\"Picked Up\"\">Picked Up</option>\n          <option value=\"\"Manifest Created\"\">Manifest Created</option>\n          <option value=\"\"In Transit\"\">In Transit</option>\n          <option value=\"\"In Transit to Branch\"\">In Transit to Branch</option>\n          <option value=\"\"Received\"\">Received at Branch</option>\n          <option value=\"\"Arrived at Branch\"\">Arrived at Branch</option>'' | Set-Content ''c:/xampp/htdocs/nsfs/admin/delivery_status_enhanced.php'' -NoNewline\")"
     ],
     "deny": [],
     "ask": []

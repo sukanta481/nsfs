@@ -1,5 +1,6 @@
 <?php
-include('conn.php');
+include_once('conn.php');
+require_once 'check_auth.php'; // Required for getOfficeFilter() and access control functions
 
 // Get filter parameters
 $fromdate = $_REQUEST['fromdate'] ?? '';
@@ -20,6 +21,13 @@ if (!empty($office_id)) {
 
 if (!empty($manifest_no)) {
     $where[] = "m.manifest_no LIKE '%".mysqli_real_escape_string($conn, $manifest_no)."%'";
+}
+
+// Apply office filter for branch-based access control
+$officeFilter = getOfficeFilter('m');
+if (!empty($officeFilter)) {
+    // Remove the leading " AND " from the filter since we're adding it to the array
+    $where[] = ltrim($officeFilter, ' AND');
 }
 
 $whereSQL = (count($where) > 0) ? ("WHERE " . implode(" AND ", $where)) : "";

@@ -50,6 +50,7 @@ $car_number = isset($_POST['car_number']) ? mysqli_real_escape_string($conn, tri
 $car_id = isset($_POST['car_id']) && !empty($_POST['car_id']) ? intval($_POST['car_id']) : NULL;
 $driver_name = isset($_POST['driver_name']) ? mysqli_real_escape_string($conn, trim($_POST['driver_name'])) : NULL;
 $driver_id = isset($_POST['driver_id']) && !empty($_POST['driver_id']) ? intval($_POST['driver_id']) : NULL;
+$driver_phone = isset($_POST['driver_phone']) ? mysqli_real_escape_string($conn, trim($_POST['driver_phone'])) : NULL;
 
 $delay_reason = isset($_POST['delay_reason']) ? mysqli_real_escape_string($conn, $_POST['delay_reason']) : NULL;
 $doc_no = isset($_POST['doc_no']) ? mysqli_real_escape_string($conn, $_POST['doc_no']) : '';
@@ -130,6 +131,22 @@ if (!$error && !$is_bulk) {
             }
         }
     }
+}
+
+// Define main office (Barasat) ID
+if (!defined('BARASAT_OFFICE_ID')) {
+    define('BARASAT_OFFICE_ID', 12);
+}
+
+// Check if user is from main office
+$user_office_id = $_SESSION['office_id'] ?? null;
+$isMainOffice = ($user_office_id == BARASAT_OFFICE_ID) ||
+                (isset($_SESSION['role_name']) && $_SESSION['role_name'] === 'Super Admin') ||
+                empty($user_office_id);
+
+// Validate driver phone for branch offices (for Out for Delivery status)
+if (!$error && $new_status === 'Out for Delivery' && !$isMainOffice && empty($driver_phone)) {
+    $error = "Driver phone number is required for branch offices.";
 }
 
 // For bulk updates, validate required fields based on new status only
@@ -220,8 +237,16 @@ try {
         // Update specific date fields based on status
         if ($new_status === 'Out for Delivery' && $status_date) {
             $update_query .= ", out_for_delivery_date = '$status_date'";
-            if ($car_id) $update_query .= ", car_id = $car_id, car_number = '$car_number'";
-            if ($driver_id) $update_query .= ", driver_id = $driver_id, driver_name = '$driver_name'";
+            // Save car number and driver name (manual entry or from database)
+            if ($car_number) {
+                $update_query .= ", car_number = '$car_number'";
+                if ($car_id) $update_query .= ", car_id = $car_id";
+            }
+            if ($driver_name) {
+                $update_query .= ", driver_name = '$driver_name'";
+                if ($driver_id) $update_query .= ", driver_id = $driver_id";
+                if ($driver_phone) $update_query .= ", driver_phone = '$driver_phone'";
+            }
         } elseif ($new_status === 'Delivered') {
             $delivery_date = $status_date ?? date('Y-m-d H:i:s');
             $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
@@ -245,7 +270,9 @@ try {
         // Build notes for status history
         $history_notes = $remarks;
         if ($car_number && $driver_name) {
-            $history_notes .= "\nVehicle: $car_number, Driver: $driver_name";
+            $driver_info = $driver_name;
+            if ($driver_phone) $driver_info .= " ($driver_phone)";
+            $history_notes .= "\nVehicle: $car_number, Driver: $driver_info";
         }
         if ($delay_reason) {
             $history_notes .= "\nDelay Reason: $delay_reason";

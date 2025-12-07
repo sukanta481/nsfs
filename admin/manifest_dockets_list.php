@@ -1,5 +1,6 @@
 <?php
-include('conn.php');
+include_once('conn.php');
+require_once 'check_auth.php'; // Required for getOfficeFilter() and access control functions
 
 $manifest_id = intval($_GET['manifest_id'] ?? 0);
 
@@ -8,11 +9,12 @@ if ($manifest_id <= 0) {
     exit;
 }
 
-// Get manifest info
+// Get manifest info with office filter for branch-based access control
+$officeFilter = getOfficeFilter('m');
 $manifest_query = "SELECT m.*, o.office_name
                    FROM tbl_manifest m
                    LEFT JOIN tbl_offices o ON m.office_id = o.office_id
-                   WHERE m.manifest_id = $manifest_id";
+                   WHERE m.manifest_id = $manifest_id" . $officeFilter;
 $manifest_result = mysqli_query($conn, $manifest_query);
 $manifest = mysqli_fetch_assoc($manifest_result);
 
