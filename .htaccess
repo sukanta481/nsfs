@@ -1,2 +1,10 @@
-SecFilterEngine Off
-SecFilterScanPOST Off
+# Standard Apache rewrite rules for NSFS
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /nsfs/
+    
+    # Redirect index.php requests to admin
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^admin/(.*)$ admin/$1 [L]
+</IfModule>
