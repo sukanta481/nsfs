@@ -36,9 +36,11 @@ $car_type = $data['car_model'] ?? '';
 $consignor_name = $data['company_name'] ?? '-';
 $consignor_addr = $data['company_address'] ?? '-';
 $consignor_phone = $data['company_phone'] ?? '-';
+$consignor_email = $data['company_email'] ?? '-';
 $consignee_name = $data['client_name'] ?? '-';
 $consignee_addr = $data['client_address'] ?? '-';
 $consignee_phone = $data['client_phone'] ?? '-';
+$consignee_email = $data['client_email'] ?? '-';
 $pickup_location = $data['pickup_location'] ?? '-';
 $delivery_location = $data['delivery_location'] ?? '-';
 $box = $data['box'] ?? '0';
@@ -46,6 +48,7 @@ $weight = $data['weight'] ?? '0.00';
 $dimensions = $data['dimensions'] ?? '-';
 $eway_bill = $data['eway_bill'] ?? '-';
 $invoice_no = $data['invoice_no'] ?? '-';
+$invoice_amount = $data['invoice_amount'] ?? '0.00';
 $item = $data['item'] ?? 'CONSUMER GOODS';
 $service_mode = $data['service_type'] ?? 'SURFACE-NORMAL';
 $trip_group = $data['trip_group_id'] ?? '-';
@@ -451,6 +454,7 @@ $office_email = 'onestepup@northsuperfastservice.com'; // Default email
                 <div class="party-title">Consignor:</div>
                 <div class="party-detail"><?= htmlspecialchars($consignor_name) ?></div>
                 <div class="party-detail"><?= htmlspecialchars($consignor_addr) ?></div>
+                <div class="party-detail"><strong>Phone:</strong> <?= htmlspecialchars($consignor_phone) ?></div>
                 <div class="location-info">
                     <div><strong>From:</strong> <?= htmlspecialchars($pickup_location) ?></div>
                 </div>
@@ -459,6 +463,7 @@ $office_email = 'onestepup@northsuperfastservice.com'; // Default email
                 <div class="party-title">Consignee:</div>
                 <div class="party-detail"><?= htmlspecialchars($consignee_name) ?></div>
                 <div class="party-detail"><?= htmlspecialchars($consignee_addr) ?></div>
+                <div class="party-detail"><strong>Phone:</strong> <?= htmlspecialchars($consignee_phone) ?></div>
                 <div class="location-info">
                     <div><strong>To:</strong> <?= htmlspecialchars($delivery_location) ?></div>
                 </div>
@@ -502,6 +507,7 @@ $office_email = 'onestepup@northsuperfastservice.com'; // Default email
             <thead>
                 <tr>
                     <th>Invoice No</th>
+                    <th>Invoice Amount</th>
                     <th>Eway bill No</th>
                     <th>Description of Goods (said to contain)</th>
                     <th>No of Pkg</th>
@@ -512,6 +518,7 @@ $office_email = 'onestepup@northsuperfastservice.com'; // Default email
             <tbody>
                 <tr>
                     <td><?= htmlspecialchars($invoice_no) ?></td>
+                    <td>₹ <?= number_format((float)$invoice_amount, 2) ?></td>
                     <td><?= htmlspecialchars($eway_bill) ?></td>
                     <td>• <?= htmlspecialchars($item) ?><br>• <?= htmlspecialchars($box) ?> Units (<?= htmlspecialchars($dimensions) ?>)</td>
                     <td><?= htmlspecialchars($box) ?></td>
