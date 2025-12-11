@@ -38,7 +38,9 @@ $next_docket_no = getNextSpecialDocketNo($conn);
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
     $doc_no = mysqli_real_escape_string($conn, trim($_POST['doc_no']));
     $company_name = mysqli_real_escape_string($conn, trim($_POST['company_name']));
+    $company_phone = mysqli_real_escape_string($conn, trim($_POST['company_phone']));
     $client_name = mysqli_real_escape_string($conn, trim($_POST['client_name']));
+    $client_phone = mysqli_real_escape_string($conn, trim($_POST['client_phone']));
     $client_address = mysqli_real_escape_string($conn, trim($_POST['client_address']));
     $client_email = mysqli_real_escape_string($conn, trim($_POST['client_email']));
     $company_email = mysqli_real_escape_string($conn, trim($_POST['company_email']));
@@ -81,13 +83,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
                 
                 $insert_query = "INSERT INTO docket_details (
                 doc_no, doc_type, status, created_at, pickup_datetime,
-                company_name, client_name, client_address, client_email, company_email,
+                company_name, company_phone, client_name, client_phone, client_address, client_email, company_email,
                 item, box, weight, rate, amount, unit_price, pay_to, eway_bill,
                 office_id, branch_office, service_type
             ) VALUES (
                     '$doc_no', 'SPECIAL', 'Pending',
                     '$created_at', '$created_at',
-                    '$company_name', '$client_name', '$client_address', '$client_email', '$company_email',
+                    '$company_name', '$company_phone', '$client_name', '$client_phone', '$client_address', '$client_email', '$company_email',
                     '$item', $box, $weight, $rate, $amount, $rate, $pay_to, '$eway_bill',
                     $office_id_value, '$branch_office', 'Special Docket'
                 )";
@@ -206,6 +208,10 @@ require 'top_header.php';
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
+}
+
+select.form-control {
+    padding: 8px 12px;
 }
 
 .form-control:focus {
@@ -386,7 +392,7 @@ textarea.form-control {
         <div class="special-docket-container">
           
           <div class="form-header">
-            <h2><i class="fas fa-star"></i> Create Special Docket <span class="badge">Premium Service</span></h2>
+            <h2><i class="fas fa-star"></i> Create Special Docket </h2>
             <p>Auto-generated docket number with SP prefix</p>
           </div>
 
@@ -414,11 +420,20 @@ textarea.form-control {
                      value="<?php echo $next_docket_no; ?>" readonly required>
             </div>
 
-            <div class="form-group">
-              <label><i class="fas fa-building"></i> Company Name</label>
-              <input type="text" name="company_name" class="form-control" 
-                     placeholder="Enter company name"
-                     value="<?php echo isset($_POST['company_name']) ? htmlspecialchars($_POST['company_name']) : ''; ?>">
+            <div class="form-row">
+              <div class="form-group">
+                <label><i class="fas fa-building"></i> Company Name</label>
+                <input type="text" name="company_name" class="form-control" 
+                       placeholder="Enter company name"
+                       value="<?php echo isset($_POST['company_name']) ? htmlspecialchars($_POST['company_name']) : ''; ?>">
+              </div>
+
+              <div class="form-group">
+                <label><i class="fas fa-phone"></i> Company Phone</label>
+                <input type="tel" name="company_phone" class="form-control" 
+                       placeholder="Enter company phone"
+                       value="<?php echo isset($_POST['company_phone']) ? htmlspecialchars($_POST['company_phone']) : ''; ?>">
+              </div>
             </div>
 
             <div class="form-row">
@@ -430,11 +445,18 @@ textarea.form-control {
               </div>
 
               <div class="form-group">
-                <label><i class="fas fa-map-marker-alt"></i> Client Address</label>
-                <input type="text" name="client_address" class="form-control" 
-                       placeholder="Enter client address"
-                       value="<?php echo isset($_POST['client_address']) ? htmlspecialchars($_POST['client_address']) : ''; ?>">
+                <label><i class="fas fa-phone"></i> Client Phone</label>
+                <input type="tel" name="client_phone" class="form-control" 
+                       placeholder="Enter client phone"
+                       value="<?php echo isset($_POST['client_phone']) ? htmlspecialchars($_POST['client_phone']) : ''; ?>">
               </div>
+            </div>
+
+            <div class="form-group">
+              <label><i class="fas fa-map-marker-alt"></i> Client Address</label>
+              <input type="text" name="client_address" class="form-control" 
+                     placeholder="Enter client address"
+                     value="<?php echo isset($_POST['client_address']) ? htmlspecialchars($_POST['client_address']) : ''; ?>">
             </div>
 
             <div class="form-row">
@@ -513,10 +535,12 @@ textarea.form-control {
                 <?php
                 if ($offices_result && mysqli_num_rows($offices_result) > 0):
                     while ($office = mysqli_fetch_assoc($offices_result)):
+                        $is_barasat = (stripos($office['office_name'], 'barasat') !== false);
+                        $is_selected = (isset($_POST['office_id']) && $_POST['office_id'] == $office['office_id']) || (!isset($_POST['office_id']) && $is_barasat);
                 ?>
                 <option value="<?php echo $office['office_id']; ?>" 
                         data-name="<?php echo htmlspecialchars($office['office_name']); ?>"
-                        <?php echo (isset($_POST['office_id']) && $_POST['office_id'] == $office['office_id']) ? 'selected' : ''; ?>>
+                        <?php echo $is_selected ? 'selected' : ''; ?>>
                     <?php echo htmlspecialchars($office['office_name']); ?>
                 </option>
                 <?php 
@@ -558,6 +582,11 @@ function updateBranchName() {
     const branchName = selectedOption.getAttribute('data-name') || '';
     document.getElementById('branch_office').value = branchName;
 }
+
+// Set default branch name on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateBranchName(); // Set the default selected office name
+});
 
 // Form validation
 document.getElementById('specialDocketForm').addEventListener('submit', function(e) {
