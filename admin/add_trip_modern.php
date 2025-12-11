@@ -873,6 +873,14 @@ $show_error = isset($_GET['msg']) && $_GET['msg'] === 'error';
                             <label>E-way Bill No. <small style="color: #7f8c8d;">(Optional)</small></label>
                             <input type="text" name="dockets[${docketCount}][eway_bill]" class="form-control auto-uppercase" placeholder="Enter e-way bill number" style="color: #000 !important; text-transform: uppercase;">
                         </div>
+                        <div class="form-group">
+                            <label>Invoice Number <small style="color: #7f8c8d;">(Optional)</small></label>
+                            <input type="text" name="dockets[${docketCount}][invoice_no]" class="form-control auto-uppercase" placeholder="Enter invoice number" style="color: #000 !important; text-transform: uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label>Invoice Amount <small style="color: #7f8c8d;">(Optional)</small></label>
+                            <input type="number" name="dockets[${docketCount}][invoice_amount]" class="form-control" step="0.01" placeholder="0.00" style="color: #000 !important;">
+                        </div>
                     </div>
                 </div>
             `;

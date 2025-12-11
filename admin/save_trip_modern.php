@@ -103,6 +103,8 @@ if (is_array($raw_dockets)) {
             'box' => $entry['box'] ?? 0,
             'dimensions' => $entry['dimensions'] ?? null,
             'eway_bill' => $entry['eway_bill'] ?? null,
+            'invoice_no' => !empty($entry['invoice_no']) ? $entry['invoice_no'] : 'N/A',
+            'invoice_amount' => !empty($entry['invoice_amount']) ? floatval($entry['invoice_amount']) : 0,
         ];
     }
 }
@@ -209,6 +211,8 @@ try {
             'box' => intval($docket['box'] ?? 0),
             'dimensions' => $docket['dimensions'] ?? 'N/A',
             'eway_bill' => $docket['eway_bill'] ?? null,
+            'invoice_no' => !empty($docket['invoice_no']) ? $docket['invoice_no'] : 'N/A',
+            'invoice_amount' => !empty($docket['invoice_amount']) ? floatval($docket['invoice_amount']) : 0,
             
             // Dates
             'pickup_datetime' => $pickup_datetime,

@@ -231,6 +231,7 @@ class DocketDetailsManager {
         $synced['eoa_bill_no'] = $data['eoa_bill_no'] ?? 'N/A';
         $synced['eway_bill'] = $data['eway_bill'] ?? 'N/A';
         $synced['invoice_no'] = $data['invoice_no'] ?? 'N/A';
+        $synced['invoice_amount'] = floatval($data['invoice_amount'] ?? 0);
         
         // Office
         $synced['office_id'] = $data['office_id'] ?? null;
