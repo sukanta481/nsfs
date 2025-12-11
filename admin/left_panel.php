@@ -39,6 +39,7 @@ if (file_exists('check_auth.php')) {
         <ul class="submenu">
           <?php if (hasPermission('docket_create')): ?>
           <li><a href="add_trip_modern.php">Create New Trip</a></li>
+          <li><a href="add_special_docket.php"><i class="fas fa-star"></i> Special Docket</a></li>
           <?php endif; ?>
           <?php if (hasPermission('docket_view')): ?>
           <li><a href="register.php?type=list_register&lp=ac">All Dockets</a></li>
