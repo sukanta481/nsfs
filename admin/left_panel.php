@@ -29,7 +29,7 @@ if (file_exists('check_auth.php')) {
       <?php endif; ?>
 
       <!-- Dockets Management -->
-      <?php if (hasPermission('docket_view') || hasPermission('docket_create') || hasPermission('docket_status_update')): ?>
+      <?php if (hasPermission('docket_view') || hasPermission('docket_create') || hasPermission('docket_status_update') || hasPermission('special_docket_create')): ?>
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-file-text"></i>
@@ -39,6 +39,8 @@ if (file_exists('check_auth.php')) {
         <ul class="submenu">
           <?php if (hasPermission('docket_create')): ?>
           <li><a href="add_trip_modern.php">Create New Trip</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('docket_create') || hasPermission('special_docket_create')): ?>
           <li><a href="add_special_docket.php"><i class="fas fa-star"></i> Special Docket</a></li>
           <?php endif; ?>
           <?php if (hasPermission('docket_view')): ?>

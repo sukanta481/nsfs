@@ -214,6 +214,10 @@ try {
             'invoice_no' => !empty($docket['invoice_no']) ? $docket['invoice_no'] : 'N/A',
             'invoice_amount' => !empty($docket['invoice_amount']) ? floatval($docket['invoice_amount']) : 0,
             
+            // Creator tracking
+            'created_by' => $_SESSION['user_id'] ?? null,
+            'created_by_name' => $_SESSION['username'] ?? 'Unknown',
+            
             // Dates
             'pickup_datetime' => $pickup_datetime,
         ];

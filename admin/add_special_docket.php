@@ -1,6 +1,6 @@
 <?php
 require 'check_auth.php';
-requirePermission('docket_create');
+requirePermission('special_docket_create');
 require 'conn.php';
 
 $error = '';
@@ -56,6 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
     $office_id = !empty($_POST['office_id']) ? intval($_POST['office_id']) : 'NULL';
     $branch_office = mysqli_real_escape_string($conn, trim($_POST['branch_office']));
     
+    // Get current user info
+    $created_by = $_SESSION['user_id'] ?? null;
+    $created_by_name = $_SESSION['username'] ?? 'Unknown';
+    
     // Validation
     if (empty($doc_no) || empty($client_name)) {
         $error = "Please fill in required fields";
@@ -83,14 +87,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
                 $office_id_value = $office_id !== 'NULL' ? $office_id : 'NULL';
                 $created_at = date('Y-m-d H:i:s');
                 
+                $created_by_value = $created_by ? intval($created_by) : 'NULL';
+                
                 $insert_query = "INSERT INTO docket_details (
-                doc_no, doc_type, status, created_at, pickup_datetime,
+                doc_no, doc_type, status, created_at, created_by, created_by_name, pickup_datetime,
                 company_name, company_phone, client_name, client_phone, client_address, client_email, company_email,
                 item, invoice_no, invoice_amount, box, weight, rate, amount, unit_price, pay_to, eway_bill,
                 office_id, branch_office, service_type
             ) VALUES (
                     '$doc_no', 'SPECIAL', 'Pending',
-                    '$created_at', '$created_at',
+                    '$created_at', $created_by_value, '$created_by_name', '$created_at',
                     '$company_name', '$company_phone', '$client_name', '$client_phone', '$client_address', '$client_email', '$company_email',
                     '$item', '$invoice_no', $invoice_amount, $box, $weight, $rate, $amount, $rate, $pay_to, '$eway_bill',
                     $office_id_value, '$branch_office', 'Special Docket'

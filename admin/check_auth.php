@@ -481,4 +481,59 @@ function logUserAction($action_type, $module = null, $record_id = null, $details
     
     return mysqli_query($conn, $query);
 }
+
+/**
+ * Get creator filter for SQL queries
+ * Returns WHERE clause fragment to filter dockets by creator for limited users
+ * 
+ * @param string $table_alias - Table alias (e.g., 'dd' for docket_details)
+ * @return string - SQL WHERE fragment (e.g., " AND dd.created_by = 5")
+ */
+function getCreatorFilter($table_alias = 'dd') {
+    // Super admin sees all
+    if (isSuperAdmin()) {
+        return '';
+    }
+    
+    // Users with specific permissions see all
+    if (hasPermission('docket_edit') || hasPermission('docket_delete') || hasPermission('docket_status_update')) {
+        return '';
+    }
+    
+    // Users with only special_docket_create permission see only their own dockets
+    if (hasPermission('special_docket_create') && !hasPermission('docket_create')) {
+        $user_id = intval($_SESSION['user_id'] ?? 0);
+        if ($user_id > 0) {
+            return " AND {$table_alias}.created_by = {$user_id}";
+        }
+    }
+    
+    return '';
+}
+
+/**
+ * Check if user can view a specific docket
+ * @param int $docket_id - Docket ID
+ * @param int $created_by - Creator user ID from docket
+ * @return bool
+ */
+function canViewDocket($docket_id, $created_by = null) {
+    // Super admin can view all
+    if (isSuperAdmin()) {
+        return true;
+    }
+    
+    // Users with edit/delete/status update permissions can view all
+    if (hasPermission('docket_edit') || hasPermission('docket_delete') || hasPermission('docket_status_update')) {
+        return true;
+    }
+    
+    // Special docket creators can only view their own
+    if (hasPermission('special_docket_create') && !hasPermission('docket_create')) {
+        $user_id = intval($_SESSION['user_id'] ?? 0);
+        return ($created_by && $user_id == $created_by);
+    }
+    
+    return true; // Default: allow viewing
+}
 ?>
