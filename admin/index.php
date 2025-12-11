@@ -17,8 +17,12 @@ require 'top_header.php';
         <?php
         // Get office filter for branch-based access control
         $dashboardOfficeFilter = getOfficeFilter('dd');
-        $officeFilterClause = !empty($dashboardOfficeFilter) ? "WHERE 1=1 $dashboardOfficeFilter" : "";
-        $officeFilterAnd = !empty($dashboardOfficeFilter) ? $dashboardOfficeFilter : "";
+        // Get creator filter for users who can only see their own dockets
+        $dashboardCreatorFilter = getCreatorFilter('dd');
+        // Combine filters
+        $combinedFilter = $dashboardOfficeFilter . $dashboardCreatorFilter;
+        $officeFilterClause = !empty($combinedFilter) ? "WHERE 1=1 $combinedFilter" : "";
+        $officeFilterAnd = !empty($combinedFilter) ? $combinedFilter : "";
         
         function fetch_count($sql) {
           global $conn;

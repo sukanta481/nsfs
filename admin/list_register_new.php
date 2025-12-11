@@ -8,9 +8,13 @@ require_once 'check_auth.php'; // Required for getOfficeFilter() and access cont
 
 // Get office filter for branch-based access control
 $officeFilter = getOfficeFilter('dd');
+// Get creator filter for users who can only see their own dockets
+$creatorFilter = getCreatorFilter('dd');
+// Combine filters
+$combinedFilter = $officeFilter . $creatorFilter;
 
 // Fetch companies for dropdown (filtered by office if applicable)
-$companiesQuery = "SELECT DISTINCT company_name FROM docket_details dd WHERE company_name IS NOT NULL AND company_name != '' AND company_name != 'N/A' $officeFilter ORDER BY company_name ASC";
+$companiesQuery = "SELECT DISTINCT company_name FROM docket_details dd WHERE company_name IS NOT NULL AND company_name != '' AND company_name != 'N/A' $combinedFilter ORDER BY company_name ASC";
 $companiesResult = $conn->query($companiesQuery);
 $companies = [];
 while($row = $companiesResult->fetch_assoc()) {
@@ -18,7 +22,7 @@ while($row = $companiesResult->fetch_assoc()) {
 }
 
 // Fetch clients for dropdown (filtered by office if applicable)
-$clientsQuery = "SELECT DISTINCT client_name FROM docket_details dd WHERE client_name IS NOT NULL AND client_name != '' AND client_name != 'N/A' $officeFilter ORDER BY client_name ASC";
+$clientsQuery = "SELECT DISTINCT client_name FROM docket_details dd WHERE client_name IS NOT NULL AND client_name != '' AND client_name != 'N/A' $combinedFilter ORDER BY client_name ASC";
 $clientsResult = $conn->query($clientsQuery);
 $clients = [];
 while($row = $clientsResult->fetch_assoc()) {
@@ -94,12 +98,15 @@ $whereSQL = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 // Apply office filter for branch-based access control
 // This ensures users only see dockets from their assigned office
 $officeFilterSQL = getOfficeFilter('dd');
-if (!empty($officeFilterSQL)) {
+$creatorFilterSQL = getCreatorFilter('dd');
+$combinedFilterSQL = $officeFilterSQL . $creatorFilterSQL;
+
+if (!empty($combinedFilterSQL)) {
     if (!empty($whereSQL)) {
-        $whereSQL .= $officeFilterSQL; // Already starts with " AND "
+        $whereSQL .= $combinedFilterSQL; // Already starts with " AND "
     } else {
         // Remove leading " AND " and use as WHERE
-        $whereSQL = "WHERE " . ltrim($officeFilterSQL, ' AND');
+        $whereSQL = "WHERE " . ltrim($combinedFilterSQL, ' AND');
     }
 }
 
