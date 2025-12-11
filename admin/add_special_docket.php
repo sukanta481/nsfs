@@ -21,14 +21,14 @@ function getNextSpecialDocketNo($conn) {
             $lastNo = str_replace('SP ', '', $row['doc_no']);
             $nextNo = intval($lastNo) + 1;
         } else {
-            $nextNo = 100001;
+            $nextNo = 3456050;
         }
         
         mysqli_commit($conn);
-        return 'SP ' . str_pad($nextNo, 6, '0', STR_PAD_LEFT);
+        return 'SP ' . $nextNo;
     } catch (Exception $e) {
         mysqli_rollback($conn);
-        return 'SP 100001';
+        return 'SP 3456050';
     }
 }
 
@@ -45,6 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
     $client_email = mysqli_real_escape_string($conn, trim($_POST['client_email']));
     $company_email = mysqli_real_escape_string($conn, trim($_POST['company_email']));
     $item = mysqli_real_escape_string($conn, trim($_POST['item']));
+    $invoice_no = !empty(trim($_POST['invoice_no'])) ? mysqli_real_escape_string($conn, trim($_POST['invoice_no'])) : 'N/A';
+    $invoice_amount = !empty(trim($_POST['invoice_amount'])) ? floatval($_POST['invoice_amount']) : 0;
     $box = intval($_POST['box']);
     $weight = floatval($_POST['weight']);
     $rate = floatval($_POST['rate']);
@@ -84,13 +86,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
                 $insert_query = "INSERT INTO docket_details (
                 doc_no, doc_type, status, created_at, pickup_datetime,
                 company_name, company_phone, client_name, client_phone, client_address, client_email, company_email,
-                item, box, weight, rate, amount, unit_price, pay_to, eway_bill,
+                item, invoice_no, invoice_amount, box, weight, rate, amount, unit_price, pay_to, eway_bill,
                 office_id, branch_office, service_type
             ) VALUES (
                     '$doc_no', 'SPECIAL', 'Pending',
                     '$created_at', '$created_at',
                     '$company_name', '$company_phone', '$client_name', '$client_phone', '$client_address', '$client_email', '$company_email',
-                    '$item', $box, $weight, $rate, $amount, $rate, $pay_to, '$eway_bill',
+                    '$item', '$invoice_no', $invoice_amount, $box, $weight, $rate, $amount, $rate, $pay_to, '$eway_bill',
                     $office_id_value, '$branch_office', 'Special Docket'
                 )";
                 
@@ -110,6 +112,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit'])) {
         }
     }
 }
+
+// Fetch companies for dropdown
+$companies_query = "SELECT company_id, company_title, company_phone FROM tbl_company ORDER BY company_title ASC";
+$companies_result = mysqli_query($conn, $companies_query);
 
 // Fetch offices for dropdown
 $offices_query = "SELECT office_id, office_name FROM tbl_offices ORDER BY office_name";
@@ -423,15 +429,31 @@ textarea.form-control {
             <div class="form-row">
               <div class="form-group">
                 <label><i class="fas fa-building"></i> Company Name</label>
-                <input type="text" name="company_name" class="form-control" 
-                       placeholder="Enter company name"
+                <select name="company_id" id="company_id" class="form-control" onchange="fillCompanyDetails()">
+                  <option value="">Select Company</option>
+                  <?php
+                  if ($companies_result && mysqli_num_rows($companies_result) > 0):
+                      while ($company = mysqli_fetch_assoc($companies_result)):
+                  ?>
+                  <option value="<?php echo $company['company_id']; ?>" 
+                          data-name="<?php echo htmlspecialchars($company['company_title']); ?>"
+                          data-phone="<?php echo htmlspecialchars($company['company_phone'] ?? ''); ?>"
+                          <?php echo (isset($_POST['company_id']) && $_POST['company_id'] == $company['company_id']) ? 'selected' : ''; ?>>
+                      <?php echo htmlspecialchars($company['company_title']); ?>
+                  </option>
+                  <?php 
+                      endwhile;
+                  endif;
+                  ?>
+                </select>
+                <input type="hidden" name="company_name" id="company_name" 
                        value="<?php echo isset($_POST['company_name']) ? htmlspecialchars($_POST['company_name']) : ''; ?>">
               </div>
 
               <div class="form-group">
                 <label><i class="fas fa-phone"></i> Company Phone</label>
-                <input type="tel" name="company_phone" class="form-control" 
-                       placeholder="Enter company phone"
+                <input type="tel" name="company_phone" id="company_phone" class="form-control" 
+                       placeholder="Auto-filled from company" readonly
                        value="<?php echo isset($_POST['company_phone']) ? htmlspecialchars($_POST['company_phone']) : ''; ?>">
               </div>
             </div>
@@ -479,6 +501,22 @@ textarea.form-control {
               <label><i class="fas fa-box"></i> Item Description</label>
               <textarea name="item" class="form-control" rows="3" 
                         placeholder="Enter item description"><?php echo isset($_POST['item']) ? htmlspecialchars($_POST['item']) : ''; ?></textarea>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label><i class="fas fa-file-invoice"></i> Invoice Number</label>
+                <input type="text" name="invoice_no" class="form-control" 
+                       placeholder="Enter invoice number (optional)"
+                       value="<?php echo isset($_POST['invoice_no']) ? htmlspecialchars($_POST['invoice_no']) : ''; ?>">
+              </div>
+
+              <div class="form-group">
+                <label><i class="fas fa-rupee-sign"></i> Invoice Amount</label>
+                <input type="number" name="invoice_amount" class="form-control" 
+                       placeholder="0.00" min="0" step="0.01"
+                       value="<?php echo isset($_POST['invoice_amount']) ? htmlspecialchars($_POST['invoice_amount']) : ''; ?>">
+              </div>
             </div>
 
             <div class="form-row">
@@ -581,6 +619,16 @@ function updateBranchName() {
     const selectedOption = select.options[select.selectedIndex];
     const branchName = selectedOption.getAttribute('data-name') || '';
     document.getElementById('branch_office').value = branchName;
+}
+
+function fillCompanyDetails() {
+    const select = document.getElementById('company_id');
+    const selectedOption = select.options[select.selectedIndex];
+    const companyName = selectedOption.getAttribute('data-name') || '';
+    const companyPhone = selectedOption.getAttribute('data-phone') || '';
+    
+    document.getElementById('company_name').value = companyName;
+    document.getElementById('company_phone').value = companyPhone;
 }
 
 // Set default branch name on page load
