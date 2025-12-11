@@ -110,6 +110,19 @@ $office_email = 'onestepup@northsuperfastservice.com'; // Default email
             height: auto;
         }
         
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo-company-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            letter-spacing: 0.5px;
+        }
+        
         .company-info {
             text-align: right;
             font-size: 10px;
@@ -402,7 +415,10 @@ $office_email = 'onestepup@northsuperfastservice.com'; // Default email
         
         <!-- Header -->
         <div class="docket-header">
-            <img src="images/logo.png" class="company-logo" alt="Company Logo">
+            <div class="logo-section">
+                <img src="images/logo.png" class="company-logo" alt="Company Logo">
+                <div class="logo-company-name">North Super Fast Service</div>
+            </div>
             <div class="company-info">
                 <div class="company-name"><?= strtoupper(htmlspecialchars($office_name)) ?></div>
                 <div><?= htmlspecialchars($office_addr) ?></div>
@@ -482,14 +498,12 @@ $office_email = 'onestepup@northsuperfastservice.com'; // Default email
         <!-- Package Details -->
         <div class="package-section">
             <div class="package-row">
-                <div class="package-cell">Volume</div>
                 <div class="package-cell">Gross Wt</div>
                 <div class="package-cell">Chargeable Wt</div>
                 <div class="package-cell">Service Modes:</div>
                 <div class="package-cell">Freight:</div>
             </div>
             <div class="package-data">
-                <div class="package-data-cell"><?= htmlspecialchars($dimensions) ?></div>
                 <div class="package-data-cell"><?= htmlspecialchars($weight) ?> Kgs</div>
                 <div class="package-data-cell"><?= htmlspecialchars($weight) ?> Kgs</div>
                 <div class="package-data-cell"><?= htmlspecialchars($service_mode) ?></div>
