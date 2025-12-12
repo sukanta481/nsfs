@@ -506,17 +506,16 @@ function getCreatorFilter($table_alias = 'dd') {
         return '';
     }
     
-    // Users with specific permissions see all
-    if (hasPermission('docket_edit') || hasPermission('docket_delete') || hasPermission('docket_status_update')) {
+    // Users with docket_view_all permission see all dockets (no filter)
+    if (hasPermission('docket_view_all')) {
         return '';
     }
     
-    // Users with only special_docket_create permission see only their own dockets
-    if (hasPermission('special_docket_create') && !hasPermission('docket_create')) {
-        $user_id = intval($_SESSION['user_id'] ?? 0);
-        if ($user_id > 0) {
-            return " AND {$table_alias}.created_by = {$user_id}";
-        }
+    // All other users (including those with edit/delete) see only their own dockets
+    // This applies to users with special_docket_create, docket_edit, etc.
+    $user_id = intval($_SESSION['user_id'] ?? 0);
+    if ($user_id > 0) {
+        return " AND {$table_alias}.created_by = {$user_id}";
     }
     
     return '';

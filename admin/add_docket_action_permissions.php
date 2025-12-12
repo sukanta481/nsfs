@@ -18,9 +18,10 @@ echo "<p>This script will add granular permissions for docket actions...</p><hr>
 
 // Define new permissions
 $new_permissions = [
+    ['docket_view_all', 'View All Dockets (Unfiltered)', 'Dockets', 'Can view ALL dockets without creator filter - gives full access to all dockets regardless of who created them'],
     ['docket_view_details', 'View Docket Details', 'Dockets', 'Can view individual docket details'],
     ['docket_download_pdf', 'Download Docket PDF', 'Dockets', 'Can download docket as PDF'],
-    ['docket_edit', 'Edit Dockets', 'Dockets', 'Can edit docket information'],
+    ['docket_edit', 'Edit Dockets', 'Dockets', 'Can edit docket information (will still see only own dockets unless docket_view_all is granted)'],
     ['docket_delete', 'Delete Dockets', 'Dockets', 'Can delete dockets'],
     ['trip_view', 'View All Trips', 'Trips', 'Can view all trips list'],
 ];

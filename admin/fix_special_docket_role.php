@@ -27,8 +27,8 @@ echo "<div style='color: green;'>✅ Found 'Special Docket Creator' role (ID: $r
 
 // Define permissions that should be REMOVED (broad access)
 $permissions_to_remove = [
-    'docket_view',          // This allows seeing ALL dockets
-    'docket_edit',          // This allows editing ALL dockets
+    'docket_view',          // This allows seeing dockets menu
+    'docket_view_all',      // This allows seeing ALL dockets without filter
     'docket_delete',        // This allows deleting dockets
     'docket_status_update', // This allows updating status
     'trip_view',            // Don't need to see all trips
@@ -38,8 +38,9 @@ $permissions_to_remove = [
 $permissions_to_keep = [
     'dashboard_view',
     'special_docket_create',
-    'docket_view_details',  // Can view their own dockets
+    'docket_view_details',  // Can view their own dockets (filtered)
     'docket_download_pdf',  // Can download PDFs of their dockets
+    'docket_edit',          // Can edit their own dockets (filtered)
 ];
 
 echo "<h3>Step 1: Removing Broad Permissions</h3>";
