@@ -22,6 +22,7 @@ $new_permissions = [
     ['docket_download_pdf', 'Download Docket PDF', 'Dockets', 'Can download docket as PDF'],
     ['docket_edit', 'Edit Dockets', 'Dockets', 'Can edit docket information'],
     ['docket_delete', 'Delete Dockets', 'Dockets', 'Can delete dockets'],
+    ['trip_view', 'View All Trips', 'Trips', 'Can view all trips list'],
 ];
 
 echo "<h3>Step 1: Adding New Permissions</h3>";

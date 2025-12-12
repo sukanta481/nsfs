@@ -208,11 +208,13 @@ require 'top_header.php';
               </thead>
               <tbody id="docketsTableBody">
                 <?php
-                // Use docket_details table with LEFT JOIN to tbl_offices (filtered by office)
+                // Use docket_details table with LEFT JOIN to tbl_offices (filtered by office and creator)
+                // Apply combined filter to show only dockets user has access to
+                $whereClause = !empty($combinedFilter) ? "WHERE 1=1 $combinedFilter" : "";
                 $sql = "SELECT dd.*, o.office_name
                         FROM docket_details dd
                         LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
-                        $officeFilterClause
+                        $whereClause
                         ORDER BY dd.docket_id DESC LIMIT 20";
                 
                 $result = mysqli_query($conn, $sql);
@@ -246,18 +248,29 @@ require 'top_header.php';
                       <td><?= $created_date ?></td>
                       <td>
                         <div class="action-buttons">
+                          <?php if (hasPermission('docket_view_details') || hasPermission('docket_view')): ?>
                           <a href="register.php?type=view_register&id=<?= $row['docket_id'] ?>" class="action-btn btn-view" title="View">
                             <i class="fa fa-eye"></i>
                           </a>
+                          <?php endif; ?>
+                          
+                          <?php if (hasPermission('docket_download_pdf') || hasPermission('docket_view')): ?>
                           <a href="download_docket.php?docket_id=<?= $row['docket_id'] ?>" class="action-btn btn-download" title="Download PDF" target="_blank">
                             <i class="fa fa-download"></i>
                           </a>
+                          <?php endif; ?>
+                          
+                          <?php if (hasPermission('docket_edit')): ?>
                           <a href="edit_register_new.php?docket_id=<?= $row['docket_id'] ?>" class="action-btn btn-edit" title="Edit">
                             <i class="fa fa-edit"></i>
                           </a>
+                          <?php endif; ?>
+                          
+                          <?php if (hasPermission('docket_delete')): ?>
                           <a href="javascript:void(0)" onclick="confirmDelete(<?= $row['docket_id'] ?>)" class="action-btn btn-delete" title="Delete">
                             <i class="fa fa-trash"></i>
                           </a>
+                          <?php endif; ?>
                         </div>
                       </td>
                     </tr>
