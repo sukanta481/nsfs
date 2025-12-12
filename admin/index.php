@@ -202,6 +202,7 @@ require 'top_header.php';
                   <th>Receiver</th>
                   <th>Service Type</th>
                   <th>Status</th>
+                  <th>Created By</th>
                   <th>Created</th>
                   <th>Actions</th>
                 </tr>
@@ -211,16 +212,17 @@ require 'top_header.php';
                 // Use docket_details table with LEFT JOIN to tbl_offices (filtered by office and creator)
                 // Apply combined filter to show only dockets user has access to
                 $whereClause = !empty($combinedFilter) ? "WHERE 1=1 $combinedFilter" : "";
-                $sql = "SELECT dd.*, o.office_name
+                $sql = "SELECT dd.*, o.office_name, u.full_name as creator_name, u.username as creator_username
                         FROM docket_details dd
                         LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
+                        LEFT JOIN tbl_users u ON dd.created_by = u.user_id
                         $whereClause
                         ORDER BY dd.docket_id DESC LIMIT 20";
                 
                 $result = mysqli_query($conn, $sql);
                 
                 if(!$result) {
-                  echo '<tr><td colspan="7" style="text-align:center;padding:40px;color:#e74c3c;">
+                  echo '<tr><td colspan="8" style="text-align:center;padding:40px;color:#e74c3c;">
                         <strong>Database Error:</strong> '.htmlspecialchars(mysqli_error($conn)).'</td></tr>';
                 } else if(mysqli_num_rows($result) > 0) {
                   while($row = mysqli_fetch_assoc($result)) {
@@ -245,6 +247,7 @@ require 'top_header.php';
                       <td><?= htmlspecialchars($receiver_name) ?></td>
                       <td><?= htmlspecialchars($row['service_type'] ?? 'Standard') ?></td>
                       <td><span class="status-badge <?= $status_class ?>"><?= htmlspecialchars($row['status'] ?? 'Pending') ?></span></td>
+                      <td><?= htmlspecialchars($row['creator_name'] ?: $row['creator_username'] ?: 'N/A') ?></td>
                       <td><?= $created_date ?></td>
                       <td>
                         <div class="action-buttons">
@@ -277,7 +280,7 @@ require 'top_header.php';
                     <?php
                   }
                 } else {
-                  echo '<tr><td colspan="7" style="text-align:center;padding:50px;font-size:1.1rem;color:#7f8c8d;">
+                  echo '<tr><td colspan="8" style="text-align:center;padding:50px;font-size:1.1rem;color:#7f8c8d;">
                         <i class="fa fa-inbox" style="font-size:3rem;display:block;margin-bottom:15px;opacity:0.5;"></i>
                         <strong>No dockets found</strong></td></tr>';
                 }

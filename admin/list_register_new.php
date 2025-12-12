@@ -29,6 +29,22 @@ while($row = $clientsResult->fetch_assoc()) {
     $clients[] = $row['client_name'];
 }
 
+// Fetch offices for dropdown
+$officesQuery = "SELECT office_id, office_name FROM tbl_offices ORDER BY office_name ASC";
+$officesResult = $conn->query($officesQuery);
+$offices = [];
+while($row = $officesResult->fetch_assoc()) {
+    $offices[] = $row;
+}
+
+// Fetch users (creators) for dropdown (filtered by office if applicable)
+$usersQuery = "SELECT user_id, full_name, username FROM tbl_users ORDER BY full_name ASC";
+$usersResult = $conn->query($usersQuery);
+$users = [];
+while($row = $usersResult->fetch_assoc()) {
+    $users[] = $row;
+}
+
 // Get filter parameters
 $fromdate = $_GET['fromdate'] ?? '';
 $todate = $_GET['todate'] ?? '';
@@ -37,6 +53,8 @@ $searchType = $_GET['searchType'] ?? '';
 $searchValue = $_GET['searchValue'] ?? '';
 $consignor = trim($_GET['consignor'] ?? '');
 $consignee = trim($_GET['consignee'] ?? '');
+$filterOffice = $_GET['office'] ?? '';
+$filterCreator = $_GET['creator'] ?? '';
 
 // Build WHERE clause
 $where = [];
@@ -93,6 +111,20 @@ if (!empty($consignee)) {
     $types .= 's';
 }
 
+// Office filter
+if (!empty($filterOffice)) {
+    $where[] = "dd.office_id = ?";
+    $params[] = $filterOffice;
+    $types .= 'i';
+}
+
+// Creator filter
+if (!empty($filterCreator)) {
+    $where[] = "dd.created_by = ?";
+    $params[] = $filterCreator;
+    $types .= 'i';
+}
+
 $whereSQL = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
 // Apply office filter for branch-based access control
@@ -112,9 +144,12 @@ if (!empty($combinedFilterSQL)) {
 
 // Build and execute query
 $sql = "SELECT dd.*, 
-               o.office_name as branch_office_name
+               o.office_name as branch_office_name,
+               u.full_name as creator_name,
+               u.username as creator_username
         FROM docket_details dd
         LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
+        LEFT JOIN tbl_users u ON dd.created_by = u.user_id
         $whereSQL
         ORDER BY dd.pickup_datetime DESC, dd.docket_id DESC";
 
@@ -128,7 +163,8 @@ $totalRecords = $result->num_rows;
 
 // Check for filter activity
 $hasFilters = !empty($fromdate) || !empty($todate) || !empty($status) ||
-              !empty($searchValue) || !empty($consignor) || !empty($consignee);
+              !empty($searchValue) || !empty($consignor) || !empty($consignee) ||
+              !empty($filterOffice) || !empty($filterCreator);
 
 // Define main office (Barasat) ID - only main office uses database cars/drivers
 define('BARASAT_OFFICE_ID', 12);
@@ -636,6 +672,38 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                                 <?php endforeach; ?>
                             </select>
                         </div>
+
+                        <!-- Office Filter -->
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-building"></i>
+                                Office
+                            </label>
+                            <select name="office" class="form-control">
+                                <option value="">All Offices</option>
+                                <?php foreach($offices as $office): ?>
+                                <option value="<?= $office['office_id'] ?>" <?= $filterOffice == $office['office_id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($office['office_name']) ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <!-- Created By Filter -->
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-user-circle"></i>
+                                Created By
+                            </label>
+                            <select name="creator" class="form-control">
+                                <option value="">All Users</option>
+                                <?php foreach($users as $user): ?>
+                                <option value="<?= $user['user_id'] ?>" <?= $filterCreator == $user['user_id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($user['full_name'] ?: $user['username']) ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="btn-group">
@@ -691,6 +759,7 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                                 <th>Consignor</th>
                                 <th>Consignee</th>
                                 <th>Delivery Address</th>
+                                <th>Created By</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -730,6 +799,7 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                                 <td><?= htmlspecialchars($row['company_name'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($row['client_name'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($row['client_address'] ?? '-') ?></td>
+                                <td><?= htmlspecialchars($row['creator_name'] ?: $row['creator_username'] ?: 'N/A') ?></td>
                                 <td>
                                     <span class="badge <?= $badgeClass ?>"
                                           style="cursor: pointer;"
@@ -802,6 +872,32 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                             <i class="fas fa-user"></i> Consignee: <?= htmlspecialchars($consignee) ?>
                         </span>
                         <?php endif; ?>
+                        <?php if($filterOffice): 
+                            $officeName = '';
+                            foreach($offices as $office) {
+                                if($office['office_id'] == $filterOffice) {
+                                    $officeName = $office['office_name'];
+                                    break;
+                                }
+                            }
+                        ?>
+                        <span class="filter-tag">
+                            <i class="fas fa-building"></i> Office: <?= htmlspecialchars($officeName) ?>
+                        </span>
+                        <?php endif; ?>
+                        <?php if($filterCreator): 
+                            $creatorName = '';
+                            foreach($users as $user) {
+                                if($user['user_id'] == $filterCreator) {
+                                    $creatorName = $user['full_name'] ?: $user['username'];
+                                    break;
+                                }
+                            }
+                        ?>
+                        <span class="filter-tag">
+                            <i class="fas fa-user-circle"></i> Created By: <?= htmlspecialchars($creatorName) ?>
+                        </span>
+                        <?php endif; ?>
                     </div>
                     <?php else: ?>
                     <p>No dockets have been created yet.</p>
@@ -843,6 +939,8 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
             if(urlParams.get('searchValue')) params.push('searchValue=' + urlParams.get('searchValue'));
             if(urlParams.get('consignor')) params.push('consignor=' + urlParams.get('consignor'));
             if(urlParams.get('consignee')) params.push('consignee=' + urlParams.get('consignee'));
+            if(urlParams.get('office')) params.push('office=' + urlParams.get('office'));
+            if(urlParams.get('creator')) params.push('creator=' + urlParams.get('creator'));
             
             const exportUrl = 'export_dockets.php?' + params.join('&');
             window.open(exportUrl, '_blank');
