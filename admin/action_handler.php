@@ -27,6 +27,9 @@ switch($action) {
     exit;
 
     case 'delete_docket':
+        // Check permission for delete
+        requirePermission('docket_delete');
+        
         $docket_id = intval($_GET['docket_id'] ?? 0);
         
         if ($docket_id > 0) {

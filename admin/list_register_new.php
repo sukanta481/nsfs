@@ -740,18 +740,29 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                                 </td>
                                 <td>
                                     <div class="action-btns">
+                                        <?php if (hasPermission('docket_view_details') || hasPermission('docket_view')): ?>
                                         <a href="view_register.php?docket_id=<?= $row['docket_id'] ?>" class="action-btn view" title="View">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (hasPermission('docket_download_pdf') || hasPermission('docket_view')): ?>
                                         <a href="download_docket.php?docket_id=<?= $row['docket_id'] ?>" class="action-btn download" title="Download PDF" target="_blank">
                                             <i class="fas fa-download"></i>
                                         </a>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (hasPermission('docket_edit')): ?>
                                         <a href="edit_register_new.php?docket_id=<?= $row['docket_id'] ?>" class="action-btn edit" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (hasPermission('docket_delete')): ?>
                                         <button onclick="deleteDocket(<?= $row['docket_id'] ?>)" class="action-btn delete" title="Delete">
                                             <i class="fas fa-trash"></i>
                                         </button>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

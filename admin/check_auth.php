@@ -125,7 +125,7 @@ function getUserPermissions() {
 }
 
 // Function to require permission (redirect if not authorized)
-function requirePermission($permission_key) {
+function requirePermission($permission_key, ...$fallback_permissions) {
     // Legacy admin bypasses permission check
     if (isset($_SESSION['is_legacy_admin']) && $_SESSION['is_legacy_admin']) {
         return;
@@ -148,7 +148,18 @@ function requirePermission($permission_key) {
         return;
     }
     
-    if (!hasPermission($permission_key)) {
+    // Check primary permission or any fallback permissions
+    $has_access = hasPermission($permission_key);
+    if (!$has_access && !empty($fallback_permissions)) {
+        foreach ($fallback_permissions as $fallback) {
+            if (hasPermission($fallback)) {
+                $has_access = true;
+                break;
+            }
+        }
+    }
+    
+    if (!$has_access) {
         header('HTTP/1.1 403 Forbidden');
         echo "<!DOCTYPE html>
         <html>

@@ -1,4 +1,6 @@
 <?php
+require 'check_auth.php';
+requirePermission('docket_edit');
 require 'top_header.php';
 require 'conn.php';
 require_once 'DocketDetailsManager.php';

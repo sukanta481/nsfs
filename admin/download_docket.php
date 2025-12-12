@@ -1,4 +1,6 @@
 <?php
+require('check_auth.php');
+requirePermission('docket_download_pdf', 'docket_view');
 require('conn.php');
 $docket_id = intval($_REQUEST['docket_id'] ?? 0);
 
