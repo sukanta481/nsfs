@@ -2,6 +2,9 @@
 // Enhanced Delivery History with Detailed Notes
 // This file provides comprehensive tracking with office details, manifest info, and rich history
 
+// Include database connection and configurations
+include("include/apps_top.php");
+
 // Detect AJAX
 $is_ajax = (
     (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') ||
