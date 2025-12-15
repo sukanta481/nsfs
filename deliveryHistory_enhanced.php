@@ -94,7 +94,7 @@ if ($get_shipping_details_row) {
     // Fallback to branch_office if creator office not available
     $pickup_office = $creator_office ?: ($get_shipping_details_row['branch_office'] ?? $get_shipping_details_row['current_location'] ?? '');
     
-    // Build creation message
+    // Build creation message with vehicle and driver info
     if (!empty($creator_name) && !empty($creator_office)) {
         // Both creator name and office are available
         $creation_details = "Docket created by <strong>{$creator_name}</strong> from <strong>{$creator_office}</strong> office";
@@ -107,6 +107,15 @@ if ($get_shipping_details_row) {
     } else {
         // Fallback
         $creation_details = "Docket created" . ($pickup_office ? " at <strong>{$pickup_office}</strong>" : "");
+    }
+    
+    // Add pickup vehicle and driver info
+    $pickup_car = $get_shipping_details_row['car_number'] ?? '';
+    $pickup_driver = $get_shipping_details_row['driver_name'] ?? '';
+    if (!empty($pickup_car) || !empty($pickup_driver)) {
+        $creation_details .= "<br>";
+        if (!empty($pickup_car)) $creation_details .= "Vehicle: <strong>{$pickup_car}</strong>";
+        if (!empty($pickup_driver)) $creation_details .= (!empty($pickup_car) ? ", " : "") . "Driver: <strong>{$pickup_driver}</strong>";
     }
     
     $timeline[] = [
@@ -1015,44 +1024,41 @@ if (!$is_ajax) { ?>
                         </div>
                         
                         <div class="detail-item">
-                            <span class="detail-label">Client Name</span>
+                            <span class="detail-label">Consignee Name</span>
                             <span class="detail-value"><?= htmlspecialchars($client_name) ?></span>
                         </div>
                         
-                        <?php if ($delivery_agent != '-'): ?>
                         <div class="detail-item">
-                            <span class="detail-label">Delivery Agent</span>
-                            <span class="detail-value"><?= htmlspecialchars($delivery_agent) ?></span>
+                            <span class="detail-label">Invoice Number</span>
+                            <span class="detail-value"><?php 
+                                $invoice_no = $get_shipping_details_row['invoice_no'] ?? '';
+                                echo !empty($invoice_no) && $invoice_no != 'N/A' ? htmlspecialchars($invoice_no) : 'N/A';
+                            ?></span>
                         </div>
-                        <?php endif; ?>
                         
-                        <?php if ($contact_number != '-'): ?>
                         <div class="detail-item">
-                            <span class="detail-label">Contact Number</span>
-                            <span class="detail-value">
-                                <a href="tel:<?= htmlspecialchars($contact_number) ?>" style="color: #5551c0; text-decoration: none;">
-                                    <?= htmlspecialchars($contact_number) ?>
-                                </a>
-                            </span>
+                            <span class="detail-label">Invoice Amount</span>
+                            <span class="detail-value"><?php 
+                                $invoice_amount = $get_shipping_details_row['invoice_amount'] ?? 0;
+                                echo !empty($invoice_amount) && $invoice_amount > 0 ? '₹ ' . number_format($invoice_amount, 2) : 'N/A';
+                            ?></span>
                         </div>
-                        <?php endif; ?>
                         
-                        <?php if ($car_no != '-'): ?>
                         <div class="detail-item">
-                            <span class="detail-label">Vehicle No.</span>
-                            <span class="detail-value"><?= htmlspecialchars($car_no) ?></span>
+                            <span class="detail-label">E-Way Bill</span>
+                            <span class="detail-value"><?php 
+                                $eway_bill = $get_shipping_details_row['eway_bill'] ?? '';
+                                echo !empty($eway_bill) ? htmlspecialchars($eway_bill) : 'N/A';
+                            ?></span>
                         </div>
-                        <?php endif; ?>
                         
-                        <?php 
-                        $destination = $get_shipping_details_row['client_address'] ?? '';
-                        if (!empty($destination) && $destination != '-'): 
-                        ?>
                         <div class="detail-item">
                             <span class="detail-label">Destination</span>
-                            <span class="detail-value"><?= htmlspecialchars($destination) ?></span>
+                            <span class="detail-value"><?php 
+                                $destination = $get_shipping_details_row['client_address'] ?? '';
+                                echo !empty($destination) && $destination != '-' ? htmlspecialchars($destination) : 'N/A';
+                            ?></span>
                         </div>
-                        <?php endif; ?>
                     </div>
                 </div>
             </div>
