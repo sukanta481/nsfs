@@ -73,6 +73,20 @@ if (empty($new_status)) {
     $error = 'Status is required';
 }
 
+// NEW: Check if docket is manifested and "In Transit" - must be received first
+if (!$error && !$is_bulk) {
+    $manifest_check = "SELECT dd.status, dd.manifest_id, m.manifest_no 
+                       FROM docket_details dd
+                       LEFT JOIN tbl_manifest m ON dd.manifest_id = m.manifest_id
+                       WHERE dd.docket_id = $docket_id";
+    $manifest_result = mysqli_query($conn, $manifest_check);
+    if ($manifest_result && $manifest_row = mysqli_fetch_assoc($manifest_result)) {
+        if ($manifest_row['status'] == 'In Transit' && $manifest_row['manifest_id']) {
+            $error = "This docket is in transit (Manifest: " . $manifest_row['manifest_no'] . "). It must be marked as 'Received at Destination' first before updating status.";
+        }
+    }
+}
+
 // Get doc_no if not provided (only for single update)
 if (!$is_bulk && empty($doc_no)) {
     $doc_query = "SELECT doc_no, status FROM docket_details WHERE docket_id = $docket_id";

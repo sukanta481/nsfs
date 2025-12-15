@@ -57,12 +57,22 @@ if (file_exists('check_auth.php')) {
       <?php endif; ?>
 
       <!-- Manifest -->
-      <?php if (hasPermission('manifest_view')): ?>
-      <li class="menu-item">
-        <a href="manifest.php" class="menu-link">
+      <?php if (hasPermission('manifest_view') || hasPermission('manifest_receive')): ?>
+      <li class="menu-item has-submenu">
+        <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-clipboard"></i>
           <span>Manifest</span>
+          <i class="fa fa-chevron-down submenu-arrow"></i>
         </a>
+        <ul class="submenu">
+          <?php if (hasPermission('manifest_view')): ?>
+          <li><a href="manifest.php"><i class="fa fa-plus"></i> Create Manifest</a></li>
+          <li><a href="register.php?type=list_manifest"><i class="fa fa-list"></i> All Manifests</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('manifest_receive')): ?>
+          <li><a href="receive_manifest.php"><i class="fa fa-inbox"></i> Receive Manifest</a></li>
+          <?php endif; ?>
+        </ul>
       </li>
       <?php endif; ?>
 

@@ -1,4 +1,7 @@
 <?php
+// Prevent multiple inclusions
+if (defined('NSFS_SESSIONS_PHP_LOADED')) return;
+define('NSFS_SESSIONS_PHP_LOADED', true);
 
 if ( (bool)ini_get('register_globals') == false ) {
     @ini_set('session.bug_compat_42', 1);

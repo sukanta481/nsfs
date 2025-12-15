@@ -1,4 +1,7 @@
 <?php
+// Prevent multiple inclusions
+if (defined('NSFS_FUNCTION_PHP_LOADED')) return;
+define('NSFS_FUNCTION_PHP_LOADED', true);
 
 function random_number($min = null, $max = null) {
     static $seeded;

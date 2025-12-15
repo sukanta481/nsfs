@@ -1,4 +1,8 @@
 <?php
+// Prevent multiple inclusions
+if (defined('NSFS_DATABASE_PHP_LOADED')) return;
+define('NSFS_DATABASE_PHP_LOADED', true);
+
 // --- Configuration Section ---
 
 // Load environment variables
