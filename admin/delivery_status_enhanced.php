@@ -40,12 +40,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
         if ($hierarchy['new_order'] < $hierarchy['old_order'] && $new_status != 'Delayed') {
             $error = "Cannot reverse status from '$current_status' to '$new_status'. Status updates must move forward only.";
         }
-        // Check if current status is final
+        // Check if current status is final (but allow POD upload for Delivered status)
         else {
             $final_check = mysqli_query($conn, "SELECT is_final FROM tbl_status_hierarchy WHERE status_name = '$current_status'");
             if ($final_check) {
                 $final_row = mysqli_fetch_assoc($final_check);
-                if ($final_row['is_final'] == 1) {
+                // Allow POD upload even if status is final (when current and new status are the same)
+                $is_pod_upload_only = ($current_status == 'Delivered' && $new_status == 'Delivered' && isset($_FILES['pod_file']));
+                if ($final_row['is_final'] == 1 && !$is_pod_upload_only) {
                     $error = "Cannot update status. '$current_status' is a final status and cannot be changed.";
                 }
             }
