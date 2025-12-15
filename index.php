@@ -20,7 +20,7 @@ $get_page_row=mysqli_fetch_array($get_page_rs);
 <a href="<?= $get_page_row['banner_link'];?>" class="cnctBtn"><i><img src="<?= SITE_URL;?>assets/images/vwSer.svg" alt="vwSer" /></i>View Our Services</a>
 					<div class="trkBx">
 						<h6>Track Your Shipment Here</h6>
-						<form id="trakform" action="<?= SITE_URL;?>deliveryHistory.php" method="get">
+						<form id="trakform" action="<?= SITE_URL;?>deliveryHistory_enhanced.php" method="get">
 							<input type="text" name="doc_no" placeholder="Enter your Tracking ID(Doc No.)" required="required"/>
 							<input type="submit" value="Track" />
 						</form>

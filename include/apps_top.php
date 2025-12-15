@@ -1,5 +1,11 @@
 <?php
-session_start();
+// Prevent multiple inclusions
+if (defined('NSFS_APPS_TOP_PHP_LOADED')) return;
+define('NSFS_APPS_TOP_PHP_LOADED', true);
+
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 require 'admin/includes/define.php';
 //$PHP_SELF = (isset($_SERVER['PHP_SELF'])? $_SERVER['PHP_SELF']:$_SERVER['SCRIPT_NAME']);
 require  'admin/includes/functions/database.php';

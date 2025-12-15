@@ -2,16 +2,19 @@
 // Enhanced Delivery History with Detailed Notes
 // This file provides comprehensive tracking with office details, manifest info, and rich history
 
-// Include database connection and configurations
-include("include/apps_top.php");
-
-// Detect AJAX
+// Detect AJAX first (before any includes)
 $is_ajax = (
     (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') ||
     (isset($_POST['ajax']) && $_POST['ajax'] == '1')
 );
 
-if (!$is_ajax) include("include/header.php");
+// Include header which loads apps_top.php (database, sessions, functions)
+if (!$is_ajax) {
+    include("include/header.php");
+} else {
+    // For AJAX requests, include apps_top directly
+    include("include/apps_top.php");
+}
 
 $doc_no = isset($_GET['doc_no']) ? mysqli_real_escape_string($conn, trim($_GET['doc_no'])) : '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['doc_no'])) {
@@ -24,36 +27,39 @@ $has_manifest = false;
 $manifest_info = [];
 
 if ($doc_no) {
-    // Query from docket_details table with all related info
+    // Query from docket_details table with creator's office info
     $get_shipping_details_sql = "SELECT dd.*, 
-                                         o.office_name as pickup_office, 
-                                         o.office_address as pickup_office_address,
-                                         o.contact_number as pickup_office_phone,
-                                         u.full_name as creator_name, 
-                                         u.username as creator_username
+                                         u.full_name as creator_full_name,
+                                         u.username as creator_username,
+                                         o.office_name as creator_office_name
                                   FROM docket_details dd
-                                  LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
                                   LEFT JOIN tbl_users u ON dd.created_by = u.user_id
+                                  LEFT JOIN tbl_offices o ON u.office_id = o.office_id
                                   WHERE dd.doc_no='" . $doc_no . "'";
     $get_shipping_details_rs = mysqli_query($conn, $get_shipping_details_sql);
-    $get_shipping_details_row = mysqli_fetch_assoc($get_shipping_details_rs);
+    
+    if ($get_shipping_details_rs && mysqli_num_rows($get_shipping_details_rs) > 0) {
+        $get_shipping_details_row = mysqli_fetch_assoc($get_shipping_details_rs);
+    } else {
+        $get_shipping_details_row = false;
+    }
 }
 
 if ($get_shipping_details_row) {
     $docket_id = $get_shipping_details_row['docket_id'];
     
-    // Check manifest info
+    // Check manifest info with office names - corrected based on actual table structure
     $manifest_check_sql = "SELECT m.*, 
-                                   from_office.office_name as from_office_name,
-                                   from_office.contact_number as from_office_phone,
-                                   to_office.office_name as to_office_name,
-                                   to_office.office_address as to_office_address,
-                                   to_office.contact_number as to_office_phone
-                            FROM manifest_dockets md
-                            LEFT JOIN manifest m ON md.manifest_id = m.manifest_id
-                            LEFT JOIN tbl_offices from_office ON m.from_office = from_office.office_id
-                            LEFT JOIN tbl_offices to_office ON m.to_office = to_office.office_id
-                            WHERE md.docket_id = '$docket_id'
+                                   md.doc_no,
+                                   o.office_name as manifest_office_name,
+                                   c.car_number,
+                                   d.driver_name
+                            FROM tbl_manifest_details md
+                            LEFT JOIN tbl_manifest m ON md.manifest_id = m.manifest_id
+                            LEFT JOIN tbl_offices o ON m.office_id = o.office_id
+                            LEFT JOIN tbl_car c ON m.car_id = c.car_id
+                            LEFT JOIN tbl_driver d ON m.driver_id = d.driver_id
+                            WHERE md.doc_no = '$doc_no'
                             LIMIT 1";
     $manifest_check_rs = @mysqli_query($conn, $manifest_check_sql);
     
@@ -62,18 +68,10 @@ if ($get_shipping_details_row) {
         $manifest_info = mysqli_fetch_assoc($manifest_check_rs);
     }
     
-    // Fetch comprehensive tracking history
-    $history_sql = "SELECT dsh.*, 
-                           o.office_name, 
-                           o.contact_number as office_phone,
-                           o.office_address,
-                           u.full_name as updated_by_full_name,
-                           u.username as updated_by_username
-                    FROM docket_status_history dsh
-                    LEFT JOIN tbl_offices o ON dsh.office_id = o.office_id
-                    LEFT JOIN tbl_users u ON dsh.updated_by = u.user_id
-                    WHERE dsh.docket_id = '$docket_id'
-                    ORDER BY dsh.changed_at ASC";
+    // Fetch tracking history from docket_status_history
+    $history_sql = "SELECT * FROM docket_status_history 
+                    WHERE docket_id = '$docket_id'
+                    ORDER BY changed_at ASC";
     $history_rs = @mysqli_query($conn, $history_sql);
     
     if ($history_rs && mysqli_num_rows($history_rs) > 0) {
@@ -86,58 +84,93 @@ if ($get_shipping_details_row) {
     $timeline = [];
     $current_status = $get_shipping_details_row['status'] ?? '';
     
-    // 1. PICKUP STATUS
-    $pickup_time = $get_shipping_details_row['pickup_datetime'] ?? $get_shipping_details_row['created_at'];
-    $pickup_location = $get_shipping_details_row['pickup_location'] ?? $get_shipping_details_row['pickup_office'] ?? '';
-    $creator_name = $get_shipping_details_row['creator_name'] ?: $get_shipping_details_row['creator_username'] ?: 'System';
+    // 1. PICKUP STATUS - Blue color for pickup/creation
+    $pickup_time = $get_shipping_details_row['pickup_datetime'] ?? $get_shipping_details_row['created_at'] ?? '';
+    
+    // Get creator info from joined tables
+    $creator_name = $get_shipping_details_row['creator_full_name'] ?: $get_shipping_details_row['creator_username'] ?: '';
+    $creator_office = $get_shipping_details_row['creator_office_name'] ?? '';
+    
+    // Fallback to branch_office if creator office not available
+    $pickup_office = $creator_office ?: ($get_shipping_details_row['branch_office'] ?? $get_shipping_details_row['current_location'] ?? '');
+    
+    // Build creation message
+    if (!empty($creator_name) && !empty($creator_office)) {
+        // Both creator name and office are available
+        $creation_details = "Docket created by <strong>{$creator_name}</strong> from <strong>{$creator_office}</strong> office";
+    } elseif (!empty($creator_name)) {
+        // Only creator name available
+        $creation_details = "Docket created by <strong>{$creator_name}</strong>";
+    } elseif (!empty($creator_office)) {
+        // Only office available
+        $creation_details = "Docket created by <strong>{$creator_office}</strong> office";
+    } else {
+        // Fallback
+        $creation_details = "Docket created" . ($pickup_office ? " at <strong>{$pickup_office}</strong>" : "");
+    }
     
     $timeline[] = [
         'status' => 'Picked Up',
         'icon' => 'fa-box-open',
         'time' => $pickup_time ? date('d M Y, h:i A', strtotime($pickup_time)) : '',
-        'location' => $pickup_location,
-        'office' => $get_shipping_details_row['pickup_office'] ?? '',
-        'office_phone' => $get_shipping_details_row['pickup_office_phone'] ?? '',
-        'details' => "Docket created by <strong>{$creator_name}</strong> at <strong>{$pickup_location}</strong>",
+        'location' => $pickup_office,
+        'office' => $pickup_office,
+        'office_phone' => '',
+        'details' => $creation_details,
         'completed' => true,
         'is_current' => false,
-        'color' => 'success'
+        'color' => 'info'  // Blue color for pickup
     ];
     
-    // 2. MANIFEST / TRANSIT TO BRANCH (if applicable)
+    // 2. MANIFEST / IN TRANSIT STATUS (if manifest exists)
     if ($has_manifest && $manifest_info) {
         $manifest_created = $manifest_info['created_at'] ?? '';
-        $to_office = $manifest_info['to_office_name'] ?? '';
-        $to_office_phone = $manifest_info['to_office_phone'] ?? '';
+        $manifest_no = $manifest_info['manifest_no'] ?? $manifest_info['manifest_id'] ?? '';
+        $to_office = $manifest_info['manifest_office_name'] ?? '';
+        $manifest_car = $manifest_info['car_number'] ?? '';
+        $manifest_driver = $manifest_info['driver_name'] ?? '';
+        
+        $transit_details = "On the way to <strong>{$to_office}</strong> office via Manifest #{$manifest_no}";
+        if ($manifest_car || $manifest_driver) {
+            $transit_details .= "<br>";
+            if ($manifest_car) $transit_details .= "Vehicle: <strong>{$manifest_car}</strong>";
+            if ($manifest_driver) $transit_details .= ($manifest_car ? ", " : "") . "Driver: <strong>{$manifest_driver}</strong>";
+        }
         
         $timeline[] = [
-            'status' => 'In Transit to Branch',
+            'status' => 'In Transit',
             'icon' => 'fa-truck-loading',
             'time' => $manifest_created ? date('d M Y, h:i A', strtotime($manifest_created)) : '',
-            'location' => "Transferring to {$to_office}",
+            'location' => $pickup_office,
             'office' => $to_office,
-            'office_phone' => $to_office_phone,
-            'details' => "Parcel transferred to <strong>{$to_office}</strong> via Manifest #{$manifest_info['manifest_no']}. Contact: {$to_office_phone}",
-            'completed' => (strtotime($current_status) >= strtotime($manifest_created)),
+            'office_phone' => '',
+            'details' => $transit_details,
+            'completed' => true,
             'is_current' => ($current_status == 'In Transit'),
             'color' => 'info'
         ];
         
         // Check if branch received
-        $branch_received = false;
         foreach ($tracking_history as $h) {
-            if ($h['new_status'] == 'Arrived at Branch' || $h['new_status'] == 'Received at Branch') {
-                $branch_received = true;
+            if (isset($h['new_status']) && ($h['new_status'] == 'Arrived at Branch' || $h['new_status'] == 'Received at Branch' || $h['new_status'] == 'Received at Destination')) {
+                $received_office = $to_office;
+                $received_notes = $h['notes'] ?? '';
+                
+                // Extract office name from notes if available
+                if (preg_match('/received at ([^\s]+(?:\s+[^\s]+)?\s+office)/i', $received_notes, $matches)) {
+                    $received_office = trim(str_replace(' office', '', $matches[1]));
+                }
+                
                 $timeline[] = [
-                    'status' => 'Received at Branch',
+                    'status' => $h['new_status'] == 'Received at Destination' ? 'Received at Destination' : 'Received at Branch',
                     'icon' => 'fa-warehouse',
                     'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
-                    'location' => $h['location'] ?? $to_office,
-                    'office' => $h['office_name'] ?? $to_office,
-                    'office_phone' => $h['office_phone'] ?? $to_office_phone,
-                    'details' => "Parcel received at <strong>{$to_office}</strong> and ready for local delivery",
+                    'location' => $received_office,
+                    'office' => $received_office,
+                    'office_phone' => '',
+                    'details' => $received_notes ?: "Parcel received at <strong>{$received_office}</strong> office and ready for local delivery",
                     'completed' => true,
-                    'is_current' => false,
+                    'is_current' => ($current_status == 'Received at Destination' || $current_status == 'Received at Branch'),
                     'color' => 'success'
                 ];
                 break;
@@ -145,17 +178,15 @@ if ($get_shipping_details_row) {
         }
     } else {
         // Direct delivery - add In Transit
-        $in_transit = false;
         foreach ($tracking_history as $h) {
-            if ($h['new_status'] == 'In Transit') {
-                $in_transit = true;
+            if (isset($h['new_status']) && $h['new_status'] == 'In Transit') {
                 $timeline[] = [
                     'status' => 'In Transit',
                     'icon' => 'fa-truck',
                     'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
                     'location' => $h['location'] ?? '',
-                    'office' => $h['office_name'] ?? '',
-                    'office_phone' => $h['office_phone'] ?? '',
+                    'office' => '',
+                    'office_phone' => '',
                     'details' => $h['notes'] ?? 'Parcel is in transit',
                     'completed' => true,
                     'is_current' => ($current_status == 'In Transit'),
@@ -167,26 +198,28 @@ if ($get_shipping_details_row) {
     }
     
     // 3. OUT FOR DELIVERY
-    $out_for_delivery = false;
     foreach ($tracking_history as $h) {
-        if ($h['new_status'] == 'Out for Delivery') {
-            $out_for_delivery = true;
-            $delivery_office = $h['office_name'] ?? $get_shipping_details_row['pickup_office'] ?? '';
+        if (isset($h['new_status']) && $h['new_status'] == 'Out for Delivery') {
             $car_no = $h['car_number'] ?? $get_shipping_details_row['car_number'] ?? '';
             $driver_name = $h['driver_name'] ?? $get_shipping_details_row['driver_name'] ?? '';
             $driver_phone = $h['driver_phone'] ?? $get_shipping_details_row['driver_phone'] ?? '';
+            
+            $details = "Out for delivery";
+            if ($car_no) $details .= "<br>Vehicle: <strong>{$car_no}</strong>";
+            if ($driver_name) $details .= "<br>Driver: <strong>{$driver_name}</strong>";
+            if ($driver_phone) $details .= " ({$driver_phone})";
             
             $timeline[] = [
                 'status' => 'Out for Delivery',
                 'icon' => 'fa-shipping-fast',
                 'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
                 'location' => $h['location'] ?? '',
-                'office' => $delivery_office,
-                'office_phone' => $h['office_phone'] ?? '',
+                'office' => '',
+                'office_phone' => '',
                 'car_no' => $car_no,
                 'driver_name' => $driver_name,
                 'driver_phone' => $driver_phone,
-                'details' => "Out for delivery from <strong>{$delivery_office}</strong><br>Vehicle: <strong>{$car_no}</strong><br>Driver: <strong>{$driver_name}</strong> ({$driver_phone})",
+                'details' => $details,
                 'completed' => true,
                 'is_current' => ($current_status == 'Out for Delivery'),
                 'color' => 'warning'
@@ -202,21 +235,21 @@ if ($get_shipping_details_row) {
     
     if ($is_delivered) {
         foreach ($tracking_history as $h) {
-            if ($h['new_status'] == 'Delivered' || $h['new_status'] == 'Pending POD') {
+            if (isset($h['new_status']) && ($h['new_status'] == 'Delivered' || $h['new_status'] == 'Pending POD')) {
                 $status_label = $has_pod ? 'Delivered' : 'Delivered (POD Pending)';
                 $timeline[] = [
                     'status' => $status_label,
                     'icon' => $has_pod ? 'fa-check-circle' : 'fa-clock',
                     'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
                     'location' => $h['location'] ?? '',
-                    'office' => $h['office_name'] ?? '',
-                    'office_phone' => $h['office_phone'] ?? '',
+                    'office' => '',
+                    'office_phone' => '',
                     'pod_status' => $has_pod ? 'available' : 'pending',
                     'pod_file' => $pod_file,
                     'details' => $has_pod ? 'Parcel successfully delivered with proof of delivery' : 'Parcel delivered, waiting for POD upload',
                     'completed' => true,
                     'is_current' => true,
-                    'color' => $has_pod ? 'success' : 'warning'
+                    'color' => 'success'  // Always green for delivered status
                 ];
                 break;
             }
@@ -226,7 +259,7 @@ if ($get_shipping_details_row) {
     // 5. DELAYED STATUS (can occur at any stage)
     $delayed_entries = [];
     foreach ($tracking_history as $h) {
-        if ($h['new_status'] == 'Delayed' || $h['is_delayed'] == 1) {
+        if (isset($h['new_status']) && ($h['new_status'] == 'Delayed' || (isset($h['is_delayed']) && $h['is_delayed'] == 1))) {
             $delayed_entries[] = [
                 'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
                 'reason' => $h['delay_reason'] ?? 'Delay reported',
@@ -240,13 +273,13 @@ if ($get_shipping_details_row) {
     $is_cancelled = ($current_status == 'Cancelled');
     if ($is_cancelled) {
         foreach ($tracking_history as $h) {
-            if ($h['new_status'] == 'Cancelled') {
+            if (isset($h['new_status']) && $h['new_status'] == 'Cancelled') {
                 $timeline[] = [
                     'status' => 'Cancelled',
                     'icon' => 'fa-times-circle',
                     'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
                     'location' => $h['location'] ?? '',
-                    'office' => $h['office_name'] ?? '',
+                    'office' => '',
                     'details' => $h['notes'] ?? 'Shipment cancelled',
                     'completed' => true,
                     'is_current' => true,
@@ -265,7 +298,7 @@ if ($get_shipping_details_row) {
         }
     }
     
-    // Shipment details
+    // Shipment details from docket_details table
     $client_name = $get_shipping_details_row['client_name'] ?? '-';
     $pickup_date = $pickup_time ? date('d M Y', strtotime($pickup_time)) : '-';
     $car_no = $get_shipping_details_row['car_number'] ?? '-';
@@ -280,14 +313,6 @@ if ($get_shipping_details_row) {
 }
 
 if (!$is_ajax) { ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Track Shipment - <?= htmlspecialchars($doc_no) ?></title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
@@ -300,10 +325,28 @@ if (!$is_ajax) { ?>
             min-height: 100vh;
         }
         
+        /* Fix for header text rendering */
+        .header_sec,
+        .header_sec * {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
         .tracking-container {
             max-width: 1200px;
             margin: 40px auto;
             padding: 0 20px;
+        }
+        
+        /* Ensure tracking container works with site header */
+        .header_sec + .tracking-container {
+            margin-top: 30px;
+            padding-bottom: 50px;
+        }
+        
+        /* Prevent tracking styles from affecting header */
+        .tracking-container .tracking-header h1 {
+            font-family: 'Inter', sans-serif;
         }
         
         .tracking-header {
@@ -315,10 +358,9 @@ if (!$is_ajax) { ?>
         .tracking-header h1 {
             font-size: 2.5rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #5551c0 0%, #7b77e8 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #5551c0;
             margin-bottom: 10px;
+            letter-spacing: -0.5px;
         }
         
         .tracking-header p {
@@ -681,9 +723,38 @@ if (!$is_ajax) { ?>
             50% { opacity: 0.6; }
         }
         
-        @media (max-width: 768px) {
+        @media (max-width: 991px) {
+            .tracking-container {
+                padding: 15px;
+                margin: 20px auto;
+            }
+            
             .tracking-content {
                 grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .search-box {
+                padding: 20px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .tracking-container {
+                padding: 10px;
+                margin: 15px auto;
+            }
+            
+            .tracking-content {
+                gap: 15px;
+            }
+            
+            .tracking-header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .tracking-header p {
+                font-size: 0.95rem;
             }
             
             .search-form {
@@ -692,11 +763,126 @@ if (!$is_ajax) { ?>
             
             .search-btn {
                 width: 100%;
+                padding: 14px;
+            }
+            
+            .search-input {
+                font-size: 14px;
+                padding: 12px 15px;
+            }
+            
+            .search-box {
+                padding: 20px 15px;
+            }
+            
+            .timeline-card, .details-card {
+                padding: 20px 15px;
+                border-radius: 15px;
+            }
+            
+            .card-title {
+                font-size: 1.25rem;
+            }
+            
+            .timeline-status span {
+                font-size: 15px;
+            }
+            
+            .timeline-details {
+                font-size: 13px;
+            }
+            
+            .details-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .detail-item {
+                padding: 12px;
+            }
+            
+            .detail-label {
+                font-size: 12px;
+            }
+            
+            .detail-value {
+                font-size: 14px;
+            }
+            
+            .modal-dialog {
+                margin: 10px;
+            }
+            
+            .table {
+                font-size: 11px;
+            }
+            
+            .full-history-btn {
+                font-size: 14px;
+                padding: 12px 20px;
             }
         }
+        
+        @media (max-width: 480px) {
+            .tracking-container {
+                padding: 8px;
+            }
+            
+            .tracking-header {
+                margin-bottom: 25px;
+            }
+            
+            .tracking-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .tracking-header p {
+                font-size: 0.85rem;
+            }
+            
+            .search-box {
+                padding: 15px;
+                border-radius: 12px;
+            }
+            
+            .search-input {
+                font-size: 13px;
+            }
+            
+            .timeline-icon {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+            
+            .timeline-card, .details-card {
+                padding: 15px;
+            }
+            
+            .card-title {
+                font-size: 1.1rem;
+            }
+            
+            .pod-buttons {
+                flex-direction: column;
+            }
+            
+            .btn-pod {
+                width: 100%;
+                margin: 5px 0;
+            }
+            
+            .timeline-time {
+                font-size: 12px;
+            }
+            
+            .timeline-location {
+                font-size: 12px;
+            }
+        }
+        
     </style>
-</head>
-<body>
+    
     <div class="tracking-container">
         <div class="tracking-header">
             <h1>Track Your Shipment</h1>
@@ -858,15 +1044,13 @@ if (!$is_ajax) { ?>
                         </div>
                         <?php endif; ?>
                         
-                        <?php if ($has_manifest): ?>
-                        <div class="detail-item">
-                            <span class="detail-label">Transfer Type</span>
-                            <span class="detail-value">Branch Transfer</span>
-                        </div>
-                        
+                        <?php 
+                        $destination = $get_shipping_details_row['client_address'] ?? '';
+                        if (!empty($destination) && $destination != '-'): 
+                        ?>
                         <div class="detail-item">
                             <span class="detail-label">Destination</span>
-                            <span class="detail-value"><?= htmlspecialchars($manifest_info['to_office_name'] ?? '-') ?></span>
+                            <span class="detail-value"><?= htmlspecialchars($destination) ?></span>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -875,13 +1059,90 @@ if (!$is_ajax) { ?>
         <?php endif; ?>
     </div>
     
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Full History Modal -->
+    <div class="modal fade" id="fullHistoryModal" tabindex="-1" role="dialog" aria-labelledby="fullHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #5551c0 0%, #7b68ee 100%); color: white;">
+                    <h5 class="modal-title" id="fullHistoryModalLabel">
+                        <i class="fas fa-history"></i> Complete Status History - <?= htmlspecialchars($doc_no) ?>
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <?php if (!empty($tracking_history)): ?>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered">
+                                <thead style="background: #f8f9fa;">
+                                    <tr>
+                                        <th>Date & Time</th>
+                                        <th>Status Change</th>
+                                        <th>Location</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($tracking_history as $history): ?>
+                                        <tr>
+                                            <td style="white-space: nowrap;">
+                                                <i class="fas fa-clock" style="color: #5551c0;"></i>
+                                                <?= date('d M Y', strtotime($history['changed_at'])) ?><br>
+                                                <small style="color: #666;"><?= date('h:i A', strtotime($history['changed_at'])) ?></small>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($history['old_status'])): ?>
+                                                    <span style="background: #e3f2fd; padding: 3px 8px; border-radius: 3px; font-size: 12px;">
+                                                        <?= htmlspecialchars($history['old_status']) ?>
+                                                    </span>
+                                                    <i class="fas fa-arrow-right" style="color: #999; margin: 0 5px;"></i>
+                                                <?php endif; ?>
+                                                <span style="background: #c8e6c9; padding: 3px 8px; border-radius: 3px; font-size: 12px; font-weight: 600;">
+                                                    <?= htmlspecialchars($history['new_status']) ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($history['location'])): ?>
+                                                    <i class="fas fa-map-marker-alt" style="color: #f44336;"></i>
+                                                    <?= htmlspecialchars($history['location']) ?>
+                                                <?php else: ?>
+                                                    <span style="color: #999;">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($history['notes'])): ?>
+                                                    <?= nl2br(htmlspecialchars($history['notes'])) ?>
+                                                <?php else: ?>
+                                                    <span style="color: #999;">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No detailed status history available for this shipment.
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function showFullHistory() {
-            alert('Full history modal will be implemented here');
+            $('#fullHistoryModal').modal('show');
         }
     </script>
-</body>
-</html>
-<?php } ?>
+<?php 
+    include("include/footer.php");
+} 
+?>
