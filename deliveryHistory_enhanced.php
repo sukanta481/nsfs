@@ -16,10 +16,26 @@ if (!$is_ajax) {
     include("include/apps_top.php");
 }
 
-$doc_no = isset($_GET['doc_no']) ? mysqli_real_escape_string($conn, trim($_GET['doc_no'])) : '';
+$doc_no = isset($_GET['doc_no']) ? trim($_GET['doc_no']) : '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['doc_no'])) {
-    $doc_no = mysqli_real_escape_string($conn, trim($_POST['doc_no']));
+    $doc_no = trim($_POST['doc_no']);
 }
+
+// Auto-format SP dockets: convert "sp1234567" or "SP1234567" to "SP 1234567"
+if (!empty($doc_no)) {
+    // Check if it starts with SP/sp without space
+    if (preg_match('/^(sp)(\d+)$/i', $doc_no, $matches)) {
+        // Format as "SP [space] numbers"
+        $doc_no = 'SP ' . $matches[2];
+    }
+    // If already has space but lowercase, convert to uppercase
+    elseif (preg_match('/^sp\s+(\d+)$/i', $doc_no, $matches)) {
+        $doc_no = 'SP ' . $matches[1];
+    }
+}
+
+// Sanitize for database query
+$doc_no = mysqli_real_escape_string($conn, $doc_no);
 
 $get_shipping_details_row = false;
 $tracking_history = [];
