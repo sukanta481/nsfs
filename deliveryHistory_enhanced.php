@@ -177,7 +177,7 @@ if ($get_shipping_details_row) {
         
         // Check if branch received
         foreach ($tracking_history as $h) {
-            if (isset($h['new_status']) && ($h['new_status'] == 'Arrived at Branch' || $h['new_status'] == 'Received at Branch' || $h['new_status'] == 'Received at Destination')) {
+            if (isset($h['new_status']) && ($h['new_status'] == 'Arrived at Branch' || $h['new_status'] == 'Received at Branch' || $h['new_status'] == 'Received at Destination' || $h['new_status'] == 'Received')) {
                 $received_office = $to_office;
                 $received_notes = $h['notes'] ?? '';
                 
@@ -186,8 +186,21 @@ if ($get_shipping_details_row) {
                     $received_office = trim(str_replace(' office', '', $matches[1]));
                 }
                 
+                // Determine display status
+                $display_status = 'Received at Branch';
+                if ($h['new_status'] == 'Received at Destination') {
+                    $display_status = 'Received at Destination';
+                } elseif ($h['new_status'] == 'Received') {
+                    // Check if it's destination office based on notes
+                    if (stripos($received_notes, 'destination') !== false) {
+                        $display_status = 'Received at Destination';
+                    } else {
+                        $display_status = 'Received at Branch';
+                    }
+                }
+                
                 $timeline[] = [
-                    'status' => $h['new_status'] == 'Received at Destination' ? 'Received at Destination' : 'Received at Branch',
+                    'status' => $display_status,
                     'icon' => 'fa-warehouse',
                     'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
                     'location' => $received_office,
@@ -195,7 +208,7 @@ if ($get_shipping_details_row) {
                     'office_phone' => '',
                     'details' => $received_notes ?: "Parcel received at <strong>{$received_office}</strong> office and ready for local delivery",
                     'completed' => true,
-                    'is_current' => ($current_status == 'Received at Destination' || $current_status == 'Received at Branch'),
+                    'is_current' => ($current_status == 'Received at Destination' || $current_status == 'Received at Branch' || $current_status == 'Received'),
                     'color' => 'success'
                 ];
                 break;
@@ -216,6 +229,57 @@ if ($get_shipping_details_row) {
                     'completed' => true,
                     'is_current' => ($current_status == 'In Transit'),
                     'color' => 'info'
+                ];
+                break;
+            }
+        }
+    }
+    
+    // 2b. RECEIVED STATUS (for non-manifest or manually set received status)
+    // Check if "Received" status exists but wasn't already added in manifest section
+    $received_already_added = false;
+    foreach ($timeline as $t) {
+        if (strpos($t['status'], 'Received') !== false) {
+            $received_already_added = true;
+            break;
+        }
+    }
+    
+    if (!$received_already_added) {
+        foreach ($tracking_history as $h) {
+            if (isset($h['new_status']) && ($h['new_status'] == 'Received' || $h['new_status'] == 'Received at Destination' || $h['new_status'] == 'Received at Branch' || $h['new_status'] == 'Arrived at Branch')) {
+                $received_office = $h['location'] ?? '';
+                $received_notes = $h['notes'] ?? '';
+                
+                // Extract office name from notes if available
+                if (empty($received_office) && preg_match('/received at ([^\s]+(?:\s+[^\s]+)?\s+office)/i', $received_notes, $matches)) {
+                    $received_office = trim(str_replace(' office', '', $matches[1]));
+                }
+                
+                // Determine display status
+                $display_status = 'Received at Branch';
+                if ($h['new_status'] == 'Received at Destination') {
+                    $display_status = 'Received at Destination';
+                } elseif ($h['new_status'] == 'Received') {
+                    // Check if it's destination office based on notes
+                    if (stripos($received_notes, 'destination') !== false) {
+                        $display_status = 'Received at Destination';
+                    } else {
+                        $display_status = 'Received';
+                    }
+                }
+                
+                $timeline[] = [
+                    'status' => $display_status,
+                    'icon' => 'fa-warehouse',
+                    'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
+                    'location' => $received_office,
+                    'office' => $received_office,
+                    'office_phone' => '',
+                    'details' => $received_notes ?: "Parcel received" . ($received_office ? " at <strong>{$received_office}</strong> office" : ""),
+                    'completed' => true,
+                    'is_current' => ($current_status == 'Received at Destination' || $current_status == 'Received at Branch' || $current_status == 'Received'),
+                    'color' => 'success'
                 ];
                 break;
             }
