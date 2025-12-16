@@ -102,20 +102,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
             // Get car and driver details if provided
             $car_number = NULL;
             $driver_name = NULL;
+            $driver_phone = NULL;
 
-            if ($car_id) {
-                $car_query = "SELECT car_number FROM tbl_car WHERE car_id = $car_id";
-                $car_result = mysqli_query($conn, $car_query);
-                if ($car_row = mysqli_fetch_assoc($car_result)) {
-                    $car_number = mysqli_real_escape_string($conn, $car_row['car_number']);
+            // Check for manual inputs first (for branch offices with manifested dockets)
+            $manual_car_number = isset($_POST['manual_car_number']) ? mysqli_real_escape_string($conn, trim($_POST['manual_car_number'])) : '';
+            $manual_driver_name = isset($_POST['manual_driver_name']) ? mysqli_real_escape_string($conn, trim($_POST['manual_driver_name'])) : '';
+            $manual_driver_phone = isset($_POST['manual_driver_phone']) ? mysqli_real_escape_string($conn, trim($_POST['manual_driver_phone'])) : '';
+
+            if (!empty($manual_car_number) && !empty($manual_driver_name)) {
+                // Use manual inputs (branch office scenario)
+                $car_number = $manual_car_number;
+                $driver_name = $manual_driver_name;
+                $driver_phone = $manual_driver_phone;
+                $car_id = NULL; // No database car ID
+                $driver_id = NULL; // No database driver ID
+            } else {
+                // Use database selections (own office scenario)
+                if ($car_id) {
+                    $car_query = "SELECT car_number FROM tbl_car WHERE car_id = $car_id";
+                    $car_result = mysqli_query($conn, $car_query);
+                    if ($car_row = mysqli_fetch_assoc($car_result)) {
+                        $car_number = mysqli_real_escape_string($conn, $car_row['car_number']);
+                    }
                 }
-            }
 
-            if ($driver_id) {
-                $driver_query = "SELECT staff_name FROM tbl_staff WHERE staff_id = $driver_id AND staff_role = 'Driver'";
-                $driver_result = mysqli_query($conn, $driver_query);
-                if ($driver_row = mysqli_fetch_assoc($driver_result)) {
-                    $driver_name = mysqli_real_escape_string($conn, $driver_row['staff_name']);
+                if ($driver_id) {
+                    $driver_query = "SELECT staff_name, staff_phone FROM tbl_staff WHERE staff_id = $driver_id AND staff_role = 'Driver'";
+                    $driver_result = mysqli_query($conn, $driver_query);
+                    if ($driver_row = mysqli_fetch_assoc($driver_result)) {
+                        $driver_name = mysqli_real_escape_string($conn, $driver_row['staff_name']);
+                        $driver_phone = $driver_row['staff_phone'] ?? '';
+                    }
                 }
             }
 
@@ -152,6 +169,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
             $history_notes = $remarks;
             if ($car_number && $driver_name) {
                 $history_notes .= "\nVehicle: $car_number, Driver: $driver_name";
+                if ($driver_phone) {
+                    $history_notes .= " (" . $driver_phone . ")";
+                }
             }
             if ($delay_reason) {
                 $history_notes .= "\nDelay Reason: $delay_reason";
@@ -747,6 +767,7 @@ body {
           <option value="In Transit">In Transit</option>
           <option value="In Transit to Branch">In Transit to Branch</option>
           <option value="Received">Received at Branch</option>
+          <option value="Received at Destination">Received at Destination</option>
           <option value="Arrived at Branch">Arrived at Branch</option>
           <option value="Out for Delivery">Out for Delivery</option>
           <option value="Delivered">Delivered</option>
@@ -767,38 +788,68 @@ body {
 
       <!-- Conditional: Car and Driver Fields (for Out for Delivery) -->
       <div id="carDriverField" class="conditional-field">
-        <div class="form-group">
-          <label>
-            <i class="fas fa-car"></i> Select Vehicle <span class="required">*</span>
-          </label>
-          <select name="car_id" class="filter-input" style="width: 100%;">
-            <option value="">-- Select Vehicle --</option>
-            <?php
-            mysqli_data_seek($cars_result, 0);
-            while ($car = mysqli_fetch_assoc($cars_result)):
-            ?>
-              <option value="<?php echo $car['car_id']; ?>">
-                <?php echo htmlspecialchars($car['car_number'] . ' - ' . $car['car_details']); ?>
-              </option>
-            <?php endwhile; ?>
-          </select>
-        </div>
+        <!-- Database Dropdown Fields (for own office dockets) -->
+        <div id="databaseCarDriver" style="display: none;">
+          <div class="form-group">
+            <label>
+              <i class="fas fa-car"></i> Select Vehicle <span class="required">*</span>
+            </label>
+            <select name="car_id" id="carIdSelect" class="filter-input" style="width: 100%;">
+              <option value="">-- Select Vehicle --</option>
+              <?php
+              mysqli_data_seek($cars_result, 0);
+              while ($car = mysqli_fetch_assoc($cars_result)):
+              ?>
+                <option value="<?php echo $car['car_id']; ?>">
+                  <?php echo htmlspecialchars($car['car_number'] . ' - ' . $car['car_details']); ?>
+                </option>
+              <?php endwhile; ?>
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label>
-            <i class="fas fa-user-tie"></i> Select Driver <span class="required">*</span>
-          </label>
-          <select name="driver_id" class="filter-input" style="width: 100%;">
-            <option value="">-- Select Driver --</option>
-            <?php
-            mysqli_data_seek($drivers_result, 0);
-            while ($driver = mysqli_fetch_assoc($drivers_result)):
-            ?>
-              <option value="<?php echo $driver['staff_id']; ?>">
-                <?php echo htmlspecialchars($driver['staff_name'] . ' - ' . $driver['staff_phone']); ?>
-              </option>
-            <?php endwhile; ?>
-          </select>
+          <div class="form-group">
+            <label>
+              <i class="fas fa-user-tie"></i> Select Driver <span class="required">*</span>
+            </label>
+            <select name="driver_id" id="driverIdSelect" class="filter-input" style="width: 100%;">
+              <option value="">-- Select Driver --</option>
+              <?php
+              mysqli_data_seek($drivers_result, 0);
+              while ($driver = mysqli_fetch_assoc($drivers_result)):
+              ?>
+                <option value="<?php echo $driver['staff_id']; ?>">
+                  <?php echo htmlspecialchars($driver['staff_name'] . ' - ' . $driver['staff_phone']); ?>
+                </option>
+              <?php endwhile; ?>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Manual Input Fields (for manifest/branch office dockets) -->
+        <div id="manualCarDriver" style="display: none;">
+          <div class="form-group">
+            <label>
+              <i class="fas fa-car"></i> Vehicle Number <span class="required">*</span>
+            </label>
+            <input type="text" name="manual_car_number" id="manualCarNumber" class="filter-input" style="width: 100%;" placeholder="Enter vehicle number (e.g., WB 12 AB 3456)">
+            <small style="color: #7f8c8d; display: block; margin-top: 5px;">
+              <i class="fas fa-info-circle"></i> Enter your branch vehicle number
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <i class="fas fa-user-tie"></i> Driver Name <span class="required">*</span>
+            </label>
+            <input type="text" name="manual_driver_name" id="manualDriverName" class="filter-input" style="width: 100%;" placeholder="Enter driver name">
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <i class="fas fa-phone"></i> Driver Phone
+            </label>
+            <input type="text" name="manual_driver_phone" id="manualDriverPhone" class="filter-input" style="width: 100%;" placeholder="Enter driver phone number">
+          </div>
         </div>
       </div>
 
@@ -880,6 +931,22 @@ function openStatusModal(docketId, docketNo, currentStatus) {
     document.getElementById('modalDocketId').value = docketId;
     document.getElementById('modalCurrentStatus').value = currentStatus;
     hideAllConditionalFields();
+    
+    // Check if docket came via manifest (AJAX call)
+    checkDocketManifest(docketId);
+}
+
+function checkDocketManifest(docketId) {
+    // AJAX call to check if docket came via manifest
+    fetch('check_docket_manifest.php?docket_id=' + docketId)
+        .then(response => response.json())
+        .then(data => {
+            window.docketManifestInfo = data;
+        })
+        .catch(error => {
+            console.error('Error checking manifest:', error);
+            window.docketManifestInfo = { has_manifest: false };
+        });
 }
 
 function closeStatusModal() {
@@ -901,6 +968,30 @@ function handleStatusChange() {
         document.getElementById('dateLabelText').textContent = 'Out for Delivery Date';
         document.getElementById('dateField').style.display = 'block';
         document.getElementById('carDriverField').style.display = 'block';
+        
+        // Check if docket came via manifest - show manual inputs for branch offices
+        const manifestInfo = window.docketManifestInfo || { has_manifest: false };
+        if (manifestInfo.has_manifest && manifestInfo.is_branch_office) {
+            // Show manual input fields for branch offices with manifested dockets
+            document.getElementById('databaseCarDriver').style.display = 'none';
+            document.getElementById('manualCarDriver').style.display = 'block';
+            // Disable database fields
+            document.getElementById('carIdSelect').removeAttribute('required');
+            document.getElementById('driverIdSelect').removeAttribute('required');
+            // Enable manual fields
+            document.getElementById('manualCarNumber').setAttribute('required', 'required');
+            document.getElementById('manualDriverName').setAttribute('required', 'required');
+        } else {
+            // Show database dropdown fields for own office dockets
+            document.getElementById('databaseCarDriver').style.display = 'block';
+            document.getElementById('manualCarDriver').style.display = 'none';
+            // Enable database fields
+            document.getElementById('carIdSelect').setAttribute('required', 'required');
+            document.getElementById('driverIdSelect').setAttribute('required', 'required');
+            // Disable manual fields
+            document.getElementById('manualCarNumber').removeAttribute('required');
+            document.getElementById('manualDriverName').removeAttribute('required');
+        }
     } else if (status === 'Delivered') {
         document.getElementById('dateLabelText').textContent = 'Delivery Date';
         document.getElementById('dateField').style.display = 'block';

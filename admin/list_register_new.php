@@ -619,6 +619,8 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                                 <option value="Pending POD" <?= $status == 'Pending POD' ? 'selected' : '' ?>>Pending POD</option>
                                 <option value="Picked Up" <?= $status == 'Picked Up' ? 'selected' : '' ?>>Picked Up</option>
                                 <option value="In Transit" <?= $status == 'In Transit' ? 'selected' : '' ?>>In Transit</option>
+                                <option value="Received" <?= $status == 'Received' ? 'selected' : '' ?>>Received</option>
+                                <option value="Received at Destination" <?= $status == 'Received at Destination' ? 'selected' : '' ?>>Received at Destination</option>
                                 <option value="Out for Delivery" <?= $status == 'Out for Delivery' ? 'selected' : '' ?>>Out for Delivery</option>
                                 <option value="Delivered" <?= $status == 'Delivered' ? 'selected' : '' ?>>Delivered</option>
                                 <option value="Delayed" <?= $status == 'Delayed' ? 'selected' : '' ?>>Delayed</option>
@@ -1395,6 +1397,7 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                             <option value="Confirmed" data-order="2">Confirmed</option>
                             <option value="Picked Up" data-order="3">Picked Up</option>
                             <option value="In Transit" data-order="4">In Transit</option>
+                            <option value="Received" data-order="4.5">Received at Destination</option>
                             <option value="Delayed" data-order="4" data-allow-anytime="true">Delayed</option>
                             <option value="Out for Delivery" data-order="5">Out for Delivery</option>
                             <option value="Pending POD" data-order="6">Pending POD (Delivered without POD)</option>
