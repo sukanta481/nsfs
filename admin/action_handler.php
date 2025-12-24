@@ -1,4 +1,5 @@
 <?php
+require 'check_auth.php';
 require 'conn.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
