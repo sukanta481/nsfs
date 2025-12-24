@@ -264,12 +264,13 @@ try {
                 if ($driver_phone) $update_query .= ", driver_phone = '$driver_phone'";
             }
         } elseif ($new_status === 'Delivered') {
-            $delivery_date = $status_date ?? date('Y-m-d H:i:s');
+            // Use provided status_date, or current time if not provided
+            $delivery_date = $status_date ?: date('Y-m-d H:i:s');
             $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
             if ($pod_file) $update_query .= ", proof_of_delivery = '$pod_file'";
         } elseif ($new_status === 'Pending POD') {
             // Delivered without POD - mark as pending POD
-            $delivery_date = $status_date ?? date('Y-m-d H:i:s');
+            $delivery_date = $status_date ?: date('Y-m-d H:i:s');
             $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
             $update_query .= ", proof_of_delivery = NULL"; // No POD yet
         } elseif ($new_status === 'Delayed' && $status_date) {
@@ -295,12 +296,14 @@ try {
         }
 
         // Insert into docket_status_history
+        // Use status_date for changed_at if provided, otherwise use current time
+        $changed_at_value = $status_date ? "'$status_date'" : "NOW()";
         $history_query = "INSERT INTO docket_status_history
             (docket_id, old_status, new_status, changed_by, changed_at, notes,
              status_date, car_id, car_number, driver_id, driver_name,
              delay_reason, pod_file, pod_uploaded_at, location,
              updated_by, updated_by_name)
-            VALUES ($current_docket_id, '$current_status', '$new_status', '$updated_by_name', NOW(), " .
+            VALUES ($current_docket_id, '$current_status', '$new_status', '$updated_by_name', $changed_at_value, " .
             ($history_notes ? "'$history_notes'" : "NULL") . ", " .
             ($status_date ? "'$status_date'" : "NULL") . ", " .
             ($car_id ?: "NULL") . ", " .
