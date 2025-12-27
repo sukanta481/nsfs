@@ -993,7 +993,7 @@ function handleStatusChange() {
             document.getElementById('manualCarNumber').removeAttribute('required');
             document.getElementById('manualDriverName').removeAttribute('required');
         }
-    } else if (status === 'Delivered') {
+    } else if (status === 'Delivered' || status === 'Pending POD') {
         document.getElementById('dateLabelText').textContent = 'Delivery Date';
         document.getElementById('dateField').style.display = 'block';
         document.getElementById('podField').style.display = 'block';

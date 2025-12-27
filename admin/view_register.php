@@ -617,7 +617,7 @@ function handleStatusChange() {
     document.getElementById('dateLabelText').textContent = 'Out for Delivery Date';
     document.getElementById('dateField').style.display = 'block';
     document.getElementById('carDriverField').style.display = 'block';
-  } else if (status === 'Delivered') {
+  } else if (status === 'Delivered' || status === 'Pending POD') {
     document.getElementById('dateLabelText').textContent = 'Delivery Date';
     document.getElementById('dateField').style.display = 'block';
     document.getElementById('podField').style.display = 'block';
