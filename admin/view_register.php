@@ -14,9 +14,12 @@ if ($is_standalone) {
 $docket_id = intval($_REQUEST['id'] ?? $_REQUEST['docket_id'] ?? 0);
 
 // Fetch docket details - query directly without DocketDetailsManager
-$sql = "SELECT dd.*, o.office_name
+$sql = "SELECT dd.*, o.office_name,
+               creator.full_name as creator_full_name,
+               creator.username as creator_username
         FROM docket_details dd
         LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
+        LEFT JOIN tbl_users creator ON dd.created_by = creator.user_id
         WHERE dd.docket_id = $docket_id";
 $res = mysqli_query($conn, $sql);
 $data = mysqli_fetch_assoc($res);
@@ -26,8 +29,14 @@ if (!$data) {
     exit;
 }
 
-// Fetch status history
-$history_sql = "SELECT * FROM docket_status_history WHERE docket_id = $docket_id ORDER BY changed_at DESC";
+// Fetch status history with user details
+$history_sql = "SELECT h.*, 
+                       u.full_name as user_full_name, 
+                       u.username as user_username
+                FROM docket_status_history h
+                LEFT JOIN tbl_users u ON h.updated_by = u.user_id
+                WHERE h.docket_id = $docket_id 
+                ORDER BY h.changed_at DESC";
 $history_result = mysqli_query($conn, $history_sql);
 $status_history = [];
 if($history_result) {
@@ -227,31 +236,60 @@ if ($is_standalone) {
                 <div class="card-body">
                   <div class="timeline">
                     <?php if(!empty($status_history)): ?>
-                      <?php foreach($status_history as $history): ?>
+                      <?php foreach($status_history as $history): 
+                        // Get the user who made the change
+                        $changed_by_user = $history['user_full_name'] ?: $history['updated_by_name'] ?: $history['changed_by'] ?: 'System';
+                      ?>
                         <div class="timeline-item">
                           <div class="timeline-badge status-<?= strtolower(str_replace(' ', '-', $history['new_status'])) ?>">
                             <?= htmlspecialchars($history['new_status']) ?>
                           </div>
                           <div class="timeline-content">
                             <div class="timeline-text"><?= htmlspecialchars($history['notes'] ?? 'Status updated') ?></div>
-                            <div class="timeline-date"><?= date('M d, Y g:i A', strtotime($history['changed_at'])) ?></div>
+                            <div class="timeline-date">
+                              <i class="fa fa-clock-o"></i> <?= date('M d, Y g:i A', strtotime($history['changed_at'])) ?>
+                            </div>
+                            
+                            <!-- User who made the change -->
+                            <div class="timeline-user" style="margin-top: 6px; font-size: 12px; color: #3498db;">
+                              <i class="fa fa-user-circle"></i> 
+                              <strong>Updated by:</strong> <?= htmlspecialchars($changed_by_user) ?>
+                              <?php if (!empty($history['updated_by'])): ?>
+                                <span style="color: #95a5a6;">(ID: <?= $history['updated_by'] ?>)</span>
+                              <?php endif; ?>
+                            </div>
+
+                            <?php if (!empty($history['old_status']) && $history['old_status'] !== $history['new_status']): ?>
+                              <div class="timeline-change" style="margin-top: 5px; font-size: 12px; color: #7f8c8d;">
+                                <i class="fa fa-exchange"></i> 
+                                <span style="text-decoration: line-through;"><?= htmlspecialchars($history['old_status']) ?></span>
+                                → <strong><?= htmlspecialchars($history['new_status']) ?></strong>
+                              </div>
+                            <?php endif; ?>
 
                             <?php if ($history['new_status'] === 'Delivered' || $history['new_status'] === 'Pending POD'): ?>
                               <div class="timeline-pod" style="margin-top: 10px;">
                                 <?php if (!empty($history['pod_file'])): ?>
-                                  <a href="../<?= htmlspecialchars($history['pod_file']) ?>" target="_blank" class="btn-view-pod">
-                                    <i class="fa fa-file-image-o"></i> View POD
-                                  </a>
+                                  <div style="background: #d4edda; padding: 8px 12px; border-radius: 6px; display: inline-block;">
+                                    <a href="../<?= htmlspecialchars($history['pod_file']) ?>" target="_blank" class="btn-view-pod" style="margin-right: 10px;">
+                                      <i class="fa fa-file-image-o"></i> View POD
+                                    </a>
+                                    <?php if (!empty($history['pod_uploaded_at'])): ?>
+                                      <span style="font-size: 11px; color: #155724;">
+                                        <i class="fa fa-upload"></i> Uploaded: <?= date('M d, Y g:i A', strtotime($history['pod_uploaded_at'])) ?>
+                                      </span>
+                                    <?php endif; ?>
+                                  </div>
                                 <?php else: ?>
-                                  <span style="color: #ff9800; font-size: 13px;">
-                                    <i class="fa fa-clock"></i> POD Pending
+                                  <span style="color: #ff9800; font-size: 13px; background: #fff3cd; padding: 5px 10px; border-radius: 5px;">
+                                    <i class="fa fa-clock-o"></i> POD Pending
                                   </span>
                                 <?php endif; ?>
                               </div>
                             <?php endif; ?>
 
                             <?php if ($history['new_status'] === 'Out for Delivery' && (!empty($history['car_number']) || !empty($history['driver_name']))): ?>
-                              <div class="timeline-vehicle" style="margin-top: 8px; font-size: 13px; color: #7f8c8d;">
+                              <div class="timeline-vehicle" style="margin-top: 8px; font-size: 13px; color: #2980b9; background: #e8f4fc; padding: 6px 10px; border-radius: 5px; display: inline-block;">
                                 <?php if (!empty($history['car_number'])): ?>
                                   <i class="fa fa-car"></i> <?= htmlspecialchars($history['car_number']) ?>
                                 <?php endif; ?>
@@ -266,9 +304,41 @@ if ($is_standalone) {
                                 <i class="fa fa-exclamation-triangle"></i> <?= htmlspecialchars($history['delay_reason']) ?>
                               </div>
                             <?php endif; ?>
+
+                            <?php if (!empty($history['location'])): ?>
+                              <div class="timeline-location" style="margin-top: 6px; font-size: 12px; color: #27ae60;">
+                                <i class="fa fa-map-marker"></i> <?= htmlspecialchars($history['location']) ?>
+                              </div>
+                            <?php endif; ?>
                           </div>
                         </div>
                       <?php endforeach; ?>
+                      
+                      <!-- Always show docket creation entry at the end -->
+                      <div class="timeline-item">
+                        <div class="timeline-badge status-created" style="background: #6c757d; color: white;">
+                          Created
+                        </div>
+                        <div class="timeline-content">
+                          <div class="timeline-text">Docket created</div>
+                          <div class="timeline-date">
+                            <i class="fa fa-clock-o"></i> <?= date('M d, Y g:i A', strtotime($data['created_at'])) ?>
+                          </div>
+                          <div class="timeline-user" style="margin-top: 6px; font-size: 12px; color: #3498db;">
+                            <i class="fa fa-user-circle"></i> 
+                            <strong>Created by:</strong> 
+                            <?= htmlspecialchars($data['creator_full_name'] ?: $data['creator_username'] ?: 'Unknown') ?>
+                            <?php if (!empty($data['created_by'])): ?>
+                              <span style="color: #95a5a6;">(ID: <?= $data['created_by'] ?>)</span>
+                            <?php endif; ?>
+                          </div>
+                          <?php if (!empty($data['office_name'])): ?>
+                            <div class="timeline-location" style="margin-top: 6px; font-size: 12px; color: #27ae60;">
+                              <i class="fa fa-building"></i> <?= htmlspecialchars($data['office_name']) ?>
+                            </div>
+                          <?php endif; ?>
+                        </div>
+                      </div>
                     <?php else: ?>
                       <div class="timeline-item">
                         <div class="timeline-badge status-pending">
@@ -276,7 +346,22 @@ if ($is_standalone) {
                         </div>
                         <div class="timeline-content">
                           <div class="timeline-text">Docket created</div>
-                          <div class="timeline-date"><?= date('M d, Y g:i A', strtotime($data['created_at'])) ?></div>
+                          <div class="timeline-date">
+                            <i class="fa fa-clock-o"></i> <?= date('M d, Y g:i A', strtotime($data['created_at'])) ?>
+                          </div>
+                          <div class="timeline-user" style="margin-top: 6px; font-size: 12px; color: #3498db;">
+                            <i class="fa fa-user-circle"></i> 
+                            <strong>Created by:</strong> 
+                            <?= htmlspecialchars($data['creator_full_name'] ?: $data['creator_username'] ?: 'Unknown') ?>
+                            <?php if (!empty($data['created_by'])): ?>
+                              <span style="color: #95a5a6;">(ID: <?= $data['created_by'] ?>)</span>
+                            <?php endif; ?>
+                          </div>
+                          <?php if (!empty($data['office_name'])): ?>
+                            <div class="timeline-location" style="margin-top: 6px; font-size: 12px; color: #27ae60;">
+                              <i class="fa fa-building"></i> <?= htmlspecialchars($data['office_name']) ?>
+                            </div>
+                          <?php endif; ?>
                         </div>
                       </div>
                     <?php endif; ?>
