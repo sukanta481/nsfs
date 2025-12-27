@@ -344,8 +344,10 @@ if ($is_standalone) {
                         <option value="Confirmed" data-order="2">Confirmed</option>
                         <option value="Picked Up" data-order="3">Picked Up</option>
                         <option value="In Transit" data-order="4">In Transit</option>
+                        <option value="Received at Destination" data-order="4.5">Received at Destination</option>
                         <option value="Delayed" data-order="4" data-allow-anytime="true">Delayed</option>
                         <option value="Out for Delivery" data-order="5">Out for Delivery</option>
+                        <option value="Pending POD" data-order="6" data-final="true">Pending POD (Delivered without POD)</option>
                         <option value="Delivered" data-order="6" data-final="true">Delivered</option>
                         <option value="Failed" data-order="6" data-final="true">Failed Delivery</option>
                         <option value="Cancelled" data-order="6" data-final="true">Cancelled</option>
@@ -694,15 +696,7 @@ document.getElementById('statusUpdateForm').addEventListener('submit', function(
     }
   }
 
-  // Validate Delivered requirements
-  if (status === 'Delivered') {
-    const podFile = document.querySelector('[name="pod_file"]').files.length;
-    if (!podFile) {
-      e.preventDefault();
-      showError('POD file is required for Delivered status');
-      return false;
-    }
-  }
+  // Note: POD file is optional for Delivered status - can be uploaded later
 });
 </script>
 
