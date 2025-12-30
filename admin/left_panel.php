@@ -52,6 +52,9 @@ if (file_exists('check_auth.php')) {
           <?php if (hasPermission('docket_status_update')): ?>
           <li><a href="delivery_status.php">📦 Update Status</a></li>
           <?php endif; ?>
+          <?php if (hasPermission('docket_view')): ?>
+          <li><a href="barcode_scanner.php"><i class="fa fa-barcode"></i> Barcode Scanner</a></li>
+          <?php endif; ?>
         </ul>
       </li>
       <?php endif; ?>
