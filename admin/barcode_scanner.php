@@ -643,13 +643,10 @@ input:checked + .toggle-slider:before {
                         <h4><i class="fa fa-cog"></i> Print Settings</h4>
                         
                         <div class="setting-row">
-                            <label>Number of Labels</label>
-                            <div class="qty-control">
-                                <button class="qty-btn" onclick="changeQty(-1)">−</button>
-                                <input type="number" id="printQty" value="1" min="1" max="10">
-                                <button class="qty-btn" onclick="changeQty(1)">+</button>
-                            </div>
+                            <label>Labels to Print</label>
+                            <div id="boxCountDisplay" style="font-weight: bold; color: #667eea; font-size: 18px;">-</div>
                         </div>
+                        <p style="font-size: 12px; color: #7f8c8d; margin: 0 0 15px 0;"><i class="fa fa-info-circle"></i> Auto-determined by number of boxes</p>
                         
                         <div class="setting-row">
                             <label>Auto-Print on Scan</label>
@@ -956,6 +953,10 @@ function updateDocketInfo(docket) {
         margin: 2
     });
     
+    // Update box count display
+    const boxCount = parseInt(docket.box) || 1;
+    document.getElementById('boxCountDisplay').textContent = boxCount + ' label' + (boxCount > 1 ? 's' : '');
+    
     // Enable print button
     document.getElementById('btnPrint').disabled = false;
 }
@@ -964,7 +965,8 @@ function updateDocketInfo(docket) {
 function printLabels() {
     if (!currentDocket) return;
     
-    const qty = parseInt(document.getElementById('printQty').value) || 1;
+    // Use box count as quantity
+    const qty = parseInt(currentDocket.box) || 1;
     
     // Generate and print
     const printWindow = window.open('', '_blank', 'width=300,height=300');
@@ -1117,14 +1119,6 @@ function addToHistory(docNo, qty, success) {
     historyDiv.insertBefore(item, historyDiv.firstChild);
 }
 
-// Quantity controls
-function changeQty(delta) {
-    const input = document.getElementById('printQty');
-    let val = parseInt(input.value) || 1;
-    val = Math.max(1, Math.min(10, val + delta));
-    input.value = val;
-}
-
 // Clear scanner
 function clearScanner() {
     currentDocket = null;
@@ -1133,6 +1127,7 @@ function clearScanner() {
     document.getElementById('docketInfo').classList.remove('active');
     document.getElementById('emptyDocket').style.display = 'block';
     document.getElementById('btnPrint').disabled = true;
+    document.getElementById('boxCountDisplay').textContent = '-';
     
     const status = document.getElementById('scanStatus');
     status.className = 'scan-status ready';
