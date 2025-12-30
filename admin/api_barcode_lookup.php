@@ -99,13 +99,6 @@ if (!$result || mysqli_num_rows($result) === 0) {
 
 $docket = mysqli_fetch_assoc($result);
 
-// Log the lookup (optional - for audit)
-$user_id = $_SESSION['user_id'] ?? 0;
-$log_sql = "INSERT INTO tbl_barcode_scans (doc_no, docket_id, scanned_by, scanned_at, action_type) 
-            VALUES ('{$docket['doc_no']}', {$docket['docket_id']}, $user_id, NOW(), 'lookup')
-            ON DUPLICATE KEY UPDATE scanned_at = NOW()";
-@mysqli_query($conn, $log_sql); // Silent fail if table doesn't exist
-
 // Return docket data
 echo json_encode([
     'success' => true,
