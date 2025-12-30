@@ -995,7 +995,8 @@ function printLabels() {
     
     let labelsHTML = '';
     for (let i = 0; i < qty; i++) {
-        labelsHTML += generateLabelHTML(currentDocket, i + 1, qty);
+        const isLast = (i === qty - 1);
+        labelsHTML += generateLabelHTML(currentDocket, i + 1, qty, isLast);
     }
     
     printWindow.document.write(`
@@ -1009,7 +1010,7 @@ function printLabels() {
                     @page { size: 70mm 70mm; margin: 0; }
                     html, body { margin: 0; padding: 0; }
                     .label { page-break-after: always; }
-                    .label:last-child { page-break-after: auto; }
+                    .label.last-label { page-break-after: avoid; }
                 }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body { font-family: Arial, sans-serif; }
@@ -1065,9 +1066,9 @@ function printLabels() {
 }
 
 // Generate single label HTML
-function generateLabelHTML(docket, current, total) {
+function generateLabelHTML(docket, current, total, isLast = false) {
     return `
-        <div class="label">
+        <div class="label${isLast ? ' last-label' : ''}">
             <div class="label-header">
                 <span>NSFS</span>
                 <span>${docket.service_type || 'SURFACE-NORMAL'}</span>
