@@ -12,18 +12,21 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 try {
     header('Content-Type: application/json');
     
-    // Check if session exists
+    // Use the proper session name
     if (session_status() === PHP_SESSION_NONE) {
+        session_name('pro');
         session_start();
     }
     
     require 'conn.php';
     
-    // Check authentication
-    if (!isset($_SESSION['user_id']) && !isset($_SESSION['admin_id'])) {
+    // Check authentication (same logic as check_auth.php)
+    $is_logged_in = (isset($_SESSION['admin_id']) || isset($_SESSION['user_id']));
+    
+    if (!$is_logged_in) {
         echo json_encode([
             'success' => false,
-            'message' => 'Session expired. Please login again.',
+            'message' => 'Session expired. Please refresh the page and login again.',
             'error_code' => 'AUTH_REQUIRED'
         ]);
         exit;
