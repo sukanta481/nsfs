@@ -4,10 +4,40 @@
  * Fetch docket details by barcode/doc_no for label printing
  */
 
-header('Content-Type: application/json');
+// Error handling - catch all errors and return as JSON
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+});
 
-require 'check_auth.php';
-require 'conn.php';
+try {
+    header('Content-Type: application/json');
+    
+    // Check if session exists
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    require 'conn.php';
+    
+    // Check authentication
+    if (!isset($_SESSION['user_id']) && !isset($_SESSION['admin_id'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Session expired. Please login again.',
+            'error_code' => 'AUTH_REQUIRED'
+        ]);
+        exit;
+    }
+    
+    // Check database connection
+    if (!$conn || $conn->connect_error) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Database connection failed',
+            'error_code' => 'DB_ERROR'
+        ]);
+        exit;
+    }
 
 $barcode = isset($_GET['barcode']) ? trim($_GET['barcode']) : '';
 
@@ -96,3 +126,12 @@ echo json_encode([
         'pickup_datetime' => $docket['pickup_datetime']
     ]
 ]);
+
+} catch (Exception $e) {
+    // Catch any PHP errors and return as JSON
+    echo json_encode([
+        'success' => false,
+        'message' => 'Server error: ' . $e->getMessage(),
+        'error_code' => 'SERVER_ERROR'
+    ]);
+}

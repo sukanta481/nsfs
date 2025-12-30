@@ -862,10 +862,32 @@ async function processScan(barcode) {
     try {
         // Fetch docket details
         const response = await fetch('api_barcode_lookup.php?barcode=' + encodeURIComponent(barcode));
-        const data = await response.json();
+        
+        // Check if response is OK
+        if (!response.ok) {
+            showError('Server error: ' + response.status + ' ' + response.statusText);
+            playSound('error');
+            return;
+        }
+        
+        // Try to parse JSON
+        let data;
+        const responseText = await response.text();
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON parse error:', responseText);
+            showError('Server returned invalid response. Check console for details.');
+            playSound('error');
+            return;
+        }
         
         if (!data.success) {
-            showError(data.message || 'Docket not found');
+            let errorMsg = data.message || 'Docket not found';
+            if (data.error_code === 'AUTH_REQUIRED') {
+                errorMsg = 'Session expired. Please refresh the page and login again.';
+            }
+            showError(errorMsg);
             playSound('error');
             input.classList.add('error');
             setTimeout(() => input.classList.remove('error'), 500);
