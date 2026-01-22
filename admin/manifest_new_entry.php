@@ -197,6 +197,17 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
                  placeholder="Auto-filled">
         </div>
 
+        <!-- Manifest Date Selection -->
+        <div>
+          <label style="display: block; font-weight: 700; color: #333; margin-bottom: 8px; font-size: 1.05rem;">
+            <i class="fa fa-calendar" style="color: #e91e63;"></i> Manifest Date <span style="color: red;">*</span>
+          </label>
+          <input type="date" name="manifest_date" id="manifestDate" class="form-control" required
+                 value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>"
+                 style="height: 45px; font-size: 1.05rem; font-weight: 600;">
+          <small style="color: #7f8c8d; font-size: 12px;">Select manifest date (current or previous date)</small>
+        </div>
+
         <!-- Manual Input Toggle -->
         <div>
           <label style="display: block; font-weight: 700; color: #333; margin-bottom: 8px; font-size: 1.05rem;">

@@ -8,7 +8,8 @@ if (!$manifest_id) {
 }
 
 // Get manifest header
-$manifest_query = "SELECT m.manifest_id, m.manifest_no, m.created_at, m.total_gross, m.total_pay_to, m.net_total, m.car_id, m.driver_id,
+$manifest_query = "SELECT m.manifest_id, m.manifest_no, m.manifest_date, m.created_at, m.total_gross, m.total_pay_to, m.net_total, m.car_id, m.driver_id,
+                   COALESCE(m.manifest_date, DATE(m.created_at)) as display_date,
                    o.office_name, c.car_number, d.driver_name
                    FROM tbl_manifest m
                    LEFT JOIN tbl_offices o ON m.office_id = o.office_id
@@ -60,7 +61,7 @@ if (!$details_result) {
         </div>
         <div style="display:flex;align-items:center;gap:12px;color:#555;">
           <i class="fa fa-calendar" style="color:#ff9800;font-size:1.6rem;"></i>
-          <span style="font-size:1.25rem;font-weight:600;"><?= date('d M Y, h:i A', strtotime($manifest['created_at'])) ?></span>
+          <span style="font-size:1.25rem;font-weight:600;"><?= date('d M Y', strtotime($manifest['display_date'])) ?></span>
         </div>
         <?php if (!empty($manifest['car_number'])): ?>
         <div style="display:flex;align-items:center;gap:12px;color:#555;">

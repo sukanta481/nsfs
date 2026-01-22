@@ -17,6 +17,16 @@ $driver_id = intval($_POST['driver_id'] ?? 0);
 $driver_license = trim($_POST['driver_license'] ?? '');
 $is_manual = intval($_POST['is_manual'] ?? 0);
 
+// Get manifest date (user selected or default to today)
+$manifest_date = isset($_POST['manifest_date']) && !empty($_POST['manifest_date']) 
+    ? mysqli_real_escape_string($conn, $_POST['manifest_date']) 
+    : date('Y-m-d');
+
+// Validate manifest date (cannot be in the future)
+if (strtotime($manifest_date) > strtotime(date('Y-m-d'))) {
+    $manifest_date = date('Y-m-d'); // Reset to today if future date
+}
+
 // Get manual input for car and driver (combo box functionality)
 $manual_car_number = isset($_POST['car_number']) ? mysqli_real_escape_string($conn, trim($_POST['car_number'])) : '';
 $manual_driver_name = isset($_POST['driver_name']) ? mysqli_real_escape_string($conn, trim($_POST['driver_name'])) : '';
@@ -168,12 +178,13 @@ mysqli_begin_transaction($conn);
 try {
     $created_at = date('Y-m-d H:i:s');
 
-    // Insert manifest
-    $manifest_insert = "INSERT INTO tbl_manifest (manifest_no, office_id, car_id, driver_id, created_at, total_gross, total_pay_to, net_total) VALUES (
+    // Insert manifest with custom manifest_date
+    $manifest_insert = "INSERT INTO tbl_manifest (manifest_no, office_id, car_id, driver_id, manifest_date, created_at, total_gross, total_pay_to, net_total) VALUES (
         '".mysqli_real_escape_string($conn, $manifest_no)."',
         ".intval($office_id).",
         ".intval($car_id).",
         ".intval($driver_id).",
+        '".mysqli_real_escape_string($conn, $manifest_date)."',
         '".mysqli_real_escape_string($conn, $created_at)."',
         ".floatval($gross_total).",
         ".floatval($total_pay_to).",

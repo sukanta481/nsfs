@@ -39,7 +39,9 @@ $company = [
 ];
 
 // Manifest details (make dynamic as needed)
-$date = date('d.m.Y');
+// Use manifest_date if available, otherwise fall back to created_at or today
+$manifest_date_value = $manifest['manifest_date'] ?? ($manifest['created_at'] ? date('Y-m-d', strtotime($manifest['created_at'])) : date('Y-m-d'));
+$date = date('d.m.Y', strtotime($manifest_date_value));
 $manifest_no = $manifest['manifest_no'] ?? 'A-M23-24/000XXXX';
 $vehicle = $manifest['car_number'] ?? 'N/A';
 $driver = $manifest['driver_name'] ?? 'N/A';

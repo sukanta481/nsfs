@@ -12,7 +12,8 @@ $manifest_no = trim($_REQUEST['manifest_no'] ?? '');
 $where = [];
 
 if (!empty($fromdate) && !empty($todate)) {
-    $where[] = "(m.created_at BETWEEN '".mysqli_real_escape_string($conn, $fromdate)." 00:00:00' AND '".mysqli_real_escape_string($conn, $todate)." 23:59:59')";
+    // Use manifest_date for filtering (with fallback to created_at for old records)
+    $where[] = "(COALESCE(m.manifest_date, DATE(m.created_at)) BETWEEN '".mysqli_real_escape_string($conn, $fromdate)."' AND '".mysqli_real_escape_string($conn, $todate)."')";
 }
 
 if (!empty($office_id)) {
@@ -35,11 +36,12 @@ $whereSQL = (count($where) > 0) ? ("WHERE " . implode(" AND ", $where)) : "";
 // Query manifests with docket count from tbl_manifest_details
 $sql = "SELECT m.*,
         o.office_name,
+        COALESCE(m.manifest_date, DATE(m.created_at)) as display_date,
         (SELECT COUNT(*) FROM tbl_manifest_details md WHERE md.manifest_id = m.manifest_id) as docket_count
         FROM tbl_manifest m
         LEFT JOIN tbl_offices o ON m.office_id = o.office_id
         $whereSQL
-        ORDER BY m.created_at DESC, m.manifest_id DESC";
+        ORDER BY COALESCE(m.manifest_date, DATE(m.created_at)) DESC, m.manifest_id DESC";
 
 $exe = mysqli_query($conn, $sql);
 $rowCount = 1;
@@ -50,7 +52,7 @@ $rowCount = 1;
         <thead>
             <tr>
                 <th>Sl</th>
-                <th>Created Date</th>
+                <th>Manifest Date</th>
                 <th>Manifest No</th>
                 <th>To Office</th>
                 <th>Dockets</th>
@@ -69,7 +71,7 @@ if (!$exe) {
 ?>
             <tr>
                 <td><?= $rowCount ?></td>
-                <td><?= htmlspecialchars(date('d M Y, h:i A', strtotime($row['created_at']))) ?></td>
+                <td><?= htmlspecialchars(date('d M Y', strtotime($row['display_date']))) ?></td>
                 <td>
                     <strong><?= htmlspecialchars($row['manifest_no'] ?? '-') ?></strong>
                 </td>
