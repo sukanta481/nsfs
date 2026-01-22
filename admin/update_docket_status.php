@@ -121,13 +121,16 @@ if (!$error && !$is_bulk) {
         if ($hierarchy['new_order'] < $hierarchy['old_order'] && $new_status != 'Delayed') {
             $error = "Cannot reverse status from '$current_status' to '$new_status'. Status updates must move forward only.";
         }
-        // Check if current status is final (but allow POD upload for Delivered status)
+        // Check if current status is final (but allow POD upload for Delivered/Pending POD status)
         else {
             $final_check = mysqli_query($conn, "SELECT is_final FROM tbl_status_hierarchy WHERE status_name = '$current_status'");
             if ($final_check) {
                 $final_row = mysqli_fetch_assoc($final_check);
-                // Allow POD upload even if status is final (when current and new status are the same)
-                $is_pod_upload_only = ($current_status == 'Delivered' && $new_status == 'Delivered' && isset($_FILES['pod_file']));
+                // Allow POD upload even if status is final (when current status is Pending POD or Delivered)
+                $is_pod_upload_only = (
+                    ($current_status == 'Delivered' && $new_status == 'Delivered' && isset($_FILES['pod_file'])) ||
+                    ($current_status == 'Pending POD' && $new_status == 'Delivered' && isset($_FILES['pod_file']))
+                );
                 if ($final_row['is_final'] == 1 && !$is_pod_upload_only) {
                     $error = "Cannot update status. '$current_status' is a final status and cannot be changed.";
                 }
@@ -264,10 +267,15 @@ try {
                 if ($driver_phone) $update_query .= ", driver_phone = '$driver_phone'";
             }
         } elseif ($new_status === 'Delivered') {
-            // Use provided status_date, or current time if not provided
-            $delivery_date = $status_date ?: date('Y-m-d H:i:s');
-            $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
-            if ($pod_file) $update_query .= ", proof_of_delivery = '$pod_file'";
+            // Use provided status_date if available
+            // For Pending POD -> Delivered (POD upload), allow updating delivery date
+            if ($status_date) {
+                $update_query .= ", actual_delivery = '$status_date', delivery_datetime = '$status_date'";
+            }
+            // Always update POD if provided
+            if ($pod_file) {
+                $update_query .= ", proof_of_delivery = '$pod_file'";
+            }
         } elseif ($new_status === 'Pending POD') {
             // Delivered without POD - mark as pending POD
             $delivery_date = $status_date ?: date('Y-m-d H:i:s');
@@ -293,6 +301,14 @@ try {
         }
         if ($delay_reason) {
             $history_notes .= "\nDelay Reason: $delay_reason";
+        }
+        // Log POD upload info
+        if ($pod_file) {
+            $history_notes .= "\nPOD Uploaded: " . basename($pod_file);
+        }
+        // Log delivery date change (for Pending POD -> Delivered transitions)
+        if ($current_status == 'Pending POD' && $new_status == 'Delivered' && $status_date) {
+            $history_notes .= "\nDelivery Date Set: " . date('d M Y, h:i A', strtotime($status_date));
         }
 
         // Insert into docket_status_history

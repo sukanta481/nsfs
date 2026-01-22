@@ -5,6 +5,86 @@ require 'conn.php';
 require 'email_config_smtp.php';
 require 'email_templates.php';
 
+// Check if user has DOD (Date of Delivery) permission to edit delivery date after delivery
+$has_dod_permission = hasPermission('docket_edit_delivery_date');
+
+// Handle DOD (Date of Delivery) Update - separate from status update
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_delivery_date'])) {
+    $docket_id = intval($_POST['docket_id']);
+    $new_delivery_date = isset($_POST['new_delivery_date']) ? mysqli_real_escape_string($conn, $_POST['new_delivery_date']) : NULL;
+    $dod_remarks = mysqli_real_escape_string($conn, trim($_POST['dod_remarks'] ?? ''));
+    
+    $updated_by = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? 0;
+    $updated_by_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Admin';
+    
+    // Check DOD permission
+    if (!$has_dod_permission) {
+        $error = "Access denied. You don't have permission to edit delivery date (DOD permission required).";
+    }
+    // Check if user can access this docket
+    elseif (!canAccessDocket($docket_id)) {
+        $error = "Access denied. You don't have permission to update this docket.";
+    }
+    // Validate new delivery date
+    elseif (empty($new_delivery_date)) {
+        $error = "Please provide a valid delivery date.";
+    }
+    else {
+        // Verify docket is in Delivered status
+        $check_status = mysqli_query($conn, "SELECT doc_no, status, delivery_datetime FROM docket_details WHERE docket_id = $docket_id");
+        $docket_info = mysqli_fetch_assoc($check_status);
+        
+        if (!$docket_info) {
+            $error = "Docket not found.";
+        } elseif ($docket_info['status'] !== 'Delivered') {
+            $error = "DOD edit is only allowed for dockets with 'Delivered' status. Current status: " . $docket_info['status'];
+        } else {
+            $old_delivery_date = $docket_info['delivery_datetime'];
+            $doc_no = $docket_info['doc_no'];
+            
+            mysqli_begin_transaction($conn);
+            try {
+                // Update the delivery date
+                $update_query = "UPDATE docket_details SET 
+                                 delivery_datetime = '$new_delivery_date',
+                                 actual_delivery = '$new_delivery_date',
+                                 last_status_update = NOW()
+                                 WHERE docket_id = $docket_id";
+                
+                if (!mysqli_query($conn, $update_query)) {
+                    throw new Exception(mysqli_error($conn));
+                }
+                
+                // Log this change in status history with formatted dates
+                $old_date_formatted = $old_delivery_date ? date('d M Y, h:i A', strtotime($old_delivery_date)) : 'Not set';
+                $new_date_formatted = date('d M Y, h:i A', strtotime($new_delivery_date));
+                $notes = "DOD (Date of Delivery) Updated\nOld Date: " . $old_date_formatted . "\nNew Date: " . $new_date_formatted;
+                if (!empty($dod_remarks)) {
+                    $notes .= "\nRemarks: $dod_remarks";
+                }
+                $notes = mysqli_real_escape_string($conn, $notes);
+                
+                // Include status_date so frontend can use the correct delivery date
+                $history_query = "INSERT INTO docket_status_history 
+                    (docket_id, old_status, new_status, changed_by, changed_at, notes, status_date, updated_by, updated_by_name)
+                    VALUES ($docket_id, 'Delivered', 'Delivered', '$updated_by_name', NOW(), '$notes', '$new_delivery_date', $updated_by, '$updated_by_name')";
+                
+                if (!mysqli_query($conn, $history_query)) {
+                    throw new Exception(mysqli_error($conn));
+                }
+                
+                mysqli_commit($conn);
+                header("Location: delivery_status.php?success=Delivery date updated successfully for docket #$doc_no!");
+                exit;
+                
+            } catch (Exception $e) {
+                mysqli_rollback($conn);
+                $error = "Error updating delivery date: " . $e->getMessage();
+            }
+        }
+    }
+}
+
 // Handle status update
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
     $docket_id = intval($_POST['docket_id']);
@@ -818,11 +898,27 @@ body {
                       <?php echo !empty($row['pickup_datetime']) ? date('d M Y', strtotime($row['pickup_datetime'])) : 'N/A'; ?>
                     </div>
                   </div>
+                  <?php if ($row['status'] === 'Delivered' && !empty($row['delivery_datetime'])): ?>
+                  <div>
+                    <div style="font-size: 12px; color: #7f8c8d; font-weight: 600;">DELIVERED ON</div>
+                    <div style="font-size: 16px; color: #155724; font-weight: 600;">
+                      <?php echo date('d M Y, h:i A', strtotime($row['delivery_datetime'])); ?>
+                    </div>
+                  </div>
+                  <?php endif; ?>
                 </div>
 
-                <button class="update-button" onclick="openStatusModal(<?php echo $row['docket_id']; ?>, '<?php echo htmlspecialchars($row['doc_no'] ?? 'N/A'); ?>', '<?php echo htmlspecialchars($row['status'] ?? 'Pending'); ?>')">
-                  <i class="fas fa-edit"></i> Update Status
-                </button>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                  <button class="update-button" onclick="openStatusModal(<?php echo $row['docket_id']; ?>, '<?php echo htmlspecialchars($row['doc_no'] ?? 'N/A'); ?>', '<?php echo htmlspecialchars($row['status'] ?? 'Pending'); ?>')">
+                    <i class="fas fa-edit"></i> Update Status
+                  </button>
+                  <?php if ($row['status'] === 'Delivered' && $has_dod_permission): ?>
+                  <button type="button" class="update-button" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);" 
+                          onclick="openDodModal(<?php echo $row['docket_id']; ?>, '<?php echo htmlspecialchars($row['doc_no'] ?? 'N/A'); ?>', '<?php echo !empty($row['delivery_datetime']) ? date('Y-m-d\TH:i', strtotime($row['delivery_datetime'])) : ''; ?>')">
+                    <i class="fas fa-calendar-alt"></i> Edit DOD
+                  </button>
+                  <?php endif; ?>
+                </div>
               </div>
               <?php endwhile; ?>
             <?php else: ?>
@@ -1004,7 +1100,91 @@ body {
   </div>
 </div>
 
+<!-- DOD (Date of Delivery) Edit Modal -->
+<?php if ($has_dod_permission): ?>
+<div id="dodModal" class="modal">
+  <div class="modal-content" style="max-width: 500px;">
+    <h2 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 24px; font-weight: 800;">
+      <i class="fas fa-calendar-alt" style="color: #f39c12;"></i>
+      Edit Delivery Date (DOD)
+    </h2>
+    <p style="color: #7f8c8d; margin: 0 0 20px 0;">
+      Docket: <strong id="dodModalDocketNo" style="color: #667eea;"></strong>
+    </p>
+    
+    <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+      <i class="fas fa-exclamation-triangle" style="color: #856404;"></i>
+      <span style="color: #856404; font-size: 13px;">
+        <strong>Warning:</strong> You are editing the delivery date for an already delivered docket. This action will be logged.
+      </span>
+    </div>
+
+    <form method="POST" action="" id="dodForm">
+      <input type="hidden" name="docket_id" id="dodModalDocketId">
+
+      <div class="form-group">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">
+          <i class="fas fa-calendar-check"></i> New Delivery Date & Time <span class="required" style="color: #e74c3c;">*</span>
+        </label>
+        <input type="datetime-local" name="new_delivery_date" id="dodNewDate" required 
+               class="filter-input" style="width: 100%; font-size: 16px; padding: 12px;">
+      </div>
+
+      <div class="form-group" style="margin-top: 15px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">
+          <i class="fas fa-comment"></i> Reason for Change
+        </label>
+        <textarea name="dod_remarks" rows="3" class="filter-input" 
+                  style="width: 100%; resize: vertical; font-size: 14px; padding: 12px;"
+                  placeholder="Please provide a reason for changing the delivery date..."></textarea>
+      </div>
+
+      <div style="display: flex; gap: 15px; margin-top: 25px;">
+        <button type="submit" name="update_delivery_date" 
+                style="flex: 1; padding: 15px; background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer;">
+          <i class="fas fa-save"></i> Update Delivery Date
+        </button>
+        <button type="button" onclick="closeDodModal()" 
+                style="flex: 1; padding: 15px; background: #6c757d; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer;">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<?php endif; ?>
+
 <script>
+// DOD Modal Functions
+function openDodModal(docketId, docketNo, currentDeliveryDate) {
+    const modal = document.getElementById('dodModal');
+    if (!modal) return;
+    
+    document.getElementById('dodModalDocketId').value = docketId;
+    document.getElementById('dodModalDocketNo').textContent = docketNo;
+    document.getElementById('dodNewDate').value = currentDeliveryDate || '';
+    modal.style.display = 'flex';
+}
+
+function closeDodModal() {
+    const modal = document.getElementById('dodModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Close DOD modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+    const dodModal = document.getElementById('dodModal');
+    if (dodModal) {
+        dodModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDodModal();
+            }
+        });
+    }
+});
+
 function openStatusModal(docketId, docketNo, currentStatus) {
     document.getElementById('modalDocketId').value = docketId;
     document.getElementById('modalDocketNo').textContent = docketNo;

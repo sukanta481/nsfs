@@ -323,14 +323,49 @@ if ($get_shipping_details_row) {
     $has_pod = !empty($pod_file);
     
     if ($is_delivered) {
+        // Get the actual delivery date - prefer from docket_details, fallback to history
+        $actual_delivery_date = $get_shipping_details_row['delivery_datetime'] ?? $get_shipping_details_row['actual_delivery'] ?? null;
+        
         foreach ($tracking_history as $h) {
             if (isset($h['new_status']) && ($h['new_status'] == 'Delivered' || $h['new_status'] == 'Pending POD')) {
+                // Use status_date from history if available, then actual_delivery_date, fallback to changed_at
+                $delivery_time = $h['status_date'] ?? $actual_delivery_date ?? $h['changed_at'];
+                
+                $status_label = $has_pod ? 'Delivered' : 'Delivered (POD Pending)';
+                
+                // Build delivery details with notes if available
+                $delivery_details = $has_pod ? 'Parcel successfully delivered with proof of delivery' : 'Parcel delivered, waiting for POD upload';
+                if (!empty($h['notes'])) {
+                    $delivery_details = nl2br(htmlspecialchars($h['notes']));
+                }
+                
+                $timeline[] = [
+                    'status' => $status_label,
+                    'icon' => $has_pod ? 'fa-check-circle' : 'fa-clock',
+                    'time' => date('d M Y, h:i A', strtotime($delivery_time)),
+                    'location' => $h['location'] ?? '',
+                    'office' => '',
+                    'office_phone' => '',
+                    'pod_status' => $has_pod ? 'available' : 'pending',
+                    'pod_file' => $pod_file,
+                    'details' => $delivery_details,
+                    'completed' => true,
+                    'is_current' => true,
+                    'color' => 'success'  // Always green for delivered status
+                ];
+                break;
+            }
+        }
+        
+        // If no history entry found but status is delivered, use docket_details data
+        if (empty($timeline) || !in_array($current_status, array_column($timeline, 'status'))) {
+            if ($actual_delivery_date) {
                 $status_label = $has_pod ? 'Delivered' : 'Delivered (POD Pending)';
                 $timeline[] = [
                     'status' => $status_label,
                     'icon' => $has_pod ? 'fa-check-circle' : 'fa-clock',
-                    'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
-                    'location' => $h['location'] ?? '',
+                    'time' => date('d M Y, h:i A', strtotime($actual_delivery_date)),
+                    'location' => '',
                     'office' => '',
                     'office_phone' => '',
                     'pod_status' => $has_pod ? 'available' : 'pending',
@@ -338,9 +373,8 @@ if ($get_shipping_details_row) {
                     'details' => $has_pod ? 'Parcel successfully delivered with proof of delivery' : 'Parcel delivered, waiting for POD upload',
                     'completed' => true,
                     'is_current' => true,
-                    'color' => 'success'  // Always green for delivered status
+                    'color' => 'success'
                 ];
-                break;
             }
         }
     }

@@ -245,7 +245,7 @@ if ($is_standalone) {
                             <?= htmlspecialchars($history['new_status']) ?>
                           </div>
                           <div class="timeline-content">
-                            <div class="timeline-text"><?= htmlspecialchars($history['notes'] ?? 'Status updated') ?></div>
+                            <div class="timeline-text"><?= nl2br(htmlspecialchars($history['notes'] ?? 'Status updated')) ?></div>
                             <div class="timeline-date">
                               <i class="fa fa-clock-o"></i> <?= date('M d, Y g:i A', strtotime($history['changed_at'])) ?>
                             </div>

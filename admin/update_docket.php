@@ -17,6 +17,10 @@ if(!isset($_SESSION['aid']) && !isset($_SESSION['admin'])) {
 }
 
 require 'conn.php';
+require 'check_auth.php';
+
+// Check DOD (Date of Delivery) permission for editing delivery date after delivery
+$has_dod_permission = hasPermission('docket_edit_delivery_date');
 
 // Check database connection
 if(!$conn || mysqli_connect_errno()) {
@@ -98,6 +102,19 @@ if($company_id <= 0) {
 
 if(empty($client_name)) {
     header('Location: edit_register_new.php?docket_id=' . $docket_id . '&error=' . urlencode('Client name is required'));
+    exit;
+}
+
+// DOD Permission Check: If docket is already delivered, check if user can edit delivery date
+$current_docket = mysqli_query($conn, "SELECT status, delivery_datetime FROM docket_details WHERE docket_id = $docket_id");
+$current_data = mysqli_fetch_assoc($current_docket);
+$current_status = $current_data['status'] ?? '';
+$current_delivery_datetime = $current_data['delivery_datetime'] ?? '';
+
+// If status is Delivered and delivery_datetime has changed, check DOD permission
+if($current_status === 'Delivered' && $delivery_datetime !== $current_delivery_datetime && !$has_dod_permission) {
+    // User trying to change delivery date without DOD permission
+    header('Location: edit_register_new.php?docket_id=' . $docket_id . '&error=' . urlencode('Permission denied: You need DOD (Date of Delivery) permission to edit delivery date for delivered dockets.'));
     exit;
 }
 

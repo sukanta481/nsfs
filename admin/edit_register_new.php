@@ -9,6 +9,9 @@ $docket_id = intval($_REQUEST['docket_id'] ?? 0);
 $message = '';
 $message_type = '';
 
+// Check DOD (Date of Delivery) permission for editing delivery date after delivery
+$has_dod_permission = hasPermission('docket_edit_delivery_date');
+
 // Check for success/error messages
 if(isset($_GET['success'])) {
     $message = 'Docket updated successfully!';
@@ -31,6 +34,11 @@ if (!$data) {
     echo '<div class="alert alert-danger">Docket entry not found. <a href="register.php?type=list_register&lp=ac">Back to List</a></div>';
     exit;
 }
+
+// Determine if delivery date editing is allowed
+// If status is 'Delivered', only allow editing if user has DOD permission
+$is_delivered = ($data['status'] === 'Delivered');
+$can_edit_delivery_date = !$is_delivered || $has_dod_permission;
 
 // Fetch dropdowns data
 $companies = mysqli_query($conn, "SELECT * FROM tbl_company ORDER BY company_title ASC");
@@ -142,8 +150,24 @@ $offices = mysqli_query($conn, "SELECT * FROM tbl_offices ORDER BY office_name A
                   </div>
                   
                   <div class="form-group">
-                    <label>Delivery Date/Time</label>
-                    <input type="datetime-local" name="delivery_datetime" value="<?= $data['delivery_datetime'] ? date('Y-m-d\TH:i', strtotime($data['delivery_datetime'])) : '' ?>" class="form-control">
+                    <label>Delivery Date/Time <?php if($is_delivered && !$has_dod_permission): ?><span style="color:#e67e22; font-size:11px;">(Locked - DOD permission required)</span><?php endif; ?></label>
+                    <input type="datetime-local" name="delivery_datetime" 
+                           value="<?= $data['delivery_datetime'] ? date('Y-m-d\TH:i', strtotime($data['delivery_datetime'])) : '' ?>" 
+                           class="form-control" 
+                           <?php if(!$can_edit_delivery_date): ?>disabled readonly style="background: #f5f5f5; cursor: not-allowed;"<?php endif; ?>>
+                    <?php if($is_delivered && !$has_dod_permission): ?>
+                    <small style="color: #e67e22; display: block; margin-top: 5px;">
+                      <i class="fa fa-lock"></i> This docket is marked as Delivered. Only users with DOD permission can edit the delivery date.
+                    </small>
+                    <?php endif; ?>
+                    <?php if($is_delivered && $has_dod_permission): ?>
+                    <small style="color: #27ae60; display: block; margin-top: 5px;">
+                      <i class="fa fa-unlock"></i> You have DOD permission - delivery date can be edited.
+                    </small>
+                    <?php endif; ?>
+                    <?php if(!$can_edit_delivery_date): ?>
+                    <input type="hidden" name="delivery_datetime" value="<?= $data['delivery_datetime'] ? date('Y-m-d\TH:i', strtotime($data['delivery_datetime'])) : '' ?>">
+                    <?php endif; ?>
                   </div>
                 </div>
               </div>
