@@ -326,6 +326,20 @@ if ($get_shipping_details_row) {
         // Get the actual delivery date - prefer from docket_details, fallback to history
         $actual_delivery_date = $get_shipping_details_row['delivery_datetime'] ?? $get_shipping_details_row['actual_delivery'] ?? null;
         
+        // Find POD upload date from history (when status changed from Pending POD to Delivered)
+        $pod_upload_date = null;
+        $original_delivery_date = null;
+        foreach ($tracking_history as $h) {
+            if (isset($h['new_status']) && $h['new_status'] == 'Pending POD') {
+                // This is when item was actually delivered (without POD)
+                $original_delivery_date = $h['status_date'] ?? $h['changed_at'];
+            }
+            if (isset($h['new_status']) && $h['new_status'] == 'Delivered' && isset($h['old_status']) && $h['old_status'] == 'Pending POD') {
+                // This is when POD was uploaded
+                $pod_upload_date = $h['changed_at'];
+            }
+        }
+        
         foreach ($tracking_history as $h) {
             if (isset($h['new_status']) && ($h['new_status'] == 'Delivered' || $h['new_status'] == 'Pending POD')) {
                 // Use status_date from history if available, then actual_delivery_date, fallback to changed_at
@@ -333,9 +347,32 @@ if ($get_shipping_details_row) {
                 
                 $status_label = $has_pod ? 'Delivered' : 'Delivered (POD Pending)';
                 
-                // Build delivery details with notes if available
-                $delivery_details = $has_pod ? 'Parcel successfully delivered with proof of delivery' : 'Parcel delivered, waiting for POD upload';
-                if (!empty($h['notes'])) {
+                // Build delivery details based on scenario
+                if ($has_pod) {
+                    // Check if delivery and POD upload were on different dates
+                    if ($original_delivery_date && $pod_upload_date) {
+                        $delivery_date_str = date('d M Y', strtotime($original_delivery_date));
+                        $pod_date_str = date('d M Y', strtotime($pod_upload_date));
+                        
+                        if ($delivery_date_str != $pod_date_str) {
+                            // Different dates - show both
+                            $delivery_details = "Item successfully delivered on " . date('d M Y, h:i A', strtotime($original_delivery_date)) . 
+                                               " and Proof of Delivery uploaded on " . date('d M Y, h:i A', strtotime($pod_upload_date)) . ".";
+                        } else {
+                            // Same date - simple message
+                            $delivery_details = 'Parcel successfully delivered with proof of delivery';
+                        }
+                    } else {
+                        // No separate dates found - use simple message
+                        $delivery_details = 'Parcel successfully delivered with proof of delivery';
+                    }
+                } else {
+                    // POD pending
+                    $delivery_details = 'Item successfully delivered. Proof of Delivery upload is pending.';
+                }
+                
+                // Override with manual notes if provided (but not system-generated ones)
+                if (!empty($h['notes']) && strpos($h['notes'], 'Item successfully delivered') === false && strpos($h['notes'], 'POD Uploaded') === false) {
                     $delivery_details = nl2br(htmlspecialchars($h['notes']));
                 }
                 
@@ -358,24 +395,31 @@ if ($get_shipping_details_row) {
         }
         
         // If no history entry found but status is delivered, use docket_details data
-        if (empty($timeline) || !in_array($current_status, array_column($timeline, 'status'))) {
-            if ($actual_delivery_date) {
-                $status_label = $has_pod ? 'Delivered' : 'Delivered (POD Pending)';
-                $timeline[] = [
-                    'status' => $status_label,
-                    'icon' => $has_pod ? 'fa-check-circle' : 'fa-clock',
-                    'time' => date('d M Y, h:i A', strtotime($actual_delivery_date)),
-                    'location' => '',
-                    'office' => '',
-                    'office_phone' => '',
-                    'pod_status' => $has_pod ? 'available' : 'pending',
-                    'pod_file' => $pod_file,
-                    'details' => $has_pod ? 'Parcel successfully delivered with proof of delivery' : 'Parcel delivered, waiting for POD upload',
-                    'completed' => true,
-                    'is_current' => true,
-                    'color' => 'success'
-                ];
+        // Check if a delivery status was already added to timeline
+        $delivery_already_added = false;
+        foreach ($timeline as $t) {
+            if (strpos($t['status'], 'Delivered') !== false) {
+                $delivery_already_added = true;
+                break;
             }
+        }
+        
+        if (!$delivery_already_added && $actual_delivery_date) {
+            $status_label = $has_pod ? 'Delivered' : 'Delivered (POD Pending)';
+            $timeline[] = [
+                'status' => $status_label,
+                'icon' => $has_pod ? 'fa-check-circle' : 'fa-clock',
+                'time' => date('d M Y, h:i A', strtotime($actual_delivery_date)),
+                'location' => '',
+                'office' => '',
+                'office_phone' => '',
+                'pod_status' => $has_pod ? 'available' : 'pending',
+                'pod_file' => $pod_file,
+                'details' => $has_pod ? 'Parcel successfully delivered with proof of delivery' : 'Parcel delivered, waiting for POD upload',
+                'completed' => true,
+                'is_current' => true,
+                'color' => 'success'
+            ];
         }
     }
     
@@ -1231,8 +1275,53 @@ if (!$is_ajax) { ?>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <?php if (!empty($history['notes'])): ?>
-                                                    <?= nl2br(htmlspecialchars($history['notes'])) ?>
+                                                <?php 
+                                                // Generate meaningful notes if empty
+                                                $display_notes = $history['notes'] ?? '';
+                                                
+                                                if (empty(trim($display_notes))) {
+                                                    // Generate default notes based on status transition
+                                                    $old_status = $history['old_status'] ?? '';
+                                                    $new_status = $history['new_status'] ?? '';
+                                                    
+                                                    if ($new_status == 'Pending POD') {
+                                                        $display_notes = 'Item successfully delivered. Proof of Delivery upload is pending.';
+                                                    } elseif ($new_status == 'Delivered' && $old_status == 'Pending POD') {
+                                                        $display_notes = 'Proof of Delivery uploaded successfully.';
+                                                        if (!empty($history['pod_file'])) {
+                                                            $display_notes .= "\nPOD File: " . basename($history['pod_file']);
+                                                        }
+                                                    } elseif ($new_status == 'Delivered') {
+                                                        $display_notes = 'Parcel successfully delivered with proof of delivery.';
+                                                    } elseif ($new_status == 'Out for Delivery') {
+                                                        $driver_info = [];
+                                                        if (!empty($history['car_number'])) {
+                                                            $driver_info[] = 'Vehicle: ' . $history['car_number'];
+                                                        }
+                                                        if (!empty($history['driver_name'])) {
+                                                            $driver_info[] = 'Driver: ' . $history['driver_name'];
+                                                        }
+                                                        $display_notes = 'Parcel is out for delivery.';
+                                                        if (!empty($driver_info)) {
+                                                            $display_notes .= "\n" . implode(', ', $driver_info);
+                                                        }
+                                                    } elseif ($new_status == 'In Transit') {
+                                                        $display_notes = 'Parcel is in transit.';
+                                                    } elseif ($new_status == 'Received' || $new_status == 'Received at Branch' || $new_status == 'Received at Destination') {
+                                                        $display_notes = 'Parcel received at branch office.';
+                                                    } elseif ($new_status == 'Delayed') {
+                                                        $display_notes = 'Delivery delayed.';
+                                                        if (!empty($history['delay_reason'])) {
+                                                            $display_notes .= "\nReason: " . $history['delay_reason'];
+                                                        }
+                                                    } elseif ($new_status == 'Cancelled') {
+                                                        $display_notes = 'Shipment has been cancelled.';
+                                                    }
+                                                }
+                                                
+                                                if (!empty($display_notes)): 
+                                                ?>
+                                                    <?= nl2br(htmlspecialchars($display_notes)) ?>
                                                 <?php else: ?>
                                                     <span style="color: #999;">-</span>
                                                 <?php endif; ?>

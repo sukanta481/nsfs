@@ -294,6 +294,18 @@ try {
 
         // Build notes for status history
         $history_notes = $remarks;
+        
+        // Add auto-generated notes based on status
+        if ($new_status === 'Pending POD') {
+            // Delivered without POD - add clear message
+            $delivery_date_display = $status_date ? date('d M Y, h:i A', strtotime($status_date)) : date('d M Y, h:i A');
+            if (empty(trim($history_notes))) {
+                $history_notes = "Item successfully delivered on $delivery_date_display. Proof of Delivery upload is pending.";
+            } else {
+                $history_notes .= "\nItem delivered on $delivery_date_display. POD upload pending.";
+            }
+        }
+        
         if ($car_number && $driver_name) {
             $driver_info = $driver_name;
             if ($driver_phone) $driver_info .= " ($driver_phone)";
@@ -302,13 +314,26 @@ try {
         if ($delay_reason) {
             $history_notes .= "\nDelay Reason: $delay_reason";
         }
-        // Log POD upload info
+        // Log POD upload info with timestamp
         if ($pod_file) {
-            $history_notes .= "\nPOD Uploaded: " . basename($pod_file);
+            $pod_upload_time = date('d M Y, h:i A');
+            $history_notes .= "\nPOD Uploaded: " . basename($pod_file) . " on $pod_upload_time";
         }
-        // Log delivery date change (for Pending POD -> Delivered transitions)
-        if ($current_status == 'Pending POD' && $new_status == 'Delivered' && $status_date) {
-            $history_notes .= "\nDelivery Date Set: " . date('d M Y, h:i A', strtotime($status_date));
+        // Log delivery date for Pending POD -> Delivered transitions (POD upload after delivery)
+        if ($current_status == 'Pending POD' && $new_status == 'Delivered') {
+            // When uploading POD for previously delivered item
+            if (empty(trim($remarks))) {
+                // Get original delivery date from docket
+                $orig_delivery_q = mysqli_query($conn, "SELECT delivery_datetime, actual_delivery FROM docket_details WHERE docket_id = $current_docket_id");
+                $orig_delivery = mysqli_fetch_assoc($orig_delivery_q);
+                $orig_date = $orig_delivery['delivery_datetime'] ?? $orig_delivery['actual_delivery'] ?? null;
+                if ($orig_date) {
+                    $history_notes = "Item was delivered on " . date('d M Y, h:i A', strtotime($orig_date)) . ".\nProof of Delivery uploaded on " . date('d M Y, h:i A') . ".";
+                    if ($pod_file) {
+                        $history_notes .= "\nPOD File: " . basename($pod_file);
+                    }
+                }
+            }
         }
 
         // Insert into docket_status_history
