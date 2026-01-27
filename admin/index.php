@@ -549,8 +549,8 @@ require 'top_header.php';
   --accent-purple: #9c27b0;
   --accent-teal: #00bcd4;
   --text-primary: #ffffff;
-  --text-secondary: #b3b3b3;
-  --text-muted: #808080;
+  --text-secondary: #d1d1d1;
+  --text-muted: #999999;
   --border-color: #333333;
   --shadow-lg: 0 10px 40px rgba(0,0,0,0.5);
   --shadow-md: 0 4px 20px rgba(0,0,0,0.3);
@@ -1132,12 +1132,13 @@ require 'top_header.php';
 .dockets-table tbody td {
   padding: 16px 20px;
   font-size: 0.9rem;
-  color: var(--text-primary);
+  color: #e5e5e5;
+  font-weight: 400;
 }
 
 .dockets-table tbody td strong {
   font-weight: 700;
-  color: var(--accent-orange);
+  color: var(--accent-teal);
 }
 
 /* Status Badges */
@@ -1550,8 +1551,8 @@ require 'top_header.php';
             label: 'Dockets',
             data: <?= json_encode($topCompanyCounts) ?>,
             backgroundColor: [
-              '#e50914', '#ff4444', '#ff6b6b', '#ff8a8a',
-              '#f5a623', '#ffb84d', '#ffc970', '#ffd699'
+              '#00bcd4', '#26c6da', '#4dd0e1', '#80deea',
+              '#2196f3', '#42a5f5', '#64b5f6', '#90caf9'
             ],
             borderRadius: 6,
             borderSkipped: false
