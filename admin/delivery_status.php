@@ -100,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
     // Get manual input for car and driver (for combo box functionality)
     $manual_car_number = isset($_POST['car_number']) ? mysqli_real_escape_string($conn, trim($_POST['car_number'])) : '';
     $manual_driver_name = isset($_POST['driver_name']) ? mysqli_real_escape_string($conn, trim($_POST['driver_name'])) : '';
+    $manual_driver_phone = isset($_POST['driver_phone']) ? mysqli_real_escape_string($conn, trim($_POST['driver_phone'])) : '';
 
     $updated_by = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? 0;
     $updated_by_name = $_SESSION['full_name'] ?? $_SESSION['username'] ?? 'Admin';
@@ -234,17 +235,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
                 }
             }
 
+            // Get driver phone - prioritize manual input
+            $driver_phone = !empty($manual_driver_phone) ? $manual_driver_phone : '';
+            
             // Auto-add driver to staff if it's a new manual entry
             if (!empty($driver_name) && !$driver_id) {
                 // Check if driver already exists
-                $check_driver = mysqli_query($conn, "SELECT staff_id FROM tbl_staff WHERE staff_name = '$driver_name' AND staff_role = 'Driver' LIMIT 1");
+                $check_driver = mysqli_query($conn, "SELECT staff_id, staff_phone FROM tbl_staff WHERE staff_name = '$driver_name' AND staff_role = 'Driver' LIMIT 1");
                 if ($check_driver && mysqli_num_rows($check_driver) > 0) {
                     $driver_row = mysqli_fetch_assoc($check_driver);
                     $driver_id = $driver_row['staff_id'];
+                    // Use existing phone only if manual phone not provided
+                    if (empty($driver_phone)) {
+                        $driver_phone = $driver_row['staff_phone'] ?? '';
+                    }
                 } else {
-                    // Insert new driver (external driver with minimal info)
+                    // Insert new driver (external driver with manual phone or N/A)
+                    $phone_to_save = !empty($driver_phone) ? $driver_phone : 'N/A';
                     $insert_driver = mysqli_query($conn, "INSERT INTO tbl_staff (staff_name, staff_role, staff_phone, office_id, branch_office, active_status)
-                                                          VALUES ('$driver_name', 'Driver', 'N/A', 1, 'External', 1)");
+                                                          VALUES ('$driver_name', 'Driver', '$phone_to_save', 1, 'External', 1)");
                     if ($insert_driver) {
                         $driver_id = mysqli_insert_id($conn);
                     }
@@ -310,6 +319,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
             
             if ($car_number && $driver_name) {
                 $history_notes .= "\nVehicle: $car_number, Driver: $driver_name";
+                if (!empty($driver_phone)) {
+                    $history_notes .= " (Ph: $driver_phone)";
+                }
             }
             if ($delay_reason) {
                 $history_notes .= "\nDelay Reason: $delay_reason";
@@ -1061,6 +1073,14 @@ body {
           <input type="hidden" name="driver_id" id="driverIdHidden">
           <small style="color: #7f8c8d; font-size: 12px;">Type manually for external drivers or select from dropdown</small>
         </div>
+        
+        <div class="form-group">
+          <label>
+            <i class="fas fa-phone"></i> Driver Phone <span style="color: #7f8c8d; font-size: 12px;">(Optional - auto-fills from dropdown)</span>
+          </label>
+          <input type="text" name="driver_phone" id="driverPhoneInput" class="filter-input" placeholder="Enter driver phone number" autocomplete="off" style="width: 100%;">
+          <small style="color: #7f8c8d; font-size: 12px;">Auto-fills when selecting from dropdown. Type manually for external drivers.</small>
+        </div>
       </div>
 
       <!-- Conditional: Delay Reason (for Delayed) -->
@@ -1303,17 +1323,21 @@ document.getElementById('driverNameInput').addEventListener('input', function() 
   const value = this.value;
   const options = document.querySelectorAll('#driverList option');
   const hiddenInput = document.getElementById('driverIdHidden');
+  const phoneInput = document.getElementById('driverPhoneInput');
 
   let matched = false;
   options.forEach(option => {
     if (option.value === value) {
       hiddenInput.value = option.getAttribute('data-id') || '';
+      // Auto-fill phone number from dropdown selection
+      phoneInput.value = option.getAttribute('data-phone') || '';
       matched = true;
     }
   });
 
   if (!matched) {
     hiddenInput.value = ''; // Manual input - no ID
+    // Don't clear phone - let user enter manually
   }
 });
 

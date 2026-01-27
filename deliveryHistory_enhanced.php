@@ -1225,6 +1225,14 @@ if (!$is_ajax) { ?>
                         </div>
                         
                         <div class="detail-item">
+                            <span class="detail-label">No. of Boxes</span>
+                            <span class="detail-value"><?php 
+                                $box_count = $get_shipping_details_row['box'] ?? 0;
+                                echo !empty($box_count) && $box_count > 0 ? intval($box_count) : 'N/A';
+                            ?></span>
+                        </div>
+                        
+                        <div class="detail-item">
                             <span class="detail-label">Destination</span>
                             <span class="detail-value"><?php 
                                 $destination = $get_shipping_details_row['client_address'] ?? '';
