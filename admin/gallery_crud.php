@@ -20,40 +20,54 @@ if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id']))
 
 // Add operation
 if (isset($_POST['save_gallery'])) {
-    $gallery_name = mysqli_real_escape_string($conn, trim($_POST['gallery_name']));
+    $gallery_title = mysqli_real_escape_string($conn, trim($_POST['gallery_name']));
     $gallery_category = mysqli_real_escape_string($conn, trim($_POST['gallery_category']));
 
     $image_name = 'noimage.jpg';
     if (!empty($_FILES['gallery_image']['name'])) {
         $image_name = time() . '_' . $_FILES['gallery_image']['name'];
-        move_uploaded_file($_FILES['gallery_image']['tmp_name'], "post_img/" . $image_name);
+        $upload_result = move_uploaded_file($_FILES['gallery_image']['tmp_name'], "post_img/" . $image_name);
+        if (!$upload_result) {
+            $message = 'Failed to upload image. Check folder permissions.';
+            $message_type = 'error';
+        }
     }
 
-    $sql = "INSERT INTO tbl_gallery (gallery_name, gallery_category, gallery_image, alise)
-            VALUES ('$gallery_name', '$gallery_category', '$image_name', '" . strtolower(str_replace(' ', '-', $gallery_name)) . "')";
+    if (empty($message)) {
+        $sql = "INSERT INTO tbl_gallery (gallery_title, gallery_category_id, gallery_image, alise, status)
+                VALUES ('$gallery_title', '" . intval($gallery_category) . "', '$image_name', '" . strtolower(str_replace(' ', '-', $gallery_title)) . "', 1)";
 
-    if (mysqli_query($conn, $sql)) {
-        $message = 'Gallery item added successfully';
-        $message_type = 'success';
+        if (mysqli_query($conn, $sql)) {
+            $message = 'Gallery item added successfully';
+            $message_type = 'success';
+        } else {
+            $message = 'Database error: ' . mysqli_error($conn);
+            $message_type = 'error';
+        }
     }
 }
 
 // Update operation
 if (isset($_POST['update_gallery'])) {
     $gallery_id = intval($_POST['gallery_id']);
-    $gallery_name = mysqli_real_escape_string($conn, trim($_POST['gallery_name']));
+    $gallery_title = mysqli_real_escape_string($conn, trim($_POST['gallery_name']));
     $gallery_category = mysqli_real_escape_string($conn, trim($_POST['gallery_category']));
 
-    $sql = "UPDATE tbl_gallery SET gallery_name = '$gallery_name', gallery_category = '$gallery_category' WHERE gallery_id = $gallery_id";
+    $sql = "UPDATE tbl_gallery SET gallery_title = '$gallery_title', gallery_category_id = '" . intval($gallery_category) . "' WHERE gallery_id = $gallery_id";
 
     if (mysqli_query($conn, $sql)) {
         if (!empty($_FILES['gallery_image']['name'])) {
             $image_name = time() . '_' . $_FILES['gallery_image']['name'];
-            move_uploaded_file($_FILES['gallery_image']['tmp_name'], "post_img/" . $image_name);
-            mysqli_query($conn, "UPDATE tbl_gallery SET gallery_image = '$image_name' WHERE gallery_id = $gallery_id");
+            $upload_result = move_uploaded_file($_FILES['gallery_image']['tmp_name'], "post_img/" . $image_name);
+            if ($upload_result) {
+                mysqli_query($conn, "UPDATE tbl_gallery SET gallery_image = '$image_name' WHERE gallery_id = $gallery_id");
+            }
         }
         $message = 'Gallery item updated successfully';
         $message_type = 'success';
+    } else {
+        $message = 'Database error: ' . mysqli_error($conn);
+        $message_type = 'error';
     }
 }
 
@@ -129,7 +143,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
                   Image Title <span style="color: #e74c3c;">*</span>
                 </label>
                 <input type="text" name="gallery_name" required class="form-control"
-                       value="<?php echo $edit_data ? htmlspecialchars($edit_data['gallery_name']) : ''; ?>"
+                       value="<?php echo $edit_data ? htmlspecialchars($edit_data['gallery_title']) : ''; ?>"
                        placeholder="Enter image title"
                        style="padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px;">
               </div>
@@ -140,8 +154,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
                   Category
                 </label>
                 <input type="text" name="gallery_category" class="form-control"
-                       value="<?php echo $edit_data ? htmlspecialchars($edit_data['gallery_category']) : ''; ?>"
-                       placeholder="e.g., Projects, Events"
+                       value="<?php echo $edit_data ? htmlspecialchars($edit_data['gallery_category_id']) : ''; ?>"
+                       placeholder="e.g., 1, 2, 3 (Category ID)"
                        style="padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 10px;">
               </div>
 
@@ -189,11 +203,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
                 <?php endif; ?>
                 <div style="padding: 15px;">
                   <h4 style="margin: 0 0 5px 0; font-size: 1rem; font-weight: 600; color: #2c3e50;">
-                    <?php echo htmlspecialchars($row['gallery_name']); ?>
+                    <?php echo htmlspecialchars($row['gallery_title'] ?? ''); ?>
                   </h4>
-                  <?php if (!empty($row['gallery_category'])): ?>
+                  <?php if (!empty($row['gallery_category_id'])): ?>
                   <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #7f8c8d;">
-                    <i class="fa fa-folder" style="margin-right: 5px;"></i><?php echo htmlspecialchars($row['gallery_category']); ?>
+                    <i class="fa fa-folder" style="margin-right: 5px;"></i>Category <?php echo htmlspecialchars($row['gallery_category_id']); ?>
                   </p>
                   <?php endif; ?>
                   <div style="display: flex; gap: 8px; margin-top: 10px;">
@@ -201,7 +215,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'edit' && isset($_GET['id'])) {
                        class="btn btn-sm btn-warning" style="flex: 1; padding: 6px; font-size: 0.85rem; border-radius: 6px;">
                       <i class="fa fa-edit"></i> Edit
                     </a>
-                    <a href="#" onclick="confirmDelete(<?php echo $row['gallery_id']; ?>, '<?php echo addslashes($row['gallery_name']); ?>')"
+                    <a href="#" onclick="confirmDelete(<?php echo $row['gallery_id']; ?>, '<?php echo addslashes($row['gallery_title'] ?? ''); ?>')"
                        class="btn btn-sm btn-danger" style="flex: 1; padding: 6px; font-size: 0.85rem; border-radius: 6px;">
                       <i class="fa fa-trash"></i> Delete
                     </a>
