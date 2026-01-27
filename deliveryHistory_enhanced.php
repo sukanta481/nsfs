@@ -323,40 +323,54 @@ if ($get_shipping_details_row) {
     $has_pod = !empty($pod_file);
     
     if ($is_delivered) {
-        // Get the actual delivery date - prefer from docket_details, fallback to history
+        // Get the actual delivery date from docket_details (most accurate)
         $actual_delivery_date = $get_shipping_details_row['delivery_datetime'] ?? $get_shipping_details_row['actual_delivery'] ?? null;
         
-        // Find POD upload date from history (when status changed from Pending POD to Delivered)
+        // Find delivery and POD upload dates from history
         $pod_upload_date = null;
-        $original_delivery_date = null;
+        $delivery_history_date = null;
+        $pending_pod_date = null;
+        
         foreach ($tracking_history as $h) {
-            if (isset($h['new_status']) && $h['new_status'] == 'Pending POD') {
-                // This is when item was actually delivered (without POD)
-                $original_delivery_date = $h['status_date'] ?? $h['changed_at'];
+            $new_status = $h['new_status'] ?? '';
+            $old_status = $h['old_status'] ?? '';
+            
+            if ($new_status == 'Pending POD') {
+                // This is when item was marked as delivered (without POD)
+                // Use changed_at as the delivery date (when status actually changed)
+                $pending_pod_date = $h['changed_at'];
             }
-            if (isset($h['new_status']) && $h['new_status'] == 'Delivered' && isset($h['old_status']) && $h['old_status'] == 'Pending POD') {
-                // This is when POD was uploaded
+            if ($new_status == 'Delivered' && $old_status == 'Pending POD') {
+                // This is when POD was uploaded (Pending POD → Delivered)
                 $pod_upload_date = $h['changed_at'];
+            }
+            if ($new_status == 'Delivered' && $old_status != 'Pending POD') {
+                // Direct delivery with POD
+                $delivery_history_date = $h['changed_at'];
             }
         }
         
+        // Determine the actual delivery date to display
+        // Priority: pending_pod_date (if exists) > delivery_history_date > actual_delivery_date
+        $display_delivery_date = $pending_pod_date ?? $delivery_history_date ?? $actual_delivery_date;
+        
         foreach ($tracking_history as $h) {
             if (isset($h['new_status']) && ($h['new_status'] == 'Delivered' || $h['new_status'] == 'Pending POD')) {
-                // Use status_date from history if available, then actual_delivery_date, fallback to changed_at
-                $delivery_time = $h['status_date'] ?? $actual_delivery_date ?? $h['changed_at'];
+                // Use changed_at as the display time (when the status actually changed)
+                $delivery_time = $h['changed_at'];
                 
                 $status_label = $has_pod ? 'Delivered' : 'Delivered (POD Pending)';
                 
                 // Build delivery details based on scenario
                 if ($has_pod) {
                     // Check if delivery and POD upload were on different dates
-                    if ($original_delivery_date && $pod_upload_date) {
-                        $delivery_date_str = date('d M Y', strtotime($original_delivery_date));
+                    if ($pending_pod_date && $pod_upload_date) {
+                        $delivery_date_str = date('d M Y', strtotime($pending_pod_date));
                         $pod_date_str = date('d M Y', strtotime($pod_upload_date));
                         
                         if ($delivery_date_str != $pod_date_str) {
                             // Different dates - show both
-                            $delivery_details = "Item successfully delivered on " . date('d M Y, h:i A', strtotime($original_delivery_date)) . 
+                            $delivery_details = "Item successfully delivered on " . date('d M Y, h:i A', strtotime($pending_pod_date)) . 
                                                " and Proof of Delivery uploaded on " . date('d M Y, h:i A', strtotime($pod_upload_date)) . ".";
                         } else {
                             // Same date - simple message
