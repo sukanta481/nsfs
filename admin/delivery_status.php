@@ -132,15 +132,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
             $hierarchy = mysqli_fetch_assoc($hierarchy_result);
 
             // Check if trying to move backward (reverse update)
-            if ($hierarchy['new_order'] < $hierarchy['old_order'] && $new_status != 'Delayed') {
+            // Allow Pending POD -> Delivered transition (POD upload)
+            $is_pod_upload_transition = ($current_status === 'Pending POD' && $new_status === 'Delivered');
+            if ($hierarchy['new_order'] < $hierarchy['old_order'] && $new_status != 'Delayed' && !$is_pod_upload_transition) {
                 $error = "Cannot reverse status from '$current_status' to '$new_status'. Status updates must move forward only.";
             }
-            // Check if current status is final
+            // Check if current status is final (but allow POD upload for Pending POD)
             else {
                 $final_check = mysqli_query($conn, "SELECT is_final FROM tbl_status_hierarchy WHERE status_name = '$current_status'");
                 if ($final_check) {
                     $final_row = mysqli_fetch_assoc($final_check);
-                    if ($final_row['is_final'] == 1) {
+                    // Allow POD upload from Pending POD status
+                    if ($final_row['is_final'] == 1 && !$is_pod_upload_transition) {
                         $error = "Cannot update status. '$current_status' is a final status and cannot be changed.";
                     }
                 }
@@ -249,8 +252,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
             }
 
             // Update status in docket_details
+            // IMPORTANT: If marking as Delivered without POD, set to "Pending POD" instead
+            $actual_new_status = $new_status;
+            $is_pod_upload_only = false;
+            
+            if ($new_status === 'Delivered') {
+                if ($current_status === 'Pending POD' && $pod_file) {
+                    // Uploading POD to already delivered (Pending POD) docket
+                    $actual_new_status = 'Delivered';
+                    $is_pod_upload_only = true;
+                } elseif (empty($pod_file)) {
+                    // Marking as Delivered but no POD uploaded - set to Pending POD
+                    $actual_new_status = 'Pending POD';
+                }
+                // If POD is uploaded along with Delivered status, keep as Delivered
+            }
+            
             $update_query = "UPDATE docket_details SET
-                             status = '$new_status',
+                             status = '$actual_new_status',
                              last_status_update = NOW()";
 
             if (!empty($location)) {
@@ -262,7 +281,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
                 $update_query .= ", out_for_delivery_date = '$status_date'";
                 if ($car_id) $update_query .= ", car_id = $car_id, car_number = '$car_number'";
                 if ($driver_id) $update_query .= ", driver_id = $driver_id, driver_name = '$driver_name'";
-            } elseif ($new_status === 'Delivered') {
+            } elseif ($new_status === 'Delivered' || $actual_new_status === 'Pending POD') {
                 $delivery_date = $status_date ?? date('Y-m-d H:i:s');
                 $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
                 if ($pod_file) $update_query .= ", proof_of_delivery = '$pod_file'";
@@ -279,6 +298,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
 
             // Build notes for status history
             $history_notes = $remarks;
+            
+            // Add meaningful notes based on status transition
+            if ($is_pod_upload_only) {
+                $history_notes = "POD Uploaded: " . basename($pod_file) . " on " . date('d M Y, h:i A');
+                if (!empty($remarks)) $history_notes .= "\n" . $remarks;
+            } elseif ($actual_new_status === 'Pending POD') {
+                $history_notes = "Parcel successfully delivered. Proof of Delivery upload is pending.";
+                if (!empty($remarks)) $history_notes .= "\n" . $remarks;
+            }
+            
             if ($car_number && $driver_name) {
                 $history_notes .= "\nVehicle: $car_number, Driver: $driver_name";
             }
@@ -292,8 +321,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
                  status_date, car_id, car_number, driver_id, driver_name,
                  delay_reason, pod_file, pod_uploaded_at, location,
                  updated_by, updated_by_name)
-                VALUES ($docket_id, '$current_status', '$new_status', '$updated_by_name', NOW(), " .
-                ($history_notes ? "'$history_notes'" : "NULL") . ", " .
+                VALUES ($docket_id, '$current_status', '$actual_new_status', '$updated_by_name', NOW(), " .
+                ($history_notes ? "'" . mysqli_real_escape_string($conn, $history_notes) . "'" : "NULL") . ", " .
                 ($status_date ? "'$status_date'" : "NULL") . ", " .
                 ($car_id ?: "NULL") . ", " .
                 ($car_number ? "'$car_number'" : "NULL") . ", " .

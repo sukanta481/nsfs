@@ -1285,11 +1285,26 @@ if (!$is_ajax) { ?>
                                                     $new_status = $history['new_status'] ?? '';
                                                     
                                                     if ($new_status == 'Pending POD') {
-                                                        $display_notes = 'Item successfully delivered. Proof of Delivery upload is pending.';
+                                                        $display_notes = 'Parcel successfully delivered. Proof of Delivery upload is pending.';
+                                                        // Add driver info if available
+                                                        $driver_info = [];
+                                                        if (!empty($history['car_number'])) {
+                                                            $driver_info[] = 'Vehicle: ' . $history['car_number'];
+                                                        }
+                                                        if (!empty($history['driver_name'])) {
+                                                            $driver_info[] = 'Driver: ' . $history['driver_name'];
+                                                        }
+                                                        if (!empty($driver_info)) {
+                                                            $display_notes .= "\n" . implode(', ', $driver_info);
+                                                        }
                                                     } elseif ($new_status == 'Delivered' && $old_status == 'Pending POD') {
                                                         $display_notes = 'Proof of Delivery uploaded successfully.';
                                                         if (!empty($history['pod_file'])) {
-                                                            $display_notes .= "\nPOD File: " . basename($history['pod_file']);
+                                                            $display_notes .= "\nPOD: " . basename($history['pod_file']);
+                                                            // Add upload time if available
+                                                            if (!empty($history['pod_uploaded_at'])) {
+                                                                $display_notes .= " on " . date('d M Y, h:i A', strtotime($history['pod_uploaded_at']));
+                                                            }
                                                         }
                                                     } elseif ($new_status == 'Delivered') {
                                                         $display_notes = 'Parcel successfully delivered with proof of delivery.';
