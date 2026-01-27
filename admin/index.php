@@ -419,30 +419,35 @@ require 'top_header.php';
                       <td><?= htmlspecialchars($row['creator_name'] ?: $row['creator_username'] ?: 'N/A') ?></td>
                       <td><?= $created_date ?></td>
                       <td>
-                        <div class="action-buttons">
-                          <?php if (hasPermission('docket_view_details') || hasPermission('docket_view')): ?>
-                          <a href="register.php?type=view_register&id=<?= $row['docket_id'] ?>" class="action-btn btn-view" title="View">
-                            <i class="fa fa-eye"></i>
-                          </a>
-                          <?php endif; ?>
-                          
-                          <?php if (hasPermission('docket_download_pdf') || hasPermission('docket_view')): ?>
-                          <a href="download_docket.php?docket_id=<?= $row['docket_id'] ?>" class="action-btn btn-download" title="Download PDF" target="_blank">
-                            <i class="fa fa-download"></i>
-                          </a>
-                          <?php endif; ?>
-                          
-                          <?php if (hasPermission('docket_edit')): ?>
-                          <a href="edit_register_new.php?docket_id=<?= $row['docket_id'] ?>" class="action-btn btn-edit" title="Edit">
-                            <i class="fa fa-edit"></i>
-                          </a>
-                          <?php endif; ?>
-                          
-                          <?php if (hasPermission('docket_delete')): ?>
-                          <a href="javascript:void(0)" onclick="confirmDelete(<?= $row['docket_id'] ?>)" class="action-btn btn-delete" title="Delete">
-                            <i class="fa fa-trash"></i>
-                          </a>
-                          <?php endif; ?>
+                        <div class="action-menu">
+                          <button class="action-menu-trigger" onclick="toggleActionMenu(this)" title="Actions">
+                            <i class="fa fa-ellipsis-h"></i>
+                          </button>
+                          <div class="action-dropdown">
+                            <?php if (hasPermission('docket_view_details') || hasPermission('docket_view')): ?>
+                            <a href="register.php?type=view_register&id=<?= $row['docket_id'] ?>" class="action-item">
+                              <i class="fa fa-eye"></i> View Details
+                            </a>
+                            <?php endif; ?>
+                            
+                            <?php if (hasPermission('docket_download_pdf') || hasPermission('docket_view')): ?>
+                            <a href="download_docket.php?docket_id=<?= $row['docket_id'] ?>" class="action-item" target="_blank">
+                              <i class="fa fa-download"></i> Download PDF
+                            </a>
+                            <?php endif; ?>
+                            
+                            <?php if (hasPermission('docket_edit')): ?>
+                            <a href="edit_register_new.php?docket_id=<?= $row['docket_id'] ?>" class="action-item">
+                              <i class="fa fa-edit"></i> Edit
+                            </a>
+                            <?php endif; ?>
+                            
+                            <?php if (hasPermission('docket_delete')): ?>
+                            <a href="javascript:void(0)" onclick="confirmDelete(<?= $row['docket_id'] ?>)" class="action-item action-item-danger">
+                              <i class="fa fa-trash"></i> Delete
+                            </a>
+                            <?php endif; ?>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -498,6 +503,31 @@ require 'top_header.php';
       window.location.href = 'register.php?type=delete_register&id=' + id;
     }
   }
+
+  // Action Menu (Meatball Menu) Toggle
+  function toggleActionMenu(button) {
+    const menu = button.closest('.action-menu');
+    const isActive = menu.classList.contains('active');
+    
+    // Close all other open menus
+    document.querySelectorAll('.action-menu.active').forEach(m => {
+      m.classList.remove('active');
+    });
+    
+    // Toggle current menu
+    if (!isActive) {
+      menu.classList.add('active');
+    }
+  }
+
+  // Close menu when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.action-menu')) {
+      document.querySelectorAll('.action-menu.active').forEach(m => {
+        m.classList.remove('active');
+      });
+    }
+  });
   </script>
   
   <style>
@@ -1049,7 +1079,7 @@ require 'top_header.php';
 }
 
 .dockets-header {
-  background: linear-gradient(135deg, var(--accent-red) 0%, var(--accent-red-dark) 100%);
+  background: linear-gradient(135deg, #2d2d2d 0%, #252525 100%);
   color: white;
   padding: 20px 25px;
   font-size: 1.1rem;
@@ -1059,6 +1089,11 @@ require 'top_header.php';
   gap: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
+  border-bottom: 3px solid var(--accent-teal);
+}
+
+.dockets-header i {
+  color: var(--accent-teal);
 }
 
 .table-responsive {
@@ -1145,68 +1180,101 @@ require 'top_header.php';
   color: var(--text-secondary);
 }
 
-/* Action Buttons */
-.action-buttons {
-  display: flex;
-  gap: 6px;
+/* Action Menu (Meatball Menu) */
+.action-menu {
+  position: relative;
+  display: inline-block;
 }
 
-.action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
+.action-menu-trigger {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  text-decoration: none;
-  transition: all 0.2s;
-  border: none;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 0.85rem;
+  transition: all 0.2s;
+  font-size: 1rem;
 }
 
-.btn-view {
-  background: rgba(33,150,243,0.2);
-  color: #64b5f6;
+.action-menu-trigger:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
 }
 
-.btn-view:hover {
-  background: var(--accent-blue);
-  color: white;
-  transform: scale(1.1);
+.action-menu.active .action-menu-trigger {
+  background: var(--bg-card-hover);
+  color: var(--accent-teal);
+  border-color: var(--accent-teal);
 }
 
-.btn-download {
-  background: rgba(70,211,105,0.2);
-  color: var(--accent-green);
+.action-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s ease;
+  z-index: 100;
+  overflow: hidden;
 }
 
-.btn-download:hover {
-  background: var(--accent-green);
-  color: white;
-  transform: scale(1.1);
+.action-menu.active .action-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
-.btn-edit {
-  background: rgba(245,166,35,0.2);
-  color: var(--accent-orange);
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
 }
 
-.btn-edit:hover {
-  background: var(--accent-orange);
-  color: white;
-  transform: scale(1.1);
+.action-item:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
 }
 
-.btn-delete {
-  background: rgba(255,68,68,0.2);
+.action-item i {
+  width: 16px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.action-item:hover i {
+  opacity: 1;
+}
+
+.action-item-danger {
   color: #ff6b6b;
 }
 
-.btn-delete:hover {
-  background: #ff4444;
-  color: white;
-  transform: scale(1.1);
+.action-item-danger:hover {
+  background: rgba(255,68,68,0.1);
+  color: #ff4444;
 }
 
 /* Responsive Styles */
@@ -1348,15 +1416,14 @@ require 'top_header.php';
     padding: 15px 18px;
   }
 
-  .action-buttons {
-    flex-wrap: wrap;
-    gap: 4px;
+  .action-menu-trigger {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
   }
 
-  .action-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 0.75rem;
+  .action-dropdown {
+    min-width: 140px;
   }
 }
   </style>
