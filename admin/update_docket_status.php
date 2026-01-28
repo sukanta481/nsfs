@@ -44,16 +44,41 @@ $current_status = mysqli_real_escape_string($conn, trim($_POST['current_status']
 $remarks = mysqli_real_escape_string($conn, trim($_POST['remarks'] ?? ''));
 $location = isset($_POST['location']) ? mysqli_real_escape_string($conn, trim($_POST['location'])) : '';
 
-// Handle status_date - convert datetime-local format (with T) to MySQL format
+// Handle status_date - convert datetime-local format to MySQL format
 $status_date = NULL;
-if (isset($_POST['status_date']) && !empty($_POST['status_date'])) {
-    // datetime-local format: 2025-01-27T14:30 -> convert to 2025-01-27 14:30:00
-    $status_date = str_replace('T', ' ', $_POST['status_date']);
-    // Ensure it has seconds
-    if (strlen($status_date) == 16) {
-        $status_date .= ':00';
+if (isset($_POST['status_date']) && !empty(trim($_POST['status_date']))) {
+    $raw_date = trim($_POST['status_date']);
+    
+    // Try to parse the date using various formats
+    $parsed_date = false;
+    
+    // Try standard datetime-local format (with T)
+    if (strpos($raw_date, 'T') !== false) {
+        $parsed_date = DateTime::createFromFormat('Y-m-d\TH:i', $raw_date);
+        if (!$parsed_date) {
+            $parsed_date = DateTime::createFromFormat('Y-m-d\TH:i:s', $raw_date);
+        }
     }
-    $status_date = mysqli_real_escape_string($conn, $status_date);
+    // Try format with space
+    if (!$parsed_date) {
+        $parsed_date = DateTime::createFromFormat('Y-m-d H:i', $raw_date);
+        if (!$parsed_date) {
+            $parsed_date = DateTime::createFromFormat('Y-m-d H:i:s', $raw_date);
+        }
+    }
+    // Try strtotime as fallback
+    if (!$parsed_date) {
+        $timestamp = strtotime($raw_date);
+        if ($timestamp !== false) {
+            $parsed_date = new DateTime();
+            $parsed_date->setTimestamp($timestamp);
+        }
+    }
+    
+    if ($parsed_date) {
+        $status_date = $parsed_date->format('Y-m-d H:i:s');
+        $status_date = mysqli_real_escape_string($conn, $status_date);
+    }
 }
 
 // Car and driver can be manual input or from database
