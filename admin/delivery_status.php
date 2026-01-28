@@ -92,7 +92,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
     $current_status = mysqli_real_escape_string($conn, $_POST['current_status']);
     $remarks = mysqli_real_escape_string($conn, trim($_POST['remarks']));
     $location = isset($_POST['location']) ? mysqli_real_escape_string($conn, trim($_POST['location'])) : '';
-    $status_date = isset($_POST['status_date']) ? mysqli_real_escape_string($conn, $_POST['status_date']) : NULL;
+    
+    // Handle status_date - convert datetime-local format (with T) to MySQL format
+    $status_date = NULL;
+    if (isset($_POST['status_date']) && !empty($_POST['status_date'])) {
+        // datetime-local format: 2025-01-27T14:30 -> convert to 2025-01-27 14:30:00
+        $status_date = str_replace('T', ' ', $_POST['status_date']);
+        // Ensure it has seconds
+        if (strlen($status_date) == 16) {
+            $status_date .= ':00';
+        }
+        $status_date = mysqli_real_escape_string($conn, $status_date);
+    }
+    
     $car_id = isset($_POST['car_id']) && !empty($_POST['car_id']) ? intval($_POST['car_id']) : NULL;
     $driver_id = isset($_POST['driver_id']) && !empty($_POST['driver_id']) ? intval($_POST['driver_id']) : NULL;
     $delay_reason = isset($_POST['delay_reason']) ? mysqli_real_escape_string($conn, $_POST['delay_reason']) : NULL;
@@ -291,7 +303,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
                 if ($car_id) $update_query .= ", car_id = $car_id, car_number = '$car_number'";
                 if ($driver_id) $update_query .= ", driver_id = $driver_id, driver_name = '$driver_name'";
             } elseif ($new_status === 'Delivered' || $actual_new_status === 'Pending POD') {
-                $delivery_date = $status_date ?? date('Y-m-d H:i:s');
+                // Use provided status_date if available, otherwise use current time
+                $delivery_date = !empty($status_date) ? $status_date : date('Y-m-d H:i:s');
                 $update_query .= ", actual_delivery = '$delivery_date', delivery_datetime = '$delivery_date'";
                 if ($pod_file) $update_query .= ", proof_of_delivery = '$pod_file'";
             } elseif ($new_status === 'Delayed' && $status_date) {
@@ -1399,8 +1412,11 @@ function disablePreviousStatusOptions() {
     option.disabled = false;
     option.style.color = '';
     // Remove the (unavailable) text if it exists
-    option.textContent = option.textContent.replace(' (unavailable)', '');
+    option.textContent = option.textContent.replace(' (unavailable)', '').replace(' (Upload POD)', '');
   });
+
+  // Special case: If current status is "Pending POD", allow "Delivered" for POD upload
+  const isPendingPOD = currentStatus === 'Pending POD';
 
   // Disable previous options
   options.forEach(option => {
@@ -1410,6 +1426,17 @@ function disablePreviousStatusOptions() {
     const optionOrder = parseInt(option.getAttribute('data-order') || 0);
     const allowAnytime = option.getAttribute('data-allow-anytime') === 'true';
     const isFinal = option.getAttribute('data-final') === 'true';
+
+    // Allow "Delivered" if current status is "Pending POD" (for POD upload)
+    if (isPendingPOD && option.value === 'Delivered') {
+      option.disabled = false;
+      option.style.color = '#28a745';
+      option.style.fontWeight = 'bold';
+      if (!option.textContent.includes('(Upload POD)')) {
+        option.textContent = option.textContent + ' (Upload POD)';
+      }
+      return;
+    }
 
     if (optionOrder < currentOrder && !allowAnytime) {
       option.disabled = true;

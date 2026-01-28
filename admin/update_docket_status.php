@@ -43,7 +43,18 @@ $new_status = mysqli_real_escape_string($conn, trim($_POST['status'] ?? ''));
 $current_status = mysqli_real_escape_string($conn, trim($_POST['current_status'] ?? ''));
 $remarks = mysqli_real_escape_string($conn, trim($_POST['remarks'] ?? ''));
 $location = isset($_POST['location']) ? mysqli_real_escape_string($conn, trim($_POST['location'])) : '';
-$status_date = isset($_POST['status_date']) ? mysqli_real_escape_string($conn, $_POST['status_date']) : NULL;
+
+// Handle status_date - convert datetime-local format (with T) to MySQL format
+$status_date = NULL;
+if (isset($_POST['status_date']) && !empty($_POST['status_date'])) {
+    // datetime-local format: 2025-01-27T14:30 -> convert to 2025-01-27 14:30:00
+    $status_date = str_replace('T', ' ', $_POST['status_date']);
+    // Ensure it has seconds
+    if (strlen($status_date) == 16) {
+        $status_date .= ':00';
+    }
+    $status_date = mysqli_real_escape_string($conn, $status_date);
+}
 
 // Car and driver can be manual input or from database
 $car_number = isset($_POST['car_number']) ? mysqli_real_escape_string($conn, trim($_POST['car_number'])) : NULL;

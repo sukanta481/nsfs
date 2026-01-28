@@ -708,6 +708,18 @@ function disablePreviousStatusOptions() {
     }
   });
 
+  // Re-enable all first
+  options.forEach(option => {
+    option.disabled = false;
+    option.style.color = '';
+    option.style.fontWeight = '';
+    // Remove appended text
+    option.textContent = option.textContent.replace(' (unavailable)', '').replace(' (Upload POD)', '');
+  });
+
+  // Special case: If current status is "Pending POD", allow "Delivered" for POD upload
+  const isPendingPOD = currentStatus === 'Pending POD';
+
   // Disable previous options
   options.forEach(option => {
     // Skip empty option
@@ -716,6 +728,17 @@ function disablePreviousStatusOptions() {
     const optionOrder = parseInt(option.getAttribute('data-order') || 0);
     const allowAnytime = option.getAttribute('data-allow-anytime') === 'true';
     const isFinal = option.getAttribute('data-final') === 'true';
+
+    // Allow "Delivered" if current status is "Pending POD" (for POD upload)
+    if (isPendingPOD && option.value === 'Delivered') {
+      option.disabled = false;
+      option.style.color = '#28a745';
+      option.style.fontWeight = 'bold';
+      if (!option.textContent.includes('(Upload POD)')) {
+        option.textContent = option.textContent + ' (Upload POD)';
+      }
+      return;
+    }
 
     if (optionOrder < currentOrder && !allowAnytime) {
       option.disabled = true;
