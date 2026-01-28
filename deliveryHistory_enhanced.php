@@ -1274,8 +1274,9 @@ if (!$is_ajax) { ?>
                                         <tr>
                                             <td style="white-space: nowrap;">
                                                 <i class="fas fa-clock" style="color: #5551c0;"></i>
-                                                <?= date('d M Y', strtotime($history['changed_at'])) ?><br>
-                                                <small style="color: #666;"><?= date('h:i A', strtotime($history['changed_at'])) ?></small>
+                                                <?php $display_date = $history['status_date'] ?? $history['changed_at']; ?>
+                                                <?= date('d M Y', strtotime($display_date)) ?><br>
+                                                <small style="color: #666;"><?= date('h:i A', strtotime($display_date)) ?></small>
                                             </td>
                                             <td>
                                                 <?php if (!empty($history['old_status'])): ?>
