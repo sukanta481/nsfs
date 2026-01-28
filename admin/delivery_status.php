@@ -87,9 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_delivery_date']
 
 // Handle status update
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
-    // Debug: Log POST data to see what's being received
-    error_log("STATUS UPDATE POST DATA: " . print_r($_POST, true));
-    
     $docket_id = intval($_POST['docket_id']);
     $new_status = mysqli_real_escape_string($conn, $_POST['status']);
     $current_status = mysqli_real_escape_string($conn, $_POST['current_status']);
@@ -376,12 +373,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
             }
 
             // Insert into docket_status_history (CORRECTED - uses docket_status_history, not tbl_tracking_history)
+            // Use status_date for changed_at if provided, otherwise use current time (matches update_docket_status.php behavior)
+            $changed_at_value = $status_date ? "'$status_date'" : "NOW()";
             $history_query = "INSERT INTO docket_status_history
                 (docket_id, old_status, new_status, changed_by, changed_at, notes,
                  status_date, car_id, car_number, driver_id, driver_name,
                  delay_reason, pod_file, pod_uploaded_at, location,
                  updated_by, updated_by_name)
-                VALUES ($docket_id, '$current_status', '$actual_new_status', '$updated_by_name', NOW(), " .
+                VALUES ($docket_id, '$current_status', '$actual_new_status', '$updated_by_name', $changed_at_value, " .
                 ($history_notes ? "'" . mysqli_real_escape_string($conn, $history_notes) . "'" : "NULL") . ", " .
                 ($status_date ? "'$status_date'" : "NULL") . ", " .
                 ($car_id ?: "NULL") . ", " .
