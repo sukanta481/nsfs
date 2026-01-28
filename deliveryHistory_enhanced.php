@@ -202,7 +202,7 @@ if ($get_shipping_details_row) {
                 $timeline[] = [
                     'status' => $display_status,
                     'icon' => 'fa-warehouse',
-                    'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
+                    'time' => date('d M Y, h:i A', strtotime($h['status_date'] ?? $h['changed_at'])),
                     'location' => $received_office,
                     'office' => $received_office,
                     'office_phone' => '',
@@ -221,7 +221,7 @@ if ($get_shipping_details_row) {
                 $timeline[] = [
                     'status' => 'In Transit',
                     'icon' => 'fa-truck',
-                    'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
+                    'time' => date('d M Y, h:i A', strtotime($h['status_date'] ?? $h['changed_at'])),
                     'location' => $h['location'] ?? '',
                     'office' => '',
                     'office_phone' => '',
@@ -272,7 +272,7 @@ if ($get_shipping_details_row) {
                 $timeline[] = [
                     'status' => $display_status,
                     'icon' => 'fa-warehouse',
-                    'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
+                    'time' => date('d M Y, h:i A', strtotime($h['status_date'] ?? $h['changed_at'])),
                     'location' => $received_office,
                     'office' => $received_office,
                     'office_phone' => '',
@@ -301,7 +301,7 @@ if ($get_shipping_details_row) {
             $timeline[] = [
                 'status' => 'Out for Delivery',
                 'icon' => 'fa-shipping-fast',
-                'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
+                'time' => date('d M Y, h:i A', strtotime($h['status_date'] ?? $h['changed_at'])),
                 'location' => $h['location'] ?? '',
                 'office' => '',
                 'office_phone' => '',
@@ -356,8 +356,8 @@ if ($get_shipping_details_row) {
         
         foreach ($tracking_history as $h) {
             if (isset($h['new_status']) && ($h['new_status'] == 'Delivered' || $h['new_status'] == 'Pending POD')) {
-                // Use changed_at as the display time (when the status actually changed)
-                $delivery_time = $h['changed_at'];
+                // Use status_date (custom date) if available, otherwise use changed_at
+                $delivery_time = $h['status_date'] ?? $h['changed_at'];
                 
                 $status_label = $has_pod ? 'Delivered' : 'Delivered (POD Pending)';
                 
@@ -442,7 +442,7 @@ if ($get_shipping_details_row) {
     foreach ($tracking_history as $h) {
         if (isset($h['new_status']) && ($h['new_status'] == 'Delayed' || (isset($h['is_delayed']) && $h['is_delayed'] == 1))) {
             $delayed_entries[] = [
-                'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
+                'time' => date('d M Y, h:i A', strtotime($h['status_date'] ?? $h['changed_at'])),
                 'reason' => $h['delay_reason'] ?? 'Delay reported',
                 'notes' => $h['notes'] ?? '',
                 'location' => $h['location'] ?? ''
@@ -458,7 +458,7 @@ if ($get_shipping_details_row) {
                 $timeline[] = [
                     'status' => 'Cancelled',
                     'icon' => 'fa-times-circle',
-                    'time' => date('d M Y, h:i A', strtotime($h['changed_at'])),
+                    'time' => date('d M Y, h:i A', strtotime($h['status_date'] ?? $h['changed_at'])),
                     'location' => $h['location'] ?? '',
                     'office' => '',
                     'details' => $h['notes'] ?? 'Shipment cancelled',
