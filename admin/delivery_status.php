@@ -145,17 +145,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
             $hierarchy = mysqli_fetch_assoc($hierarchy_result);
 
             // Check if trying to move backward (reverse update)
-            // Allow Pending POD -> Delivered transition (POD upload)
-            $is_pod_upload_transition = ($current_status === 'Pending POD' && $new_status === 'Delivered');
+            // Allow POD upload transitions:
+            // - Pending POD -> Delivered (uploading POD)
+            // - Delivered -> Delivered (re-uploading or adding POD)
+            $is_pod_upload_transition = (
+                ($current_status === 'Pending POD' && $new_status === 'Delivered') ||
+                ($current_status === 'Delivered' && $new_status === 'Delivered' && isset($_FILES['pod_file']) && $_FILES['pod_file']['error'] === UPLOAD_ERR_OK)
+            );
+            
             if ($hierarchy['new_order'] < $hierarchy['old_order'] && $new_status != 'Delayed' && !$is_pod_upload_transition) {
                 $error = "Cannot reverse status from '$current_status' to '$new_status'. Status updates must move forward only.";
             }
-            // Check if current status is final (but allow POD upload for Pending POD)
+            // Check if current status is final (but allow POD upload)
             else {
                 $final_check = mysqli_query($conn, "SELECT is_final FROM tbl_status_hierarchy WHERE status_name = '$current_status'");
                 if ($final_check) {
                     $final_row = mysqli_fetch_assoc($final_check);
-                    // Allow POD upload from Pending POD status
+                    // Allow POD upload from Pending POD or Delivered status
                     if ($final_row['is_final'] == 1 && !$is_pod_upload_transition) {
                         $error = "Cannot update status. '$current_status' is a final status and cannot be changed.";
                     }
@@ -1411,12 +1417,14 @@ function disablePreviousStatusOptions() {
   options.forEach(option => {
     option.disabled = false;
     option.style.color = '';
+    option.style.fontWeight = '';
     // Remove the (unavailable) text if it exists
     option.textContent = option.textContent.replace(' (unavailable)', '').replace(' (Upload POD)', '');
   });
 
-  // Special case: If current status is "Pending POD", allow "Delivered" for POD upload
+  // Special case: Allow "Delivered" for POD upload when current status is "Pending POD" or "Delivered"
   const isPendingPOD = currentStatus === 'Pending POD';
+  const isDelivered = currentStatus === 'Delivered';
 
   // Disable previous options
   options.forEach(option => {
@@ -1427,8 +1435,8 @@ function disablePreviousStatusOptions() {
     const allowAnytime = option.getAttribute('data-allow-anytime') === 'true';
     const isFinal = option.getAttribute('data-final') === 'true';
 
-    // Allow "Delivered" if current status is "Pending POD" (for POD upload)
-    if (isPendingPOD && option.value === 'Delivered') {
+    // Allow "Delivered" if current status is "Pending POD" or "Delivered" (for POD upload)
+    if ((isPendingPOD || isDelivered) && option.value === 'Delivered') {
       option.disabled = false;
       option.style.color = '#28a745';
       option.style.fontWeight = 'bold';

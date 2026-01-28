@@ -717,8 +717,9 @@ function disablePreviousStatusOptions() {
     option.textContent = option.textContent.replace(' (unavailable)', '').replace(' (Upload POD)', '');
   });
 
-  // Special case: If current status is "Pending POD", allow "Delivered" for POD upload
+  // Special case: Allow "Delivered" for POD upload when current status is "Pending POD" or "Delivered"
   const isPendingPOD = currentStatus === 'Pending POD';
+  const isDelivered = currentStatus === 'Delivered';
 
   // Disable previous options
   options.forEach(option => {
@@ -729,8 +730,8 @@ function disablePreviousStatusOptions() {
     const allowAnytime = option.getAttribute('data-allow-anytime') === 'true';
     const isFinal = option.getAttribute('data-final') === 'true';
 
-    // Allow "Delivered" if current status is "Pending POD" (for POD upload)
-    if (isPendingPOD && option.value === 'Delivered') {
+    // Allow "Delivered" if current status is "Pending POD" or "Delivered" (for POD upload)
+    if ((isPendingPOD || isDelivered) && option.value === 'Delivered') {
       option.disabled = false;
       option.style.color = '#28a745';
       option.style.fontWeight = 'bold';

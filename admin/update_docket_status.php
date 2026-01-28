@@ -138,9 +138,10 @@ if (!$error && !$is_bulk) {
             if ($final_check) {
                 $final_row = mysqli_fetch_assoc($final_check);
                 // Allow POD upload even if status is final (when current status is Pending POD or Delivered)
+                // Also allow same-status transition for POD upload
                 $is_pod_upload_only = (
-                    ($current_status == 'Delivered' && $new_status == 'Delivered' && isset($_FILES['pod_file'])) ||
-                    ($current_status == 'Pending POD' && $new_status == 'Delivered' && isset($_FILES['pod_file']))
+                    ($current_status == 'Delivered' && $new_status == 'Delivered') ||
+                    ($current_status == 'Pending POD' && $new_status == 'Delivered')
                 );
                 if ($final_row['is_final'] == 1 && !$is_pod_upload_only) {
                     $error = "Cannot update status. '$current_status' is a final status and cannot be changed.";
