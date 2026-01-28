@@ -13,20 +13,24 @@ $creatorFilter = getCreatorFilter('dd');
 // Combine filters
 $combinedFilter = $officeFilter . $creatorFilter;
 
-// Fetch companies for dropdown (filtered by office if applicable)
-$companiesQuery = "SELECT DISTINCT company_name FROM docket_details dd WHERE company_name IS NOT NULL AND company_name != '' AND company_name != 'N/A' $combinedFilter ORDER BY company_name ASC";
+// Fetch companies from master table (much faster than DISTINCT on large table)
+$companiesQuery = "SELECT company_id, company_name FROM tbl_company WHERE active_status = 1 ORDER BY company_name ASC";
 $companiesResult = $conn->query($companiesQuery);
 $companies = [];
-while($row = $companiesResult->fetch_assoc()) {
-    $companies[] = $row['company_name'];
+if ($companiesResult) {
+    while($row = $companiesResult->fetch_assoc()) {
+        $companies[] = $row['company_name'];
+    }
 }
 
-// Fetch clients for dropdown (filtered by office if applicable)
-$clientsQuery = "SELECT DISTINCT client_name FROM docket_details dd WHERE client_name IS NOT NULL AND client_name != '' AND client_name != 'N/A' $combinedFilter ORDER BY client_name ASC";
+// Fetch clients from master table (much faster than DISTINCT on large table)
+$clientsQuery = "SELECT client_id, client_name FROM tbl_clients WHERE active_status = 1 ORDER BY client_name ASC";
 $clientsResult = $conn->query($clientsQuery);
 $clients = [];
-while($row = $clientsResult->fetch_assoc()) {
-    $clients[] = $row['client_name'];
+if ($clientsResult) {
+    while($row = $clientsResult->fetch_assoc()) {
+        $clients[] = $row['client_name'];
+    }
 }
 
 // Fetch offices for dropdown
@@ -84,15 +88,26 @@ if (!empty($status)) {
     $types .= 's';
 }
 
-// Search filter (Doc/Box)
+// Search filter (Doc/Box) - Optimized for index usage
 if (!empty($searchType) && !empty($searchValue)) {
+    $searchValue = trim($searchValue);
     if ($searchType == 'doc') {
-        $where[] = "dd.doc_no LIKE ?";
-        $params[] = "%$searchValue%";
-        $types .= 's';
+        // Use exact match first, then prefix match for better index usage
+        // If searching for exact doc_no, use = instead of LIKE
+        if (preg_match('/^\d+$/', $searchValue)) {
+            // Numeric search - likely exact doc_no
+            $where[] = "dd.doc_no = ?";
+            $params[] = $searchValue;
+            $types .= 's';
+        } else {
+            // Use prefix match (LIKE 'value%') which can use index
+            $where[] = "dd.doc_no LIKE ?";
+            $params[] = "$searchValue%";
+            $types .= 's';
+        }
     } elseif ($searchType == 'box') {
         $where[] = "dd.box LIKE ?";
-        $params[] = "%$searchValue%";
+        $params[] = "$searchValue%";
         $types .= 's';
     }
 }
