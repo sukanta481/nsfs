@@ -87,6 +87,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_delivery_date']
 
 // Handle status update
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
+    // Debug: Log POST data to see what's being received
+    error_log("STATUS UPDATE POST DATA: " . print_r($_POST, true));
+    
     $docket_id = intval($_POST['docket_id']);
     $new_status = mysqli_real_escape_string($conn, $_POST['status']);
     $current_status = mysqli_real_escape_string($conn, $_POST['current_status']);
