@@ -1030,7 +1030,7 @@ body {
           <label>
             <i class="fas fa-calendar"></i> <span id="dateLabelText">Date</span> <span class="required">*</span>
           </label>
-          <input type="datetime-local" name="status_date" class="filter-input" style="width: 100%;" value="<?php echo date('Y-m-d\TH:i'); ?>">
+          <input type="datetime-local" name="status_date" id="statusDateInput" class="filter-input" style="width: 100%;">
         </div>
       </div>
 
@@ -1244,7 +1244,20 @@ function openStatusModal(docketId, docketNo, currentStatus) {
     document.getElementById('statusForm').reset();
     document.getElementById('modalDocketId').value = docketId;
     document.getElementById('modalCurrentStatus').value = currentStatus;
+    
+    // Set current datetime for date field
+    const now = new Date();
+    const localDateTime = now.getFullYear() + '-' + 
+        String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(now.getDate()).padStart(2, '0') + 'T' + 
+        String(now.getHours()).padStart(2, '0') + ':' + 
+        String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('statusDateInput').value = localDateTime;
+    
     hideAllConditionalFields();
+    
+    // Disable previous status options based on current status
+    disablePreviousStatusOptions();
 }
 
 function closeStatusModal() {
@@ -1408,6 +1421,49 @@ function disablePreviousStatusOptions() {
     }
   });
 }
+
+// Form validation before submit
+document.getElementById('statusForm').addEventListener('submit', function(e) {
+  const status = document.getElementById('newStatus').value;
+
+  if (!status) {
+    e.preventDefault();
+    alert('Please select a status');
+    return false;
+  }
+
+  // Validate Out for Delivery requirements
+  if (status === 'Out for Delivery') {
+    const carNumber = document.getElementById('carNumberInput').value;
+    const driverName = document.getElementById('driverNameInput').value;
+    if (!carNumber || !driverName) {
+      e.preventDefault();
+      alert('Vehicle number and Driver name are required for Out for Delivery status');
+      return false;
+    }
+  }
+
+  // Validate Delayed requirements
+  if (status === 'Delayed') {
+    const delayReason = document.querySelector('[name="delay_reason"]').value;
+    if (!delayReason) {
+      e.preventDefault();
+      alert('Delay reason is required for Delayed status');
+      return false;
+    }
+  }
+
+  // Validate date field when visible
+  const dateField = document.getElementById('dateField');
+  if (dateField.style.display !== 'none') {
+    const statusDate = document.getElementById('statusDateInput').value;
+    if (!statusDate) {
+      e.preventDefault();
+      alert('Please select a date and time');
+      return false;
+    }
+  }
+});
 </script>
 
 </body>
