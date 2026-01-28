@@ -13,24 +13,20 @@ $creatorFilter = getCreatorFilter('dd');
 // Combine filters
 $combinedFilter = $officeFilter . $creatorFilter;
 
-// Fetch companies from master table (much faster than DISTINCT on large table)
-$companiesQuery = "SELECT company_id, company_name FROM tbl_company WHERE active_status = 1 ORDER BY company_name ASC";
+// Fetch companies for dropdown (filtered by office if applicable)
+$companiesQuery = "SELECT DISTINCT company_name FROM docket_details dd WHERE company_name IS NOT NULL AND company_name != '' AND company_name != 'N/A' $combinedFilter ORDER BY company_name ASC";
 $companiesResult = $conn->query($companiesQuery);
 $companies = [];
-if ($companiesResult) {
-    while($row = $companiesResult->fetch_assoc()) {
-        $companies[] = $row['company_name'];
-    }
+while($row = $companiesResult->fetch_assoc()) {
+    $companies[] = $row['company_name'];
 }
 
-// Fetch clients from master table (much faster than DISTINCT on large table)
-$clientsQuery = "SELECT client_id, client_name FROM tbl_clients WHERE active_status = 1 ORDER BY client_name ASC";
+// Fetch clients for dropdown (filtered by office if applicable)
+$clientsQuery = "SELECT DISTINCT client_name FROM docket_details dd WHERE client_name IS NOT NULL AND client_name != '' AND client_name != 'N/A' $combinedFilter ORDER BY client_name ASC";
 $clientsResult = $conn->query($clientsQuery);
 $clients = [];
-if ($clientsResult) {
-    while($row = $clientsResult->fetch_assoc()) {
-        $clients[] = $row['client_name'];
-    }
+while($row = $clientsResult->fetch_assoc()) {
+    $clients[] = $row['client_name'];
 }
 
 // Fetch offices for dropdown
