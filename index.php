@@ -18,17 +18,6 @@ $get_page_row=mysqli_fetch_array($get_page_rs);
 				<div class="banLeft">
 <?= $get_page_row['banner_heading'];?>
 <a href="<?= $get_page_row['banner_link'];?>" class="cnctBtn"><i><img src="<?= SITE_URL;?>assets/images/vwSer.svg" alt="vwSer" /></i>View Our Services</a>
-					<div class="trkBx">
-						<h6>Track Your Shipment Here</h6>
-						<form id="trakform" action="<?= SITE_URL;?>deliveryHistory_enhanced.php" method="get">
-							<input type="text" name="doc_no" placeholder="Enter your Tracking ID(Doc No.)" required="required"/>
-							<input type="submit" value="Track" />
-						</form>
-
-
-						
-
-					</div>
 				</div>
 			</div>
 			<div class="col-md-6 banRight">
@@ -85,14 +74,39 @@ $get_page_row=mysqli_fetch_array($get_page_rs);
 	</div>
 </div>
 
+<!-- Floating Tracking Card -->
+<div class="tracking-card-wrapper">
+	<div class="tracking-card">
+		<div class="tracking-card-inner">
+			<div class="tracking-icon">
+				<i class="fa-solid fa-magnifying-glass"></i>
+			</div>
+			<div class="tracking-content">
+				<h3>Track Your Shipment</h3>
+				<p>Enter your tracking ID to get real-time updates</p>
+			</div>
+			<form class="tracking-form" action="<?= SITE_URL;?>deliveryHistory_enhanced.php" method="get">
+				<div class="tracking-input-group">
+					<input type="text" name="doc_no" placeholder="Enter Tracking ID / Docket No." required />
+					<button type="submit">
+						<i class="fa-solid fa-arrow-right"></i>
+						<span>Track</span>
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
 
-
-
-
-
-
-
-
+<!-- Mobile Sticky Tracking Bar -->
+<div class="mobile-tracking-bar">
+	<form action="<?= SITE_URL;?>deliveryHistory_enhanced.php" method="get">
+		<div class="mobile-tracking-inner">
+			<input type="text" name="doc_no" placeholder="Track your shipment..." required />
+			<button type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+		</div>
+	</form>
+</div>
 
 <?php include("sec_site_feature.php"); ?>
 
@@ -172,10 +186,13 @@ $get_page_row=mysqli_fetch_array($get_page_rs);
 						?>
 						<div class="item">
 							<div class="tmBx">
-								<i><img src="<?= SITE_URL;?>admin/post_img/<?= $team_result['team_image']; ?>" alt="tm1" /></i>
+								<i><img src="<?= SITE_URL;?>admin/post_img/<?= $team_result['team_image']; ?>" alt="<?= htmlspecialchars($team_result['team_title']); ?>" /></i>
 								<strong><?= $team_result['team_title']; ?></strong>
 								<span><?= $team_result['team_desg']; ?></span>
-								<p><?= $team_result['team_srt_desc']; ?></p>
+								<div class="tm-social">
+									<a href="#" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+									<a href="mailto:#" title="Email"><i class="fa-solid fa-envelope"></i></a>
+								</div>
 							</div>
 						</div>
 						<?php $rowCount ++ ; ?>
@@ -209,11 +226,61 @@ $get_page_row=mysqli_fetch_array($get_page_rs);
 				</div>
 			</div>
 			<div class="col-md-7">
-				<img class="w-100" src="<?= SITE_URL;?>admin/post_img/<?= $get_page_row['feature_image'];?>" alt="gallery" />
+				<div class="homeGalleryGrid">
+					<?php
+					// Fetch latest gallery images from tbl_gallery
+					$home_gallery_sql = "SELECT * FROM tbl_gallery WHERE status = 1 ORDER BY gallery_id DESC LIMIT 6";
+					$home_gallery_rs = mysqli_query($conn, $home_gallery_sql);
+					$img_count = 0;
+					while($home_gallery_row = mysqli_fetch_array($home_gallery_rs)) {
+						$img_count++;
+						$size_class = ($img_count == 1 || $img_count == 6) ? 'galBig' : 'galSmall';
+					?>
+					<div class="galItem <?= $size_class; ?>">
+						<a href="<?= SITE_URL; ?>admin/post_img/<?= $home_gallery_row['gallery_image']; ?>" data-fancybox="homeGal">
+							<img src="<?= SITE_URL; ?>admin/post_img/<?= $home_gallery_row['gallery_image']; ?>" alt="<?= htmlspecialchars($home_gallery_row['gallery_title'] ?? 'Gallery'); ?>" />
+						</a>
+					</div>
+					<?php } ?>
+				</div>
 			</div>
 		</div>
 	</div>
 </section>
+
+<style>
+.homeGalleryGrid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	grid-template-rows: repeat(2, 180px);
+	gap: 10px;
+}
+.homeGalleryGrid .galItem {
+	overflow: hidden;
+	border-radius: 10px;
+}
+.homeGalleryGrid .galItem img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform 0.3s ease;
+}
+.homeGalleryGrid .galItem:hover img {
+	transform: scale(1.05);
+}
+.homeGalleryGrid .galItem.galBig {
+	grid-row: span 2;
+}
+@media (max-width: 768px) {
+	.homeGalleryGrid {
+		grid-template-columns: repeat(2, 1fr);
+		grid-template-rows: repeat(3, 150px);
+	}
+	.homeGalleryGrid .galItem.galBig {
+		grid-row: span 1;
+	}
+}
+</style>
 
 <div id="myModal" class="modal fade traketable" role="dialog">
   <div class="modal-dialog modal-lg modal-dialog-centered">
