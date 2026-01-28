@@ -36,7 +36,7 @@ error_reporting(E_ALL);
 
     <link href="<?= SITE_URL; ?>assets/css/bootstrap.css" rel="stylesheet">
     <link href="<?= SITE_URL; ?>assets/css/fonts.css" rel="stylesheet">
-	<link href="<?= SITE_URL; ?>assets/css/doc.css" rel="stylesheet">
+	<link href="<?= SITE_URL; ?>assets/css/doc.css?v=<?= time(); ?>" rel="stylesheet">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 	<link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.1.1/css/all.css">
 	<link href="<?= SITE_URL; ?>assets/css/owl.carousel.css" rel="stylesheet">
