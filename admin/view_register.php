@@ -9,6 +9,35 @@ if ($is_standalone) {
     require 'conn.php';
 }
 
+// Handle status history delete request (Admin only)
+if (isset($_POST['delete_status_history']) && (isSuperAdmin() || hasPermission('delete_status_history'))) {
+    $history_id = intval($_POST['history_id']);
+    $delete_docket_id = intval($_POST['docket_id']);
+    
+    if ($history_id > 0) {
+        // Delete the status history entry
+        $delete_sql = "DELETE FROM docket_status_history WHERE history_id = $history_id";
+        if (mysqli_query($conn, $delete_sql)) {
+            // After deletion, update the docket's current status to the most recent remaining status
+            $latest_status_sql = "SELECT new_status FROM docket_status_history WHERE docket_id = $delete_docket_id ORDER BY changed_at DESC LIMIT 1";
+            $latest_result = mysqli_query($conn, $latest_status_sql);
+            if ($latest_row = mysqli_fetch_assoc($latest_result)) {
+                $new_current_status = mysqli_real_escape_string($conn, $latest_row['new_status']);
+                mysqli_query($conn, "UPDATE docket_details SET status = '$new_current_status' WHERE docket_id = $delete_docket_id");
+            } else {
+                // No history left, reset to 'Picked Up' (initial status)
+                mysqli_query($conn, "UPDATE docket_details SET status = 'Picked Up' WHERE docket_id = $delete_docket_id");
+            }
+            $_SESSION['success_msg'] = 'Status history entry deleted successfully.';
+        } else {
+            $_SESSION['error_msg'] = 'Failed to delete status history entry.';
+        }
+    }
+    // Redirect to avoid form resubmission
+    header("Location: view_register.php?id=$delete_docket_id");
+    exit;
+}
+
 // DocketDetailsManager.php is optional - we don't actually use it
 // Just query directly instead
 $docket_id = intval($_REQUEST['id'] ?? $_REQUEST['docket_id'] ?? 0);
@@ -77,6 +106,20 @@ if ($is_standalone) {
 <!-- View Docket Content -->
 <div class="view-docket-container">
   
+  <?php if (isset($_SESSION['success_msg'])): ?>
+    <div class="alert alert-success" style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px 20px; border-radius: 8px; margin-bottom: 20px;">
+      <i class="fa fa-check-circle"></i> <?= $_SESSION['success_msg'] ?>
+    </div>
+    <?php unset($_SESSION['success_msg']); ?>
+  <?php endif; ?>
+  
+  <?php if (isset($_SESSION['error_msg'])): ?>
+    <div class="alert alert-danger" style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 12px 20px; border-radius: 8px; margin-bottom: 20px;">
+      <i class="fa fa-exclamation-circle"></i> <?= $_SESSION['error_msg'] ?>
+    </div>
+    <?php unset($_SESSION['error_msg']); ?>
+  <?php endif; ?>
+
   <!-- Back Button -->
   <div class="back-button-section">
     <a href="register.php?type=list_register&lp=ac" class="btn-back">
@@ -308,6 +351,19 @@ if ($is_standalone) {
                             <?php if (!empty($history['location'])): ?>
                               <div class="timeline-location" style="margin-top: 6px; font-size: 12px; color: #27ae60;">
                                 <i class="fa fa-map-marker"></i> <?= htmlspecialchars($history['location']) ?>
+                              </div>
+                            <?php endif; ?>
+
+                            <?php if (isSuperAdmin() || hasPermission('delete_status_history')): ?>
+                              <div class="timeline-delete" style="margin-top: 10px;">
+                                <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this status entry? This action cannot be undone.');">
+                                  <input type="hidden" name="delete_status_history" value="1">
+                                  <input type="hidden" name="history_id" value="<?= $history['history_id'] ?>">
+                                  <input type="hidden" name="docket_id" value="<?= $docket_id ?>">
+                                  <button type="submit" class="btn-delete-status" style="background: #dc3545; color: #fff; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fa fa-trash"></i> Delete
+                                  </button>
+                                </form>
                               </div>
                             <?php endif; ?>
                           </div>
@@ -1228,6 +1284,19 @@ function confirmDelete(docketId) {
 .timeline-date {
     font-size: 0.85rem;
     color: #6c757d;
+}
+
+/* Delete Status Button */
+.btn-delete-status:hover {
+    background: #c82333 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220,53,69,0.4);
+}
+
+.timeline-delete {
+    border-top: 1px dashed #e9ecef;
+    padding-top: 8px;
+    margin-top: 10px;
 }
 
 /* Actions Card */
