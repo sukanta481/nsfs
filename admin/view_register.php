@@ -290,7 +290,7 @@ if ($is_standalone) {
                           <div class="timeline-content">
                             <div class="timeline-text"><?= nl2br(htmlspecialchars($history['notes'] ?? 'Status updated')) ?></div>
                             <div class="timeline-date">
-                              <i class="fa fa-clock-o"></i> <?= date('M d, Y g:i A', strtotime($history['changed_at'])) ?>
+                              <i class="fa fa-clock-o"></i> <?= date('M d, Y g:i A', strtotime($history['status_date'] ?? $history['changed_at'])) ?>
                             </div>
                             
                             <!-- User who made the change -->
