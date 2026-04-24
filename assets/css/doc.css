@@ -84,11 +84,17 @@ p{padding-bottom: 10px;}
    FLOATING TRACKING CARD - Premium Design
    ============================================ */
 .tracking-card-wrapper {
-  position: relative;
-  z-index: 50;
-  margin-top: -100px;
-  margin-bottom: 40px;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 20px;
+  z-index: 1000;
   padding: 0 15px;
+  pointer-events: none;
+}
+
+body:has(.tracking-card-wrapper) {
+  padding-bottom: 180px;
 }
 
 .tracking-card {
@@ -98,6 +104,7 @@ p{padding-bottom: 10px;}
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255,255,255,0.1);
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .tracking-card-inner {
@@ -965,7 +972,7 @@ body{font-size: 15px;line-height: 22px;}
 /* Show mobile sticky tracking bar, hide desktop card */
 .mobile-tracking-bar { display: block; }
 .tracking-card-wrapper { display: none; }
-body { padding-bottom: 80px; } /* Space for sticky bar */
+body:has(.tracking-card-wrapper) { padding-bottom: 80px; } /* Space for sticky bar */
 
 .bannersec .row{margin: 0 -15px;}
 .bannersec .container, .bannersec .col-md-6{padding: 0 15px;}
