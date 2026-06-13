@@ -480,6 +480,7 @@ if ($get_shipping_details_row) {
     }
     
     // Shipment details from docket_details table
+    $consignor_name = $get_shipping_details_row['company_name'] ?? '-';
     $client_name = $get_shipping_details_row['client_name'] ?? '-';
     $pickup_date = $pickup_time ? date('d M Y', strtotime($pickup_time)) : '-';
     $car_no = $get_shipping_details_row['car_number'] ?? '-';
@@ -1196,7 +1197,12 @@ if (!$is_ajax) { ?>
                         </div>
                         
                         <div class="detail-item">
-                            <span class="detail-label">Consignee Name</span>
+                            <span class="detail-label">Consignor</span>
+                            <span class="detail-value"><?= htmlspecialchars($consignor_name) ?></span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="detail-label">Consignee</span>
                             <span class="detail-value"><?= htmlspecialchars($client_name) ?></span>
                         </div>
                         

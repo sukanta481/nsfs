@@ -153,8 +153,31 @@ if (!empty($combinedFilterSQL)) {
     }
 }
 
-// Build and execute query
-$sql = "SELECT dd.*, 
+// ---- Pagination setup ----
+$perPage = 50;
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+
+// Count total matching records first (fast: no joins needed, filters are all on dd.*)
+$countSql = "SELECT COUNT(*) AS cnt FROM docket_details dd $whereSQL";
+$countStmt = $conn->prepare($countSql);
+if (!empty($params)) {
+    $countStmt->bind_param($types, ...$params);
+}
+$countStmt->execute();
+$totalRecords = (int) ($countStmt->get_result()->fetch_assoc()['cnt'] ?? 0);
+
+// Clamp requested page to the available range and compute offset
+$totalPages = max(1, (int) ceil($totalRecords / $perPage));
+if ($page > $totalPages) $page = $totalPages;
+$offset = ($page - 1) * $perPage;
+
+// Build base query string for pagination links (preserve all active filters)
+$pageQueryParams = $_GET;
+unset($pageQueryParams['page']);
+$baseQuery = http_build_query($pageQueryParams);
+
+// Build and execute the paginated data query
+$sql = "SELECT dd.*,
                o.office_name as branch_office_name,
                u.full_name as creator_name,
                u.username as creator_username
@@ -162,15 +185,19 @@ $sql = "SELECT dd.*,
         LEFT JOIN tbl_offices o ON dd.office_id = o.office_id
         LEFT JOIN tbl_users u ON dd.created_by = u.user_id
         $whereSQL
-        ORDER BY dd.pickup_datetime DESC, dd.docket_id DESC";
+        ORDER BY dd.pickup_datetime DESC, dd.docket_id DESC
+        LIMIT ? OFFSET ?";
+
+// Append LIMIT/OFFSET params to a copy of the filter params for this query only
+$dataParams = $params;
+$dataParams[] = $perPage;
+$dataParams[] = $offset;
+$dataTypes = $types . 'ii';
 
 $stmt = $conn->prepare($sql);
-if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
-}
+$stmt->bind_param($dataTypes, ...$dataParams);
 $stmt->execute();
 $result = $stmt->get_result();
-$totalRecords = $result->num_rows;
 
 // Check for filter activity
 $hasFilters = !empty($fromdate) || !empty($todate) || !empty($status) ||
@@ -385,6 +412,80 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
         .results-count span {
             color: #667eea;
             font-size: 1.125rem;
+        }
+
+        /* Pagination Bar */
+        .pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 20px;
+            border-top: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+
+        .pagination-info {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .pagination-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .pagination-links .page-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            height: 38px;
+            padding: 0 10px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-links .page-link:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .pagination-links .page-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: transparent;
+            color: white;
+            cursor: default;
+        }
+
+        .pagination-links .page-link.disabled {
+            color: #d1d5db;
+            background: #f3f4f6;
+            cursor: not-allowed;
+        }
+
+        .pagination-links .page-ellipsis {
+            padding: 0 4px;
+            color: #9ca3af;
+        }
+
+        @media (max-width: 768px) {
+            .pagination-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .pagination-links {
+                justify-content: center;
+            }
         }
 
         /* Table Styles */
@@ -743,7 +844,12 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
         <div class="card">
             <div class="results-bar">
                 <div class="results-count">
-                    Showing <span><?= $totalRecords ?></span> docket(s)
+                    <?php if($totalRecords > 0): ?>
+                    Showing <span><?= number_format($offset + 1) ?>&ndash;<?= number_format(min($offset + $perPage, $totalRecords)) ?></span>
+                    of <span><?= number_format($totalRecords) ?></span> docket(s)
+                    <?php else: ?>
+                    Showing <span>0</span> docket(s)
+                    <?php endif; ?>
                     <?php if($hasFilters): ?>
                     <span style="color: #667eea; font-weight: normal;"> (filtered)</span>
                     <?php endif; ?>
@@ -778,9 +884,9 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                             </tr>
                         </thead>
                         <tbody>
-                            <?php 
-                            $sl = 1;
-                            while($row = $result->fetch_assoc()): 
+                            <?php
+                            $sl = $offset + 1;
+                            while($row = $result->fetch_assoc()):
                                 // Format date
                                 $pickup_date = 'N/A';
                                 if(!empty($row['pickup_datetime'])) {
@@ -853,6 +959,52 @@ $delay_reasons_result = mysqli_query($conn, $delay_reasons_query);
                         </tbody>
                     </table>
                 </div>
+
+                <?php if($totalPages > 1):
+                    // Windowed page range around the current page
+                    $window = 2;
+                    $startPage = max(1, $page - $window);
+                    $endPage = min($totalPages, $page + $window);
+                    $sep = $baseQuery !== '' ? '&' : '';
+                    $pageUrl = function($p) use ($baseQuery, $sep) {
+                        return '?' . $baseQuery . $sep . 'page=' . $p;
+                    };
+                ?>
+                <div class="pagination-bar">
+                    <div class="pagination-info">
+                        Page <strong><?= number_format($page) ?></strong> of <strong><?= number_format($totalPages) ?></strong>
+                    </div>
+                    <div class="pagination-links">
+                        <?php if($page > 1): ?>
+                        <a href="<?= $pageUrl(1) ?>" class="page-link" title="First page">&laquo;</a>
+                        <a href="<?= $pageUrl($page - 1) ?>" class="page-link" title="Previous page">&lsaquo; Prev</a>
+                        <?php else: ?>
+                        <span class="page-link disabled">&laquo;</span>
+                        <span class="page-link disabled">&lsaquo; Prev</span>
+                        <?php endif; ?>
+
+                        <?php if($startPage > 1): ?>
+                        <span class="page-ellipsis">&hellip;</span>
+                        <?php endif; ?>
+
+                        <?php for($p = $startPage; $p <= $endPage; $p++): ?>
+                        <a href="<?= $pageUrl($p) ?>" class="page-link <?= $p == $page ? 'active' : '' ?>"><?= $p ?></a>
+                        <?php endfor; ?>
+
+                        <?php if($endPage < $totalPages): ?>
+                        <span class="page-ellipsis">&hellip;</span>
+                        <?php endif; ?>
+
+                        <?php if($page < $totalPages): ?>
+                        <a href="<?= $pageUrl($page + 1) ?>" class="page-link" title="Next page">Next &rsaquo;</a>
+                        <a href="<?= $pageUrl($totalPages) ?>" class="page-link" title="Last page">&raquo;</a>
+                        <?php else: ?>
+                        <span class="page-link disabled">Next &rsaquo;</span>
+                        <span class="page-link disabled">&raquo;</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
                 <?php else: ?>
                 <div class="empty-state">
                     <i class="fas fa-inbox"></i>
