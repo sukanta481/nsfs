@@ -1,0 +1,10 @@
+# Route every request in this folder to index.php and preserve the Authorization header
+RewriteEngine On
+
+# Make the Authorization: Bearer header available as HTTP_AUTHORIZATION (shared hosting strips it)
+RewriteCond %{HTTP:Authorization} ^(.+)$
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
+
+# Send all requests that are not a real file to index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [QSA,L]
