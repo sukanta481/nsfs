@@ -117,6 +117,36 @@ if (file_exists('check_auth.php')) {
       </li>
       <?php endif; ?>
 
+      <!-- OpsDesk: staff & operations -->
+      <?php if (hasPermission('ops_attendance_view') || hasPermission('ops_payroll_view') || hasPermission('ops_hand_ledger_view')): ?>
+      <li class="menu-item has-submenu">
+        <a href="javascript:void(0)" class="menu-link">
+          <i class="fa fa-people-group"></i>
+          <span>OpsDesk</span>
+          <i class="fa fa-chevron-down submenu-arrow"></i>
+        </a>
+        <ul class="submenu">
+          <li><a href="ops_dashboard.php"><i class="fa fa-chart-simple"></i> Overview</a></li>
+          <?php if (hasPermission('ops_attendance_view')): ?>
+          <li><a href="ops_attendance.php"><i class="fa fa-calendar-check"></i> Daily Attendance</a></li>
+          <li><a href="ops_register.php"><i class="fa fa-table-cells"></i> Monthly Register</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('ops_payroll_view')): ?>
+          <li><a href="ops_payroll.php"><i class="fa fa-indian-rupee-sign"></i> Payroll</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('ops_salary_manage')): ?>
+          <li><a href="ops_salaries.php"><i class="fa fa-money-check"></i> Salary Setup</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('ops_advance_manage')): ?>
+          <li><a href="ops_advances.php"><i class="fa fa-hand-holding-dollar"></i> Salary Advances</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('ops_hand_ledger_view')): ?>
+          <li><a href="ops_hand.php"><i class="fa fa-wallet"></i> Hand Balance</a></li>
+          <?php endif; ?>
+        </ul>
+      </li>
+      <?php endif; ?>
+
       <!-- Companies -->
       <?php if (hasPermission('client_view')): ?>
       <li class="menu-item has-submenu">
