@@ -84,26 +84,26 @@ if (!empty($status)) {
     $types .= 's';
 }
 
-// Search filter (Doc/Box) - Optimized for index usage
+// Search filter (Doc/Box) - Normalized to find any matching docket across all records
 if (!empty($searchType) && !empty($searchValue)) {
     $searchValue = trim($searchValue);
     if ($searchType == 'doc') {
-        // Use exact match first, then prefix match for better index usage
-        // If searching for exact doc_no, use = instead of LIKE
-        if (preg_match('/^\d+$/', $searchValue)) {
-            // Numeric search - likely exact doc_no
-            $where[] = "dd.doc_no = ?";
-            $params[] = $searchValue;
-            $types .= 's';
-        } else {
-            // Use prefix match (LIKE 'value%') which can use index
-            $where[] = "dd.doc_no LIKE ?";
-            $params[] = "$searchValue%";
-            $types .= 's';
+        // Normalize: uppercase and remove whitespace/dashes so "sp 123", "SP-123", "sp123"
+        // all match an existing docket like "SP 123" or "SP123".
+        $normalized = strtoupper(preg_replace('/[\s\-_]+/', '', $searchValue));
+        $normalized = preg_replace('/[%_]/', '', $normalized);
+        if ($normalized !== '') {
+            // Use exact match if user typed a fully-normalized docket number.
+            // Otherwise use a flexible contains search (substring) so old dockets
+            // can be found regardless of prefix/suffix formatting.
+            $exact = $conn->real_escape_string($normalized);
+            $like  = $conn->real_escape_string('%' . $normalized . '%');
+            $where[] = "(UPPER(REPLACE(REPLACE(REPLACE(REPLACE(dd.doc_no, ' ', ''), '-', ''), '_', ''), '/', '')) = '$exact' "
+                     . "OR UPPER(REPLACE(REPLACE(REPLACE(REPLACE(dd.doc_no, ' ', ''), '-', ''), '_', ''), '/', '')) LIKE '$like')";
         }
     } elseif ($searchType == 'box') {
         $where[] = "dd.box LIKE ?";
-        $params[] = "$searchValue%";
+        $params[] = "%$searchValue%";
         $types .= 's';
     }
 }

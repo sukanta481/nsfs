@@ -233,7 +233,7 @@ if ($is_standalone) {
                   </div>
 
                   <!-- Package Details -->
-                  <div class="detail-row-grid triple">
+                  <div class="detail-row-grid quadruple">
                     <div class="detail-item">
                       <div class="detail-icon">
                         <i class="fa fa-balance-scale"></i>
@@ -243,7 +243,17 @@ if ($is_standalone) {
                         <strong><?= htmlspecialchars($data['weight']) ?> kg</strong>
                       </div>
                     </div>
-                    
+
+                    <div class="detail-item">
+                      <div class="detail-icon">
+                        <i class="fa fa-boxes"></i>
+                      </div>
+                      <div class="detail-content">
+                        <label>Boxes:</label>
+                        <strong><?= htmlspecialchars($data['box'] ?? 'N/A') ?></strong>
+                      </div>
+                    </div>
+
                     <div class="detail-item">
                       <div class="detail-icon">
                         <i class="fa fa-cube"></i>
@@ -1171,6 +1181,10 @@ function confirmDelete(docketId) {
     grid-template-columns: repeat(3, 1fr);
 }
 
+.detail-row-grid.quadruple {
+    grid-template-columns: repeat(4, 1fr);
+}
+
 .detail-item {
     display: flex;
     gap: 15px;
@@ -1551,6 +1565,10 @@ function confirmDelete(docketId) {
 
     .detail-row-grid.triple {
         grid-template-columns: 1fr;
+    }
+
+    .detail-row-grid.quadruple {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 

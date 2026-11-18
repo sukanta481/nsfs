@@ -349,6 +349,8 @@ if (!$is_ajax) { ?>
                   <?php
                   $status = $get_shipping_details_row['status'] ?? '';
                   $pod_file = $get_shipping_details_row['proof_of_delivery'] ?? '';
+                  // Legacy rows store placeholders like 'N/A' - only real POD paths count
+                  if ($pod_file === 'N/A' || strpos($pod_file, 'uploads/pod/') !== 0) { $pod_file = ''; }
                   // Show POD row for "Delivered" or "Pending POD" status
                   if ($status === 'Delivered' || $status === 'Pending POD') {
                       echo '<tr><td>Proof of Delivery (POD)</td><td>';
@@ -383,6 +385,8 @@ if (!$is_ajax) { ?>
                   <?php
                   $status = $get_shipping_details_row['status'] ?? '';
                   $pod_file = $get_shipping_details_row['proof_of_delivery'] ?? '';
+                  // Legacy rows store placeholders like 'N/A' - only real POD paths count
+                  if ($pod_file === 'N/A' || strpos($pod_file, 'uploads/pod/') !== 0) { $pod_file = ''; }
                   // Show POD row for "Delivered" or "Pending POD" status
                   if ($status === 'Delivered' || $status === 'Pending POD') {
                       echo '<tr><td>Proof of Delivery (POD)</td><td>';

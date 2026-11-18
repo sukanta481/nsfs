@@ -320,6 +320,8 @@ if ($get_shipping_details_row) {
     // 4. DELIVERED / POD PENDING
     $is_delivered = ($current_status == 'Delivered' || $current_status == 'Pending POD');
     $pod_file = $get_shipping_details_row['proof_of_delivery'] ?? '';
+    // Legacy rows store placeholders like 'N/A' - only real POD paths count
+    if ($pod_file === 'N/A' || strpos($pod_file, 'uploads/pod/') !== 0) { $pod_file = ''; }
     $has_pod = !empty($pod_file);
     
     if ($is_delivered) {
