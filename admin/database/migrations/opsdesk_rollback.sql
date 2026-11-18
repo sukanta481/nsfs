@@ -1,7 +1,9 @@
--- OpsDesk rollback: removes ONLY what opsdesk_001..003 added.
+-- OpsDesk rollback: removes ONLY what opsdesk_001..004 added.
 -- For local/test use. On live this destroys OpsDesk data (attendance, ledgers, payroll), so take a backup first.
 
 ALTER TABLE tbl_car DROP FOREIGN KEY IF EXISTS fk_ops_car_default_vendor;
+
+-- (004 columns live on OpsDesk tables, so dropping the tables below removes them too.)
 
 DROP TABLE IF EXISTS
     tbl_ops_activity_log,

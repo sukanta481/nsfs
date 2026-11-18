@@ -111,6 +111,30 @@ eq('inr negative', '−₹200', ops_inr(-20000));
 eq('inr small', '₹999', ops_inr(99900));
 
 echo "
+Extra duty (EXD)
+";
+$x = ops_payroll_calc(1600000, 30, 30, 0, 2);            // full month + 2 EXD
+eq('exd full month earned = salary', 1600000, $x['earned']);
+eq('exd 2 days pay = 2 x 533.33', 106667, $x['extra_pay']);
+eq('exd gross', 1706667, $x['gross']);
+eq('exd net', 1706667, $x['net']);
+$x = ops_payroll_calc(1100000, 26, 31, 0, 3);            // 11000 x 29/31 = 10290.32
+eq('exd gross rounded once', 1029032, $x['gross']);
+eq('exd earned part', 922581, $x['earned']);
+eq('exd extra = gross - earned', 106451, $x['extra_pay']);
+$x = ops_payroll_calc(1600000, 10, 30, 600000, 1);       // advance bigger than earned, EXD helps
+eq('exd advance limited by gross', 586667, $x['advance_deduction']);
+eq('exd net never below 0', 0, $x['net']);
+eq('exd carry', 13333, $x['advance_carry']);
+$x = ops_payroll_calc(1600000, 28, 30, 0);               // no EXD: unchanged behaviour
+eq('no exd extra 0', 0, $x['extra_pay']);
+eq('no exd gross = earned', $x['earned'], $x['gross']);
+throws('exd negative rejected', function () { ops_payroll_calc(1600000, 30, 30, 0, -1); });
+throws('exd more than days rejected', function () { ops_payroll_calc(1600000, 30, 30, 0, 31); });
+$c = ops_count_attendance(array(1 => 'present', 2 => 'present'), 30, 1);
+eq('count carries exd', 1, $c['extra_duty']);
+
+echo "
 Amount in words
 ";
 eq('words zero', 'Rupees Zero Only', ops_amount_words(0));

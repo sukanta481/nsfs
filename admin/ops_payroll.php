@@ -36,10 +36,10 @@ $sheet = ops_payroll_sheet($month);
 $days = $sheet['days'];
 $final = $sheet['run'] && $sheet['run']['status'] === 'finalized';
 $rows = array_values(array_filter($sheet['rows'], function ($r) use ($officeId) { return !$officeId || (int)$r['office_id'] === $officeId; }));
-$tot = array('earned' => 0, 'ded' => 0, 'net' => 0, 'missing' => 0, 'unmarked' => 0, 'nomark' => 0, 'done' => 0, 'pending' => 0, 'pendingNet' => 0);
+$tot = array('earned' => 0, 'extra' => 0, 'ded' => 0, 'net' => 0, 'missing' => 0, 'unmarked' => 0, 'nomark' => 0, 'done' => 0, 'pending' => 0, 'pendingNet' => 0);
 foreach ($rows as $r) {
     if ($r['missing_salary']) { $tot['missing']++; continue; }
-    $tot['earned'] += $r['earned']; $tot['ded'] += $r['advance_deduction']; $tot['net'] += $r['net'];
+    $tot['earned'] += $r['gross']; $tot['extra'] += $r['extra_pay']; $tot['ded'] += $r['advance_deduction']; $tot['net'] += $r['net'];
     if ($r['finalized']) { $tot['done']++; continue; }
     $tot['pending']++; $tot['pendingNet'] += $r['net'];
     if ($r['counts']['unmarked']) $tot['unmarked']++;
@@ -56,13 +56,13 @@ if (isset($_GET['export'])) {
     header('Content-Disposition: attachment; filename="salary-sheet-' . substr($month, 0, 7) . '.csv"');
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, array('Staff ID', 'Name', 'Role', 'Branch', 'Monthly salary', 'Days in month', 'Present', 'Paid leave', 'Week off', 'Absent', 'Payable days', 'Earned', 'Advance deducted', 'Net pay', 'Status'));
+    fputcsv($out, array('Staff ID', 'Name', 'Role', 'Branch', 'Monthly salary', 'Days in month', 'Present', 'Paid leave', 'Week off', 'Absent', 'Payable days', 'Earned', 'Extra duty days', 'Extra duty pay', 'Gross', 'Advance deducted', 'Net pay', 'Status'));
     foreach ($rows as $r) {
         if ($r['missing_salary']) { fputcsv($out, array($r['uid'], $r['name'], $r['role'], $r['office'], 'NOT SET')); continue; }
         $c = $r['counts'];
         fputcsv($out, array($r['uid'], $r['name'], $r['role'], $r['office'], ops_paise_to_db($r['salary']), $days,
             $c['present'], $c['paid_leave'], $c['week_off'], $c['absent_total'], $c['payable'],
-            ops_paise_to_db($r['earned']), ops_paise_to_db($r['advance_deduction']), ops_paise_to_db($r['net']), $r['finalized'] ? 'Finalized' : 'Draft'));
+            ops_paise_to_db($r['earned']), $c['extra_duty'], ops_paise_to_db($r['extra_pay']), ops_paise_to_db($r['gross']), ops_paise_to_db($r['advance_deduction']), ops_paise_to_db($r['net']), $r['finalized'] ? 'Finalized' : 'Draft'));
     }
     exit;
 }
@@ -93,7 +93,7 @@ require 'opsdesk/layout_start.php';
       <?php elseif ($tot['done']): ?><span class="pill blue"><i class="fa fa-list-check"></i><?= $tot['done'] ?> of <?= $tot['done'] + $tot['pending'] ?> finalized</span>
       <?php else: ?><span class="pill draft"><i class="fa fa-pen"></i>Draft</span><?php endif; ?></div>
     <div class="hint"><?= $final ? 'by ' . h($sheet['run']['finalized_by_name']) . ' on ' . date('j M Y', strtotime($sheet['run']['finalized_at'])) : ($tot['pending'] ? $tot['pending'] . ' still recalculating live from attendance' : 'Everyone with a salary is finalized') ?></div></div>
-  <div class="card kpi"><div class="lbl">Earned</div><div class="val num"><?= ops_inr($tot['earned']) ?></div></div>
+  <div class="card kpi"><div class="lbl">Gross earned</div><div class="val num"><?= ops_inr($tot['earned']) ?></div><?php if ($tot['extra']): ?><div class="hint">incl. <?= ops_inr($tot['extra']) ?> extra duty</div><?php endif; ?></div>
   <div class="card kpi"><div class="lbl">Advances recovered</div><div class="val num out"><?= $tot['ded'] ? '−' . ops_inr($tot['ded']) : '₹0' ?></div></div>
   <div class="card kpi"><div class="lbl">Net to pay</div><div class="val num"><?= ops_inr($tot['net']) ?></div></div>
 </div>
@@ -118,12 +118,12 @@ require 'opsdesk/layout_start.php';
   <div class="scroll-x"><table class="t">
     <thead><tr><th>Staff</th><th class="right">Monthly salary</th>
       <th class="center" title="Present">P</th><th class="center" title="Paid leave">L</th><th class="center" title="Week off">W</th><th class="center" title="Absent, incl. not marked">A</th>
-      <th class="center">Payable</th><th class="right">Earned</th><th class="right">Advance</th><th class="right">Net pay</th><th class="right no-print">Status</th></tr></thead>
+      <th class="center">Payable</th><th class="center" title="Extra duty days">EXD</th><th class="right">Earned</th><th class="right" title="Extra duty pay">Extra duty</th><th class="right">Advance</th><th class="right">Net pay</th><th class="right no-print">Status</th></tr></thead>
     <tbody>
     <?php foreach ($rows as $r): $c = $r['counts']; ?>
       <?php if ($r['missing_salary']): ?>
         <tr><td><div class="who"><?= ops_avatar($r['staff_id'], $r['name']) ?><div><b><?= h($r['name']) ?></b><span><?= h($r['role']) ?> · <?= h($r['office']) ?></span></div></div></td>
-          <td colspan="10"><span class="pill draft"><i class="fa fa-circle-exclamation"></i>Salary not set</span> <a class="small" href="ops_salaries.php?q=<?= urlencode($r['name']) ?>">Set salary</a></td></tr>
+          <td colspan="12"><span class="pill draft"><i class="fa fa-circle-exclamation"></i>Salary not set</span> <a class="small" href="ops_salaries.php?q=<?= urlencode($r['name']) ?>">Set salary</a></td></tr>
       <?php else: ?>
         <tr class="click" onclick="location.href='ops_slip.php?month=<?= substr($month, 0, 7) ?>&staff_id=<?= $r['staff_id'] ?>'">
           <td><div class="who"><?= ops_avatar($r['staff_id'], $r['name']) ?><div><b><?= h($r['name']) ?></b><span><?= h($r['role']) ?> · <?= h($r['office']) ?></span></div></div></td>
@@ -133,7 +133,9 @@ require 'opsdesk/layout_start.php';
           <td class="center num"><?= $c['week_off'] ?></td>
           <td class="center num out"><?= $c['absent_total'] ?><?php if (!$r['finalized'] && $c['unmarked']): ?><div class="small unmarked-tag"><?= $c['unmarked'] ?> not marked</div><?php endif; ?></td>
           <td class="center num"><b><?= $c['payable'] ?></b><span class="muted">/<?= $days ?></span></td>
+          <td class="center num" style="color:var(--exd)"><?= $c['extra_duty'] ?: '—' ?></td>
           <td class="right num"><?= ops_inr($r['earned']) ?></td>
+          <td class="right num" style="color:var(--exd)"><?= $r['extra_pay'] ? '+' . ops_inr($r['extra_pay']) : '—' ?></td>
           <td class="right num <?= $r['advance_deduction'] ? 'out' : 'muted' ?>"><?= $r['advance_deduction'] ? '−' . ops_inr($r['advance_deduction']) : '—' ?>
             <?php if (!empty($r['advance_carry'])): ?><div class="small" style="color:var(--warn)"><?= ops_inr($r['advance_carry']) ?> carried forward</div><?php endif; ?></td>
           <td class="right num"><b><?= ops_inr($r['net']) ?></b></td>
@@ -142,13 +144,13 @@ require 'opsdesk/layout_start.php';
             <?php elseif ($canFinalizeOne): ?><button class="btn sm" onclick='finalizeOne(<?= h(json_encode(array(
                 'id' => $r['staff_id'], 'name' => $r['name'], 'p' => $c['present'], 'l' => $c['paid_leave'], 'w' => $c['week_off'],
                 'a' => $c['absent_total'], 'u' => $c['unmarked'], 'pay' => $c['payable'], 'salary' => ops_inr($r['salary']),
-                'earned' => ops_inr($r['earned']), 'adv' => $r['advance_deduction'] ? ops_inr($r['advance_deduction']) : '', 'carry' => !empty($r['advance_carry']) ? ops_inr($r['advance_carry']) : '',
+                'earned' => ops_inr($r['earned']), 'x' => $c['extra_duty'], 'extra' => ops_inr($r['extra_pay']), 'gross' => ops_inr($r['gross']), 'adv' => $r['advance_deduction'] ? ops_inr($r['advance_deduction']) : '', 'carry' => !empty($r['advance_carry']) ? ops_inr($r['advance_carry']) : '',
                 'net' => ops_inr($r['net'])))) ?>)'><i class="fa fa-lock"></i>Finalize</button>
             <?php else: ?><span class="pill grey">Draft</span><?php endif; ?></td>
         </tr>
       <?php endif; ?>
     <?php endforeach; ?>
-    <?php if (!$rows): ?><tr><td colspan="11" class="empty">No staff for this month.</td></tr><?php endif; ?>
+    <?php if (!$rows): ?><tr><td colspan="13" class="empty">No staff for this month.</td></tr><?php endif; ?>
     </tbody>
   </table></div>
 </div>
@@ -173,6 +175,8 @@ function finalizeOne(d) {
     '<tr><td>Absent' + (d.u ? ' <span class="small unmarked-tag">(incl. ' + d.u + ' not marked)</span>' : '') + '</td><td class="right num out">' + d.a + '</td></tr>' +
     '<tr><td><b>Payable days</b></td><td class="right num"><b>' + d.pay + ' / ' + DAYS + '</b></td></tr>' +
     '<tr><td>Earned <span class="muted small">(' + e(d.salary) + ' × ' + d.pay + ' ÷ ' + DAYS + ')</span></td><td class="right num">' + e(d.earned) + '</td></tr>' +
+    (d.x ? '<tr><td>Extra duty <span class="muted small">(' + d.x + ' × per-day salary)</span></td><td class="right num" style="color:var(--exd)">+' + e(d.extra) + '</td></tr>' +
+           '<tr><td><b>Gross</b></td><td class="right num"><b>' + e(d.gross) + '</b></td></tr>' : '') +
     '<tr><td>Advance deducted</td><td class="right num out">' + (d.adv ? '−' + e(d.adv) : '₹0') + '</td></tr>' +
     (d.carry ? '<tr><td class="small" style="color:var(--warn)">Advance still due, carried to next month</td><td class="right num small" style="color:var(--warn)">' + e(d.carry) + '</td></tr>' : '') +
     '</tbody></table>' +

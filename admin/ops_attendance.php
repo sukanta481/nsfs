@@ -20,13 +20,14 @@ $doneStaff = ops_finalized_staff($date); // staff whose payroll for this month i
 $dow = (int)date('w', strtotime($date));
 $days = array('Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday');
 
-$counts = array('present' => 0, 'paid_leave' => 0, 'week_off' => 0, 'absent' => 0, 'un' => 0);
+$counts = array('present' => 0, 'paid_leave' => 0, 'week_off' => 0, 'absent' => 0, 'un' => 0, 'exd' => 0);
 $unmarkedIds = array();
 $weekOffDue = array();
 foreach ($staff as $s) {
     $sid = (int)$s['staff_id'];
     if (isset($att[$sid])) {
         $counts[$att[$sid]['status']]++;
+        if (!empty($att[$sid]['extra_duty'])) $counts['exd']++;
     } else {
         $counts['un']++;
         if (isset($doneStaff[$sid])) continue; // payroll already finalized: cannot be marked
@@ -73,7 +74,7 @@ require 'opsdesk/layout_start.php';
     <input class="input auto" style="width:200px" name="q" value="<?= h($filters['q']) ?>" placeholder="Search name, ID, phone">
     <div class="r">
       <?php if ($canMark && $unmarkedIds): ?>
-      <button type="button" class="btn success" onclick="bulk('present', <?= h(json_encode(implode(',', $unmarkedIds))) ?>, <?= count($unmarkedIds) ?>)"><i class="fa fa-check-double"></i>Mark <?= count($unmarkedIds) ?> unmarked as Present</button>
+      <button type="button" class="btn success" onclick="bulk('present', <?= h(json_encode(implode(',', $unmarkedIds))) ?>, <?= count($unmarkedIds) ?>)"><i class="fa fa-check-double"></i>Mark <?= count($unmarkedIds) ?> unmarked as Present (Day)</button>
       <?php endif; ?>
     </div>
   </form>
@@ -84,6 +85,7 @@ require 'opsdesk/layout_start.php';
       <div class="chip"><span class="dot" style="background:var(--off)"></span>Week off <b><?= $counts['week_off'] ?></b></div>
       <div class="chip"><span class="dot" style="background:var(--absent)"></span>Absent <b><?= $counts['absent'] ?></b></div>
       <div class="chip unmarked"><i class="fa fa-circle-exclamation"></i>Not marked <b><?= $counts['un'] ?></b></div>
+      <div class="chip"><span class="dot exd"></span>Extra duty <b><?= $counts['exd'] ?></b></div>
     </div>
     <?php if ($canMark && $weekOffDue): ?>
       <div class="note info mt"><i class="fa fa-lightbulb"></i><div>
@@ -98,17 +100,22 @@ require 'opsdesk/layout_start.php';
     <div class="empty">No active staff match these filters.</div>
   <?php else: ?>
   <table class="t att-table">
-    <thead><tr><th>Staff</th><th class="hide-m">Branch</th><th>Status</th><th class="hide-m">Remarks</th></tr></thead>
+    <thead><tr><th>Staff</th><th class="hide-m">Branch</th><th>Status</th><th>Extra duty</th><th class="hide-m">Remarks</th></tr></thead>
     <tbody>
-    <?php foreach ($staff as $s): $sid = (int)$s['staff_id']; $cur = isset($att[$sid]) ? $att[$sid]['status'] : null; $rowMark = $canMark && !isset($doneStaff[$sid]); ?>
+    <?php foreach ($staff as $s): $sid = (int)$s['staff_id']; $cur = isset($att[$sid]) ? $att[$sid]['status'] : null; $rowMark = $canMark && !isset($doneStaff[$sid]);
+          $shift = isset($att[$sid]) ? $att[$sid]['shift'] : null; $exd = isset($att[$sid]) ? $att[$sid]['extra_duty'] : null; ?>
       <tr class="<?= $cur ? '' : 'unmarked' ?>" data-sid="<?= $sid ?>">
         <td><div class="who"><?= ops_avatar($sid, $s['staff_name']) ?><div><b><?= h($s['staff_name']) ?></b>
           <span><?= h($s['staff_role']) ?><?= $s['staff_unique_id'] ? ' · ' . h($s['staff_unique_id']) : '' ?><?= $cur ? '' : ' · <span class="unmarked-tag">not marked</span>' ?></span></div></div></td>
         <td class="hide-m muted"><?= h($s['office_name']) ?></td>
         <td><div class="seg<?= $rowMark ? '' : ' locked' ?>"<?= isset($doneStaff[$sid]) ? ' title="Payroll finalized for this month"' : '' ?>>
           <?php foreach ($statusMeta as $k => $m): ?>
-            <button type="button" class="<?= $k ?><?= $cur === $k ? ' on' : '' ?>" title="<?= $m[1] ?>" onclick="mark(<?= $sid ?>,'<?= $k ?>',this)"><?= $m[0] ?></button>
+            <button type="button" class="<?= $k ?><?= $cur === $k ? ' on' : '' ?>" title="<?= $m[1] ?>" onclick="<?= $k === 'present' ? 'pickShift(event,' . $sid . ',this)' : 'mark(' . $sid . ',\'' . $k . '\',this)' ?>"><?= $m[0] ?><?php if ($k === 'present'): ?><span class="sh"><?= $cur === 'present' ? ($shift === 'night' ? 'N' : 'D') : '' ?></span><?php endif; ?></button>
           <?php endforeach; ?>
+        </div></td>
+        <td><div class="seg exd-seg<?= $rowMark ? '' : ' locked' ?><?= $cur === 'present' ? '' : ' off' ?>" data-shift="<?= h($shift) ?>">
+          <button type="button" data-x="day" class="<?= $exd === 'day' ? 'on' : '' ?>" <?= ($cur !== 'present' || $shift === 'day') ? 'disabled' : '' ?> title="Extra duty, Day shift" onclick="extra(<?= $sid ?>,'day',this)">EXD·D</button>
+          <button type="button" data-x="night" class="<?= $exd === 'night' ? 'on' : '' ?>" <?= ($cur !== 'present' || $shift === 'night') ? 'disabled' : '' ?> title="Extra duty, Night shift" onclick="extra(<?= $sid ?>,'night',this)">EXD·N</button>
         </div></td>
         <td class="hide-m"><input class="input" style="max-width:240px" placeholder="<?= $cur ? 'Optional' : 'Mark status first' ?>" value="<?= h(isset($att[$sid]) ? $att[$sid]['remarks'] : '') ?>"
              <?= ($rowMark && $cur) ? '' : 'disabled' ?> data-orig="<?= h(isset($att[$sid]) ? $att[$sid]['remarks'] : '') ?>" onblur="remark(<?= $sid ?>, this)"></td>
@@ -117,7 +124,8 @@ require 'opsdesk/layout_start.php';
     </tbody>
   </table>
   <div class="card-b small muted" style="border-top:1px solid var(--line2)">
-    <span class="kbd">P</span> Present · <span class="kbd">L</span> Paid leave · <span class="kbd">W</span> Week off · <span class="kbd">A</span> Absent — keys mark the first unmarked person. Changes save instantly.
+    Click <b>P</b> to choose <b>Day (D)</b> or <b>Night (N)</b>. <b>EXD</b> (extra duty) is only for a Present day, in the other shift, and adds one day's salary.<br>
+    <span class="kbd">D</span> Present Day · <span class="kbd">N</span> Present Night · <span class="kbd">L</span> Paid leave · <span class="kbd">W</span> Week off · <span class="kbd">A</span> Absent — keys mark the first unmarked person. Changes save instantly.
   </div>
   <?php endif; ?>
 </div>
@@ -125,19 +133,62 @@ require 'opsdesk/layout_start.php';
 <script>
 var OPS_DATE = <?= json_encode($date) ?>;
 var LABEL = {present:'Present', paid_leave:'Paid leave', week_off:'Week off', absent:'Absent'};
-function mark(sid, status, btn) {
+var SHIFT = {day:'Day', night:'Night'};
+function closePop() { var p = document.getElementById('shiftPop'); if (p) p.parentNode.removeChild(p); }
+function pickShift(e, sid, btn) {
+  e.stopPropagation(); closePop();
+  var row = btn.closest('tr'), curShift = btn.classList.contains('on') ? (row.querySelector('.exd-seg').dataset.shift || '') : '';
+  var pop = document.createElement('div');
+  pop.id = 'shiftPop'; pop.className = 'shift-pop';
+  pop.innerHTML = '<button type="button" data-s="day" class="' + (curShift === 'day' ? 'on' : '') + '"><i class="fa fa-sun"></i> Day (D)</button>' +
+                  '<button type="button" data-s="night" class="' + (curShift === 'night' ? 'on' : '') + '"><i class="fa fa-moon"></i> Night (N)</button>';
+  var host = document.querySelector('.ops').getBoundingClientRect(), r = btn.getBoundingClientRect();
+  pop.style.left = (r.left - host.left) + 'px';
+  pop.style.top = (r.bottom - host.top + 4) + 'px';
+  pop.addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    var b = ev.target.closest('button'); if (!b) return;
+    closePop();
+    mark(sid, 'present', btn, b.dataset.s);
+  });
+  document.querySelector('.ops').appendChild(pop);
+}
+document.addEventListener('click', closePop);
+function mark(sid, status, btn, shift) {
   var row = btn.closest('tr'), seg = btn.parentNode;
   seg.classList.add('saving');
-  OPS.api('attendance_set', {staff_id: sid, date: OPS_DATE, status: status}).then(function () {
+  var data = {staff_id: sid, date: OPS_DATE, status: status};
+  if (status === 'present') data.shift = shift || 'day';
+  OPS.api('attendance_set', data).then(function (j) {
     Array.prototype.forEach.call(seg.children, function (b) { b.classList.toggle('on', b === btn); });
+    var r = j.row || {}, sh = seg.querySelector('button.present .sh');
+    if (sh) sh.textContent = r.status === 'present' ? (r.shift === 'night' ? 'N' : 'D') : '';
+    syncExtra(row, r);
     if (row.classList.contains('unmarked')) {
       row.classList.remove('unmarked');
       var tag = row.querySelector('.unmarked-tag'); if (tag) tag.parentNode.removeChild(tag);
       var inp = row.querySelector('input'); if (inp) { inp.disabled = false; inp.placeholder = 'Optional'; }
     }
-    OPS.toast(row.querySelector('.who b').textContent + ' → ' + LABEL[status]);
+    OPS.toast(row.querySelector('.who b').textContent + ' → ' + LABEL[status] + (status === 'present' ? ' (' + SHIFT[r.shift] + ')' : ''));
     refreshCounts();
   }).catch(function (e) { OPS.toast(e.message, true); }).then(function () { seg.classList.remove('saving'); });
+}
+function syncExtra(row, r) {
+  var es = row.querySelector('.exd-seg');
+  es.dataset.shift = r.shift || '';
+  es.classList.toggle('off', r.status !== 'present');
+  es.querySelectorAll('button').forEach(function (b) {
+    b.disabled = r.status !== 'present' || r.shift === b.dataset.x;
+    b.classList.toggle('on', !!r.extra_duty && r.extra_duty === b.dataset.x);
+  });
+}
+function extra(sid, x, btn) {
+  var row = btn.closest('tr'), turnOff = btn.classList.contains('on');
+  OPS.api('attendance_extra', {staff_id: sid, date: OPS_DATE, extra: turnOff ? '' : x}).then(function () {
+    btn.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', !turnOff && b === btn); });
+    OPS.toast(row.querySelector('.who b').textContent + (turnOff ? ' → extra duty removed' : ' → extra duty (' + SHIFT[x] + ') added: +1 day salary'));
+    refreshCounts();
+  }).catch(function (e) { OPS.toast(e.message, true); });
 }
 function remark(sid, input) {
   if (input.value === input.dataset.orig) return;
@@ -152,20 +203,21 @@ function bulk(status, ids, n) {
     .catch(function (e) { OPS.toast(e.message, true); });
 }
 function refreshCounts() {
-  var c = {present:0, paid_leave:0, week_off:0, absent:0, un:0};
+  var c = {present:0, paid_leave:0, week_off:0, absent:0, un:0, exd:0};
   document.querySelectorAll('.att-table tbody tr').forEach(function (tr) {
-    var on = tr.querySelector('.seg button.on');
+    var on = tr.querySelector('.seg:not(.exd-seg) button.on');
     if (!on) c.un++; else c[on.className.split(' ')[0]]++;
+    if (tr.querySelector('.exd-seg button.on')) c.exd++;
   });
   var chips = document.querySelectorAll('.chips .chip b');
-  [c.present, c.paid_leave, c.week_off, c.absent, c.un].forEach(function (v, i) { chips[i].textContent = v; });
+  [c.present, c.paid_leave, c.week_off, c.absent, c.un, c.exd].forEach(function (v, i) { chips[i].textContent = v; });
 }
 document.addEventListener('keydown', function (e) {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
-  var map = {p:'present', l:'paid_leave', w:'week_off', a:'absent'}, st = map[e.key.toLowerCase()];
+  var k = e.key.toLowerCase(), map = {d:'present', n:'present', l:'paid_leave', w:'week_off', a:'absent'}, st = map[k];
   if (!st) return;
   var row = document.querySelector('.att-table tr.unmarked');
-  if (row) mark(+row.dataset.sid, st, row.querySelector('.seg button.' + st));
+  if (row) mark(+row.dataset.sid, st, row.querySelector('.seg button.' + st), k === 'n' ? 'night' : 'day');
 });
 </script>
 <?php require 'opsdesk/layout_end.php'; ?>

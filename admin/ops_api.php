@@ -30,7 +30,16 @@ try {
             ops_require('ops_attendance_mark');
             $date = ops_date_param('date', '');
             if (!$date) throw new InvalidArgumentException('Invalid date.');
-            ops_attendance_set((int)$p('staff_id'), $date, $p('status'));
+            ops_attendance_set((int)$p('staff_id'), $date, $p('status'), null, $p('shift') !== '' ? $p('shift') : null);
+            $row = ops_one('SELECT status, shift, extra_duty FROM tbl_ops_attendance WHERE staff_id = ? AND att_date = ?', array((int)$p('staff_id'), $date));
+            ops_json(array('ok' => true, 'row' => $row));
+
+        case 'attendance_extra':
+            // Extra Duty (EXD): extra = day | night | '' (clear)
+            ops_require('ops_attendance_mark');
+            $date = ops_date_param('date', '');
+            if (!$date) throw new InvalidArgumentException('Invalid date.');
+            ops_attendance_extra((int)$p('staff_id'), $date, $p('extra'));
             ops_json(array('ok' => true));
 
         case 'attendance_remarks':

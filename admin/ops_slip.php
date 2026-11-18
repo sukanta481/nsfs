@@ -76,7 +76,7 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
   .emp td.k{background:var(--soft);color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;width:17%}
   .emp td.v{font-weight:600}
   .sec{margin-top:14px;font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-  .att{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line)}
+  .att{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--line)}
   .att div{padding:8px;text-align:center;border-right:1px solid var(--line)}
   .att div:last-child{border-right:0;background:var(--soft)}
   .att b{display:block;font-size:17px;font-weight:800}
@@ -163,6 +163,7 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
     <div><b><?= $c['paid_leave'] ?></b><small>Paid leave</small></div>
     <div><b><?= $c['week_off'] ?></b><small>Week off</small></div>
     <div><b style="color:var(--red)"><?= $c['absent_total'] ?></b><small>Absent<?= (!$final && $c['unmarked']) ? '*' : '' ?></small></div>
+    <div><b style="color:#d35400"><?= (int)$c['extra_duty'] ?></b><small>Extra duty</small></div>
     <div><b><?= $days ?></b><small>Days in month</small></div>
     <div><b><?= $c['payable'] ?></b><small>Payable days</small></div>
   </div>
@@ -174,7 +175,11 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
         <td class="split">Salary advance recovered<?php if ($carry > 0): ?><span class="sub">still due <?= ops_inr($carry) ?>, carried to next month</span><?php endif; ?></td><td class="r"><?= ops_inr($r['advance_deduction']) ?></td></tr>
     <tr><td>Salary earned<span class="sub"><?= ops_inr($r['salary']) ?> × <?= $c['payable'] ?> ÷ <?= $days ?> days</span></td><td class="r"><?= ops_inr($r['earned']) ?></td>
         <td class="split"></td><td></td></tr>
-    <tr class="tot"><td>Gross earnings</td><td class="r"><?= ops_inr($r['earned']) ?></td><td class="split">Total deductions</td><td class="r"><?= ops_inr($r['advance_deduction']) ?></td></tr>
+    <?php if (!empty($c['extra_duty'])): ?>
+    <tr><td>Extra duty (EXD)<span class="sub"><?= (int)$c['extra_duty'] ?> day<?= $c['extra_duty'] > 1 ? 's' : '' ?> × per-day salary</span></td><td class="r"><?= ops_inr($r['extra_pay']) ?></td>
+        <td class="split"></td><td></td></tr>
+    <?php endif; ?>
+    <tr class="tot"><td>Gross earnings</td><td class="r"><?= ops_inr($r['gross']) ?></td><td class="split">Total deductions</td><td class="r"><?= ops_inr($r['advance_deduction']) ?></td></tr>
   </table>
 
   <div class="net">
@@ -188,7 +193,7 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
       <div>Road-expense hand balance on <?= date('j M Y', strtotime($monthEnd)) ?>: <b><?= ops_inr(abs($r['hand_balance'])) ?></b>
         <?= $r['hand_balance'] > 0 ? '(cash held by employee, hisab pending)' : '(owed to employee)' ?> — for information only, not part of salary.</div>
     <?php endif; ?>
-    <div>Payable days = present + paid leave + week off. Absent and unmarked days are not paid.</div>
+    <div>Payable days = present + paid leave + week off. Absent and unmarked days are not paid. Each extra duty (EXD) adds one day's salary.</div>
   </div>
 
   <div class="pay">
