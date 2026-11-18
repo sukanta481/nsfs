@@ -12,5 +12,5 @@ admin/uploads/*/
 files/
 demo/
 
-# Composer lock (if you want consistent dependencies, remove this line)
-composer.lock
+# Composer: libraries are installed on the server by `composer install` (from composer.lock)
+vendor/
