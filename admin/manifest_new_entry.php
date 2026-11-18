@@ -747,9 +747,17 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
     row.querySelector('input[name="pay_to[]"]').value = data.pay_to || '';
     
     // Calculate amount
-    const rate = parseFloat(data.rate) || 0;
-    const box = parseFloat(data.box) || 1;
-    row.querySelector('input[name="amount[]"]').value = (rate * box).toFixed(2);
+    row.querySelector('input[name="amount[]"]').value = computeAmount(data.rate, data.box, data.weight);
+  }
+
+  /**
+   * Amount rule: weight > 0 → rate × weight; otherwise rate × box (box defaults to 1)
+   */
+  function computeAmount(rateVal, boxVal, weightVal) {
+    const rate = parseFloat(rateVal) || 0;
+    const weight = parseFloat(weightVal) || 0;
+    const box = parseFloat(boxVal) || 1;
+    return (rate * (weight > 0 ? weight : box)).toFixed(2);
   }
   
   /**
@@ -768,9 +776,11 @@ $drivers_result = mysqli_query($conn, "SELECT staff_id, staff_name, driving_lice
     // Recalculate amount if rate or box changed
     if (e.target.classList.contains('rate-input') || e.target.classList.contains('box-input')) {
       const row = e.target.closest('tr');
-      const rate = parseFloat(row.querySelector('.rate-input').value) || 0;
-      const box = parseFloat(row.querySelector('.box-input').value) || 1;
-      row.querySelector('input[name="amount[]"]').value = (rate * box).toFixed(2);
+      row.querySelector('input[name="amount[]"]').value = computeAmount(
+        row.querySelector('.rate-input').value,
+        row.querySelector('.box-input').value,
+        row.querySelector('input[name="weight[]"]').value
+      );
     }
     
     // Recalculate totals for any numeric field change

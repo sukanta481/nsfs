@@ -141,7 +141,7 @@ for ($i = 0; $i < $rows; $i++) {
     $box = intval($boxes[$i] ?? 0);
     $weight = floatval($weights[$i] ?? 0);
     $rate = floatval($rates[$i] ?? 0);
-    $amount = ($amounts[$i] !== '' && $amounts[$i] !== null) ? floatval($amounts[$i]) : ($rate * max(1, $box));
+    $amount = ($amounts[$i] !== '' && $amounts[$i] !== null) ? floatval($amounts[$i]) : ($weight > 0 ? $rate * $weight : $rate * max(1, $box));
     $eway = trim($eway_bills[$i] ?? '');
     $pay = floatval($pay_tos[$i] ?? 0);
     $client_email = trim($client_emails[$i] ?? '');
