@@ -39,6 +39,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $b = ops_bill_get($billId);
 $items = $b ? ops_bill_items($billId) : array();
+// Bills made before 2026-11-19 used a rate per docket (amount = rate). Newer bills: amount = boxes × rate.
+$perBox = true;
+foreach ($items as $it) {
+    if (ops_paise_from_db($it['amount']) !== ops_paise_from_db($it['rate']) * max(1, (int)$it['boxes'])) { $perBox = false; break; }
+}
 $pays = $b ? ops_bill_payments($billId) : array();
 $paid = $b ? ops_bill_paid($billId) : array('received' => 0, 'tds' => 0, 'settled' => 0);
 $total = $b ? ops_paise_from_db($b['total']) : 0;
@@ -156,21 +161,22 @@ $gstTxt = rtrim(rtrim(number_format($gst / 2, 2), '0'), '.');
         <tr><td>Bill no</td><td><b><?= h($b['bill_no']) ?></b></td></tr>
         <tr><td>Bill date</td><td><?= date('d M Y', strtotime($b['bill_date'])) ?></td></tr>
         <tr><td>Period</td><td><?= date('d M Y', strtotime($b['period_from'])) ?> – <?= date('d M Y', strtotime($b['period_to'])) ?></td></tr>
-        <tr><td>Dockets</td><td><?= (int)$b['docket_count'] ?> delivered</td></tr>
+        <tr><td>Dockets</td><td><?= (int)$b['docket_count'] ?> delivered · <?= array_sum(array_map(function ($it) { return (int)$it['boxes']; }, $items)) ?> boxes</td></tr>
         <tr><td>Service</td><td>Courier / freight</td></tr>
       </table>
     </div>
   </div>
 
   <table class="lines">
-    <thead><tr><th style="width:28px">#</th><th>Docket no</th><th>Delivered</th><th>Consignee</th><th>Destination</th><th class="c">Boxes</th><th>Invoice no</th><th class="r">Amount (₹)</th></tr></thead>
+    <thead><tr><th style="width:28px">#</th><th>Docket no</th><th>Delivered</th><th>Consignee</th><th>Destination</th><th>Invoice no</th><th class="c">Boxes</th><th class="r"><?= $perBox ? 'Rate/box' : 'Rate/docket' ?></th><th class="r">Amount (₹)</th></tr></thead>
     <tbody>
     <?php foreach ($items as $n => $it): ?>
       <tr><td><?= $n + 1 ?></td><td><b><?= h($it['doc_no']) ?></b></td>
         <td><?= $it['delivery_date'] ? date('d-m-Y', strtotime($it['delivery_date'])) : '—' ?></td>
         <td><?= h($it['consignee_name']) ?></td><td><?= h(mb_strimwidth((string)$it['destination'], 0, 38, '…')) ?></td>
-        <td class="c"><?= (int)$it['boxes'] ?: '—' ?></td>
         <td><?= h($it['consignor_invoice_no'] && $it['consignor_invoice_no'] !== 'N/A' ? $it['consignor_invoice_no'] : '—') ?></td>
+        <td class="c"><?= (int)$it['boxes'] ?: '—' ?></td>
+        <td class="r"><?= number_format((float)$it['rate'], 2) ?></td>
         <td class="r"><?= number_format((float)$it['amount'], 2) ?></td></tr>
     <?php endforeach; ?>
     </tbody>

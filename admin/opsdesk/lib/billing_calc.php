@@ -2,7 +2,8 @@
 /**
  * OpsDesk consignor billing maths. Pure functions, no DB, unit tested.
  * All money in integer paise.
- *   subtotal  = sum of line amounts (amount = rate per docket)
+ *   line      = boxes × rate per box
+ *   subtotal  = sum of line amounts
  *   CGST/SGST = round(subtotal × gst% / 2) each   (same state)
  *   IGST      = round(subtotal × gst%)            (other state)
  *   total     = subtotal + tax, rounded to the nearest rupee; the difference is "round off"
@@ -11,6 +12,17 @@
 const OPS_GST_RATES = array(0, 5, 12, 18);
 const OPS_TAX_TYPES = array('none', 'cgst_sgst', 'igst');
 const OPS_HOME_STATE_CODE = '19'; // West Bengal (first two digits of our GSTIN)
+
+/** One bill line: boxes × rate per box (paise). Boxes must be a whole number of at least 1. */
+function ops_bill_line_amount($ratePaise, $boxes)
+{
+    $ratePaise = (int)$ratePaise;
+    if ($ratePaise <= 0) throw new InvalidArgumentException('Rate must be more than zero.');
+    if (!is_int($boxes) && !(is_string($boxes) && ctype_digit($boxes))) throw new InvalidArgumentException('Boxes must be a whole number.');
+    $boxes = (int)$boxes;
+    if ($boxes < 1 || $boxes > 100000) throw new InvalidArgumentException('Boxes must be at least 1.');
+    return $ratePaise * $boxes;
+}
 
 /** round(a / b) half up for non-negative integers */
 function ops_div_round($a, $b)

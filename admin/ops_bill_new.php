@@ -26,8 +26,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lines = json_decode(isset($_POST['lines']) ? $_POST['lines'] : '', true);
         if (!is_array($lines)) throw new InvalidArgumentException('No dockets were sent. Please try again.');
         $rates = array();
-        foreach ($lines as $id => $rate) {
-            $rates[(int)$id] = ops_paise_from_input((string)$rate);
+        foreach ($lines as $id => $l) {
+            if (!is_array($l)) throw new InvalidArgumentException('Please reload the page and try again.');
+            $rates[(int)$id] = array(
+                'rate' => ops_paise_from_input(isset($l['r']) ? (string)$l['r'] : ''),
+                'boxes' => isset($l['b']) ? trim((string)$l['b']) : '',
+            );
         }
         $billId = ops_bill_create(
             $companyId, $from, $to, ops_date_param('bill_date', ''), $rates,
@@ -54,7 +58,7 @@ $ops_title = 'New Consignor Bill';
 require 'opsdesk/layout_start.php';
 ?>
 <div class="page-head">
-  <div><h1>New Consignor Bill</h1><p>Choose a consignor and a period. Every <b>delivered</b> docket that is not billed yet appears below: enter the rate and generate the bill.</p></div>
+  <div><h1>New Consignor Bill</h1><p>Choose a consignor and a period. Every <b>delivered</b> docket that is not billed yet appears below: enter the <b>rate per box</b> (amount = boxes × rate) and generate the bill.</p></div>
   <div class="actions"><a class="btn" href="ops_bills.php"><i class="fa fa-arrow-left"></i>All bills</a></div>
 </div>
 
@@ -103,14 +107,14 @@ require 'opsdesk/layout_start.php';
       <div class="card-h">
         <h3>Dockets</h3>
         <div class="r bill-apply">
-          <span class="muted small">Rate for ticked dockets ₹</span>
+          <span class="muted small">Rate per box for ticked dockets ₹</span>
           <input class="input auto num" id="allRate" inputmode="decimal" placeholder="0" style="width:100px">
           <button type="button" class="btn sm" onclick="applyRate(false)">Apply to all</button>
           <button type="button" class="btn sm" onclick="applyRate(true)">Fill empty only</button>
         </div>
       </div>
       <div class="scroll-x"><table class="t bill-lines">
-        <thead><tr><th style="width:34px"><input type="checkbox" id="tickAll" checked onchange="tickAll(this.checked)"></th><th>#</th><th>Docket no</th><th>Delivered</th><th>Consignee</th><th class="center">Boxes</th><th class="right" style="width:120px">Rate (₹)</th><th class="hide-m">Destination</th><th class="hide-m">Invoice no</th></tr></thead>
+        <thead><tr><th style="width:34px"><input type="checkbox" id="tickAll" checked onchange="tickAll(this.checked)"></th><th>#</th><th>Docket no</th><th>Delivered</th><th>Consignee</th><th class="center" style="width:80px">Boxes</th><th class="right" style="width:120px">Rate / box (₹)</th><th class="right" style="width:110px">Amount</th><th class="hide-m">Destination</th><th class="hide-m">Invoice no</th></tr></thead>
         <tbody>
         <?php foreach ($dockets as $i => $d): ?>
           <tr data-id="<?= (int)$d['docket_id'] ?>">
@@ -119,8 +123,9 @@ require 'opsdesk/layout_start.php';
             <td><b><?= h($d['doc_no']) ?></b></td>
             <td class="num"><?= $d['delivered_on'] ? date('j M', strtotime($d['delivered_on'])) : '—' ?></td>
             <td><?= h($d['client_name']) ?></td>
-            <td class="center num"><?= (int)$d['box'] ?: '—' ?></td>
+            <td class="center"><input class="input num boxes" inputmode="numeric" value="<?= (int)$d['box'] > 0 ? (int)$d['box'] : '' ?>" placeholder="?" oninput="recalc()" style="width:64px;text-align:center" title="Boxes from the docket. Change only if it is wrong."></td>
             <td class="right"><input class="input num rate" inputmode="decimal" placeholder="0.00" oninput="recalc()" style="width:110px;text-align:right"></td>
+            <td class="right num amt-cell">—</td>
             <td class="hide-m muted small"><?= h(mb_strimwidth((string)$d['delivery_location'], 0, 40, '…')) ?></td>
             <td class="hide-m muted small"><?= h($d['invoice_no'] && $d['invoice_no'] !== 'N/A' ? $d['invoice_no'] : '—') ?></td>
           </tr>
@@ -191,23 +196,29 @@ function suggestTax() {
   recalc();
 }
 function recalc() {
-  var sub = 0, n = 0, missing = 0, bad = 0;
+  var sub = 0, n = 0, missing = 0, bad = 0, noBox = 0, boxesTot = 0;
   rows().forEach(function (r) {
     var on = r.querySelector('.tick').checked, inp = r.querySelector('.rate'), p = paise(inp.value);
+    var bi = r.querySelector('.boxes'), bv = bi.value.trim(), b = /^\d+$/.test(bv) ? parseInt(bv, 10) : 0;
     r.classList.toggle('off', !on);
     inp.classList.toggle('bad', on && inp.value.trim() !== '' && (p === null || p <= 0));
+    bi.classList.toggle('bad', on && b < 1);
+    var cell = r.querySelector('.amt-cell');
+    cell.textContent = (p && p > 0 && b >= 1) ? inr(p * b) : '—';
     if (!on) return;
     n++;
+    if (b < 1) { noBox++; return; }
+    boxesTot += b;
     if (inp.value.trim() === '') missing++;
     else if (p === null || p <= 0) bad++;
-    else sub += p;
+    else sub += p * b;
   });
   var rate = parseInt(document.getElementById('gstRate').value, 10), type = rate ? document.getElementById('taxType').value : 'none';
   var cg = 0, sg = 0, ig = 0;
   if (type === 'cgst_sgst') { cg = divRound(sub * rate, 200); sg = cg; }
   if (type === 'igst') ig = divRound(sub * rate, 100);
   var before = sub + cg + sg + ig, total = divRound(before, 100) * 100;
-  document.getElementById('tCount').textContent = n;
+  document.getElementById('tCount').textContent = n + (boxesTot ? ' · ' + boxesTot + ' boxes' : '');
   document.getElementById('tSub').textContent = inr(sub);
   document.getElementById('tCgst').textContent = inr(cg); document.getElementById('tSgst').textContent = inr(sg); document.getElementById('tIgst').textContent = inr(ig);
   document.getElementById('rCgst').style.display = type === 'cgst_sgst' ? '' : 'none';
@@ -221,13 +232,16 @@ function recalc() {
   var msg = [];
   if (missing) msg.push(missing + ' ticked docket' + (missing > 1 ? 's have' : ' has') + ' no rate');
   if (bad) msg.push(bad + ' rate' + (bad > 1 ? 's are' : ' is') + ' not a valid amount');
+  if (noBox) msg.push(noBox + ' ticked docket' + (noBox > 1 ? 's have' : ' has') + ' no box count');
   document.getElementById('missing').style.display = msg.length ? '' : 'none';
-  document.getElementById('missingTxt').textContent = msg.join(' · ') + (msg.length ? '. Enter a rate or untick the docket.' : '');
-  document.getElementById('genBtn').disabled = !n || missing > 0 || bad > 0;
+  document.getElementById('missingTxt').textContent = msg.join(' · ') + (msg.length ? '. Fill it in or untick the docket.' : '');
+  document.getElementById('genBtn').disabled = !n || missing > 0 || bad > 0 || noBox > 0;
 }
 function beforeSubmit() {
   var lines = {};
-  rows().forEach(function (r) { if (r.querySelector('.tick').checked) lines[r.dataset.id] = r.querySelector('.rate').value.trim(); });
+  rows().forEach(function (r) {
+    if (r.querySelector('.tick').checked) lines[r.dataset.id] = {r: r.querySelector('.rate').value.trim(), b: r.querySelector('.boxes').value.trim()};
+  });
   document.getElementById('lines').value = JSON.stringify(lines);
   var t = document.getElementById('tTotal').textContent, n = document.getElementById('tCount').textContent;
   if (!confirm('Generate a bill for ' + n + ' dockets, total ' + t + '?')) return false;

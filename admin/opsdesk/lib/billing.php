@@ -52,28 +52,30 @@ function ops_bill_already_billed_count($companyId, $from, $to)
 
 /**
  * Create a bill.
- * @param array $rates docket_id => rate in paise (only the ticked dockets)
+ * @param array $lines docket_id => ['rate' => paise per box, 'boxes' => int] (only the ticked dockets)
  * @return int bill_id
  */
-function ops_bill_create($companyId, $from, $to, $billDate, array $rates, $gstRate, $taxType, $gstin, $note)
+function ops_bill_create($companyId, $from, $to, $billDate, array $lines, $gstRate, $taxType, $gstin, $note)
 {
     $co = ops_bill_consignor($companyId);
     if (!$co) throw new InvalidArgumentException('Choose a consignor.');
     if (!$from || !$to || $from > $to) throw new InvalidArgumentException('Choose a valid date range.');
     if (!$billDate || $billDate > date('Y-m-d')) throw new InvalidArgumentException('Bill date cannot be in the future.');
-    if (!$rates) throw new InvalidArgumentException('Tick at least one docket.');
-    foreach ($rates as $id => $p) {
-        if ($p === null || $p <= 0) throw new InvalidArgumentException('Enter a rate for every ticked docket (or untick it).');
+    if (!$lines) throw new InvalidArgumentException('Tick at least one docket.');
+    $amounts = array();
+    foreach ($lines as $id => $l) {
+        if (!isset($l['rate']) || $l['rate'] === null || $l['rate'] <= 0) throw new InvalidArgumentException('Enter a rate for every ticked docket (or untick it).');
+        $amounts[$id] = ops_bill_line_amount($l['rate'], isset($l['boxes']) ? $l['boxes'] : 0);
     }
     $gstin = strtoupper(trim((string)$gstin));
     if (!ops_valid_gstin($gstin)) throw new InvalidArgumentException('GSTIN looks wrong. It should be 15 characters, like 19ABCDE1234F1Z5.');
-    $totals = ops_bill_totals(array_values($rates), $gstRate, $taxType);
+    $totals = ops_bill_totals(array_values($amounts), $gstRate, $taxType);
 
     ops_begin();
     try {
         // Re-read the dockets inside the transaction: still delivered, in range, this consignor, not billed.
-        $dockets = ops_bill_unbilled_dockets($companyId, $from, $to, array_keys($rates), true);
-        if (count($dockets) !== count($rates)) {
+        $dockets = ops_bill_unbilled_dockets($companyId, $from, $to, array_keys($lines), true);
+        if (count($dockets) !== count($lines)) {
             throw new InvalidArgumentException('Some dockets are no longer available (already billed by someone else, or changed). Reload and try again.');
         }
         $fy = ops_fin_year($billDate);
@@ -90,14 +92,16 @@ function ops_bill_create($companyId, $from, $to, $billDate, array $rates, $gstRa
                   ops_paise_to_db($totals['total']), $note !== '' ? $note : null, ops_user_id(), ops_user_name())
         );
         foreach ($dockets as $d) {
-            $rate = (int)$rates[(int)$d['docket_id']];
+            $l = $lines[(int)$d['docket_id']];
+            $rate = (int)$l['rate'];
+            $boxes = (int)$l['boxes'];
             ops_write(
                 'INSERT INTO tbl_ops_bill_items (bill_id, docket_id, active_docket_id, doc_no, delivery_date, consignee_name, destination,
                      boxes, weight, consignor_invoice_no, rate, amount)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 array($billId, $d['docket_id'], $d['docket_id'], $d['doc_no'], $d['delivered_on'], $d['client_name'],
-                      mb_substr((string)$d['delivery_location'], 0, 255), $d['box'], $d['weight'], $d['invoice_no'],
-                      ops_paise_to_db($rate), ops_paise_to_db($rate))
+                      mb_substr((string)$d['delivery_location'], 0, 255), $boxes, $d['weight'], $d['invoice_no'],
+                      ops_paise_to_db($rate), ops_paise_to_db($amounts[(int)$d['docket_id']]))
             );
         }
         // remember the consignor's GSTIN for next time
