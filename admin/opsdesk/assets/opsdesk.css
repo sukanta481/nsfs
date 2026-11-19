@@ -199,3 +199,9 @@
 .ops .picker .seg button.present_night{min-width:44px}
 .ops .picker .seg button.present_night:hover,.ops .picker .seg button.present_night.on{background:#1f3a5f;color:#fff}
 .ops .seg button{white-space:nowrap}
+
+/* hand balance passbook date filter */
+.ops .pb-filter{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line2)}
+.ops .pb-filter label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.ops .print-only{display:none}
+@media print{.ops .print-only{display:block}.ops .pb-print-head{padding:6px 0 10px;font-size:12px}}

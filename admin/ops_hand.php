@@ -34,10 +34,28 @@ if (!$sid && $staffList) $sid = (int)$staffList[0]['staff_id'];
 $cur = isset($staffById[$sid]) ? $staffById[$sid] : null;
 $canManage = hasPermission('ops_hand_ledger_manage');
 
+// Passbook date range (optional). Opening balance = everything before "from".
+$from = ops_date_param('from', '');
+$to = ops_date_param('to', '');
+if ($from && $to && $from > $to) { $tmp = $from; $from = $to; $to = $tmp; }
+$ranged = $from !== '' || $to !== '';
+$where = 'h.staff_id = ?';
+$args = array($sid);
+if ($from) { $where .= ' AND h.entry_date >= ?'; $args[] = $from; }
+if ($to) { $where .= ' AND h.entry_date <= ?'; $args[] = $to; }
 $entries = $cur ? ops_rows(
     'SELECT h.*, (SELECT COUNT(*) FROM tbl_ops_hand_ledger x WHERE x.reversal_of_id = h.id) AS is_reversed
-     FROM tbl_ops_hand_ledger h WHERE h.staff_id = ? ORDER BY h.entry_date, h.id', array($sid)
+     FROM tbl_ops_hand_ledger h WHERE ' . $where . ' ORDER BY h.entry_date, h.id', $args
 ) : array();
+$opening = ($cur && $from) ? ops_hand_balance($sid, date('Y-m-d', strtotime($from . ' -1 day'))) : 0;
+$rangeLabel = $ranged
+    ? ($from ? date('j M Y', strtotime($from)) : 'Start') . ' – ' . ($to ? date('j M Y', strtotime($to)) : 'Today')
+    : 'All entries';
+$presets = array(
+    'This month' => array(date('Y-m-01'), date('Y-m-d')),
+    'Last month' => array(date('Y-m-01', strtotime('first day of last month')), date('Y-m-t', strtotime('last day of last month'))),
+    'Last 7 days' => array(date('Y-m-d', strtotime('-6 days')), date('Y-m-d')),
+);
 $bal = $cur ? ops_hand_balance($sid) : 0;
 $first = $cur ? explode(' ', ucwords(strtolower($cur['staff_name'])))[0] : '';
 
@@ -46,7 +64,9 @@ require 'opsdesk/layout_start.php';
 ?>
 <div class="page-head">
   <div><h1>Hand Balance</h1><p>Road-expense cash given to staff and the hisab they give back. Whatever is left carries forward to the next day.</p></div>
-  <form class="actions" method="get">
+  <form class="actions no-print" method="get">
+    <?php if ($from): ?><input type="hidden" name="from" value="<?= h($from) ?>"><?php endif; ?>
+    <?php if ($to): ?><input type="hidden" name="to" value="<?= h($to) ?>"><?php endif; ?>
     <select class="input auto" name="staff_id" onchange="this.form.submit()">
       <?php foreach ($staffList as $s): ?><option value="<?= $s['staff_id'] ?>" <?= (int)$s['staff_id'] === $sid ? 'selected' : '' ?>><?= h($s['staff_name']) ?> — <?= h($s['staff_role']) ?><?= isset($balances[(int)$s['staff_id']]) ? ' (' . ops_inr($balances[(int)$s['staff_id']]) . ')' : '' ?></option><?php endforeach; ?>
     </select>
@@ -54,7 +74,7 @@ require 'opsdesk/layout_start.php';
 </div>
 
 <?php if ($cur): ?>
-<div class="grid g3">
+<div class="grid g3<?= $ranged ? " no-print" : "" ?>">
   <div class="card balance-card" style="grid-column:span 2">
     <?php $holding = $bal >= 0; ?>
     <div class="ico" style="background:<?= $holding ? 'var(--present-bg)' : 'var(--absent-bg)' ?>;color:<?= $holding ? 'var(--present)' : 'var(--absent)' ?>"><i class="fa fa-wallet"></i></div>
@@ -65,7 +85,7 @@ require 'opsdesk/layout_start.php';
            <?php else: ?>All settled.<?php endif; ?></div></div>
   </div>
   <?php if ($canManage): ?>
-  <div class="card card-b" style="display:flex;flex-direction:column;gap:10px;justify-content:center">
+  <div class="card card-b no-print" style="display:flex;flex-direction:column;gap:10px;justify-content:center">
     <button class="btn success" onclick="entryForm('given')"><i class="fa fa-arrow-down"></i>Give cash</button>
     <button class="btn primary" onclick="entryForm('expense')"><i class="fa fa-receipt"></i>Add expense (hisab)</button>
   </div>
@@ -73,20 +93,35 @@ require 'opsdesk/layout_start.php';
 </div>
 
 <div class="card mt">
-  <div class="card-h"><h3>Passbook</h3><span class="muted small">Never edited — mistakes are corrected with a reversal</span><div class="r"><button class="btn sm" onclick="window.print()"><i class="fa fa-print"></i>Print</button></div></div>
-  <?php if (!$entries): ?><div class="empty">No entries yet for <?= h($cur['staff_name']) ?>.</div><?php else: ?>
+  <div class="card-h"><h3>Passbook · <?= h($rangeLabel) ?></h3><span class="muted small no-print">Never edited — mistakes are corrected with a reversal</span><div class="r no-print"><button class="btn sm" onclick="window.print()"><i class="fa fa-print"></i>Print</button></div></div>
+  <form class="card-b no-print pb-filter" method="get">
+    <input type="hidden" name="staff_id" value="<?= (int)$sid ?>">
+    <label>From <input class="input auto" type="date" name="from" value="<?= h($from) ?>" max="<?= date('Y-m-d') ?>"></label>
+    <label>To <input class="input auto" type="date" name="to" value="<?= h($to) ?>" max="<?= date('Y-m-d') ?>"></label>
+    <button class="btn sm primary"><i class="fa fa-filter"></i>Apply</button>
+    <?php foreach ($presets as $label => $pr): $on = $from === $pr[0] && $to === $pr[1]; ?>
+      <a class="btn sm<?= $on ? ' primary' : '' ?>" href="?staff_id=<?= (int)$sid ?>&from=<?= $pr[0] ?>&to=<?= $pr[1] ?>"><?= h($label) ?></a>
+    <?php endforeach; ?>
+    <?php if ($ranged): ?><a class="btn sm ghost" href="?staff_id=<?= (int)$sid ?>"><i class="fa fa-xmark"></i>Show all</a><?php endif; ?>
+  </form>
+  <div class="print-only pb-print-head"><b><?= h($cur['staff_name']) ?></b> · <?= h($cur['staff_role']) ?> · <?= h($cur['office_name']) ?> — Hand balance passbook, <?= h($rangeLabel) ?> · printed <?= date('j M Y, g:i a') ?></div>
+  <?php if (!$entries): ?><div class="empty">No entries <?= $ranged ? 'in this date range' : 'yet' ?> for <?= h($cur['staff_name']) ?>.<?= $ranged ? ' Balance on ' . h($to ? date('j M Y', strtotime($to)) : 'today') . ': <b>' . ops_inr($cur ? ops_hand_balance($sid, $to ?: null) : 0) . '</b>' : '' ?></div><?php else: ?>
   <div class="scroll-x"><table class="t">
     <thead><tr><th>Type</th><th>Details</th><th class="right">Given</th><th class="right">Spent</th><th class="right">Balance</th><th class="no-print"></th></tr></thead>
     <tbody>
+    <?php if ($from): ?>
+      <tr class="sub-row"><td colspan="4">Opening balance on <?= date('j M Y', strtotime($from)) ?> (brought forward)</td><td class="right num"><b><?= ops_inr($opening) ?></b></td><td class="no-print"></td></tr>
+    <?php endif; ?>
     <?php
-    $run = 0; $day = null;
+    $run = $opening; $day = null; $totIn = 0; $totOut = 0;
     foreach ($entries as $i => $e):
         if ($e['entry_date'] !== $day):
             if ($day !== null): ?><tr class="sub-row"><td colspan="4">Closing balance, carried to next day</td><td class="right num"><b><?= ops_inr($run) ?></b></td><td></td></tr><?php endif;
             $day = $e['entry_date']; ?>
             <tr class="pb-day"><td colspan="3"><?= date('l, j F Y', strtotime($day)) ?></td><td class="right num" colspan="3">Opening <?= ops_inr($run) ?></td></tr>
         <?php endif;
-        $v = (int)$e['direction'] * ops_paise_from_db($e['amount']); $run += $v; $rev = (int)$e['is_reversed'] > 0; ?>
+        $v = (int)$e['direction'] * ops_paise_from_db($e['amount']); $run += $v; $rev = (int)$e['is_reversed'] > 0;
+        if ($v > 0) $totIn += $v; else $totOut += -$v; ?>
         <tr class="<?= $rev ? 'rev' : '' ?>">
           <td><?php if ($e['entry_type'] === 'given'): ?><span class="pill final"><i class="fa fa-arrow-down"></i>Given</span>
               <?php elseif ($e['entry_type'] === 'expense'): ?><span class="pill grey"><?= h($e['category'] ?: 'Expense') ?></span>
@@ -103,14 +138,15 @@ require 'opsdesk/layout_start.php';
           <?php endif; ?></td>
         </tr>
     <?php endforeach; ?>
-      <tr class="sub-row"><td colspan="4"><b>Current balance</b></td><td class="right num"><b><?= ops_inr($run) ?></b></td><td></td></tr>
+      <tr class="sub-row"><td colspan="2"><b>Total in this period</b></td><td class="right num amt in"><b><?= ops_inr($totIn) ?></b></td><td class="right num amt out"><b><?= ops_inr($totOut) ?></b></td><td></td><td class="no-print"></td></tr>
+      <tr class="sub-row"><td colspan="4"><b><?= $to ? 'Closing balance on ' . date('j M Y', strtotime($to)) : 'Current balance' ?></b></td><td class="right num"><b><?= ops_inr($run) ?></b></td><td class="no-print"></td></tr>
     </tbody>
   </table></div>
   <?php endif; ?>
 </div>
 <?php endif; ?>
 
-<div class="card mt">
+<div class="card mt no-print">
   <div class="card-h"><h3>All staff balances</h3></div>
   <?php if (!$balances): ?><div class="empty">Nobody has an open balance.</div><?php else: ?>
   <table class="t"><tbody>
