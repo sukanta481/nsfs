@@ -52,7 +52,8 @@ function ops_bill_already_billed_count($companyId, $from, $to)
 
 /**
  * Create a bill.
- * @param array $lines docket_id => ['rate' => paise per box, 'boxes' => int] (only the ticked dockets)
+ * @param array $lines docket_id => ['rate' => paise, 'boxes' => text, 'weight' => text kg] (only the ticked dockets).
+ *                     With a weight the rate is per kg, otherwise per box.
  * @return int bill_id
  */
 function ops_bill_create($companyId, $from, $to, $billDate, array $lines, $gstRate, $taxType, $gstin, $note)
@@ -63,9 +64,11 @@ function ops_bill_create($companyId, $from, $to, $billDate, array $lines, $gstRa
     if (!$billDate || $billDate > date('Y-m-d')) throw new InvalidArgumentException('Bill date cannot be in the future.');
     if (!$lines) throw new InvalidArgumentException('Tick at least one docket.');
     $amounts = array();
+    $priced = array();
     foreach ($lines as $id => $l) {
         if (!isset($l['rate']) || $l['rate'] === null || $l['rate'] <= 0) throw new InvalidArgumentException('Enter a rate for every ticked docket (or untick it).');
-        $amounts[$id] = ops_bill_line_amount($l['rate'], isset($l['boxes']) ? $l['boxes'] : 0);
+        $priced[$id] = ops_bill_line($l['rate'], isset($l['boxes']) ? $l['boxes'] : '', isset($l['weight']) ? $l['weight'] : '');
+        $amounts[$id] = $priced[$id]['amount'];
     }
     $gstin = strtoupper(trim((string)$gstin));
     if (!ops_valid_gstin($gstin)) throw new InvalidArgumentException('GSTIN looks wrong. It should be 15 characters, like 19ABCDE1234F1Z5.');
@@ -93,14 +96,16 @@ function ops_bill_create($companyId, $from, $to, $billDate, array $lines, $gstRa
         );
         foreach ($dockets as $d) {
             $l = $lines[(int)$d['docket_id']];
+            $pr = $priced[(int)$d['docket_id']];
             $rate = (int)$l['rate'];
-            $boxes = (int)$l['boxes'];
+            $boxes = $pr['boxes'] ?: null;
+            $weight = $pr['weight_h'] ? number_format($pr['weight_h'] / 100, 2, '.', '') : null;
             ops_write(
                 'INSERT INTO tbl_ops_bill_items (bill_id, docket_id, active_docket_id, doc_no, delivery_date, consignee_name, destination,
-                     boxes, weight, consignor_invoice_no, rate, amount)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                     boxes, weight, consignor_invoice_no, rate_basis, rate, amount)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 array($billId, $d['docket_id'], $d['docket_id'], $d['doc_no'], $d['delivered_on'], $d['client_name'],
-                      mb_substr((string)$d['delivery_location'], 0, 255), $boxes, $d['weight'], $d['invoice_no'],
+                      mb_substr((string)$d['delivery_location'], 0, 255), $boxes, $weight, $d['invoice_no'], $pr['basis'],
                       ops_paise_to_db($rate), ops_paise_to_db($amounts[(int)$d['docket_id']]))
             );
         }

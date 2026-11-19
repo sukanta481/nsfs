@@ -2,7 +2,8 @@
 /**
  * OpsDesk consignor billing maths. Pure functions, no DB, unit tested.
  * All money in integer paise.
- *   line      = boxes × rate per box
+ *   line      = weight × rate per kg   (when the docket has a weight)
+ *             = boxes × rate per box   (no weight)
  *   subtotal  = sum of line amounts
  *   CGST/SGST = round(subtotal × gst% / 2) each   (same state)
  *   IGST      = round(subtotal × gst%)            (other state)
@@ -22,6 +23,33 @@ function ops_bill_line_amount($ratePaise, $boxes)
     $boxes = (int)$boxes;
     if ($boxes < 1 || $boxes > 100000) throw new InvalidArgumentException('Boxes must be at least 1.');
     return $ratePaise * $boxes;
+}
+
+/** Weight text ("12", "12.5", "12.50") -> hundredths of a kg (1250). '' or 0 -> 0. Invalid -> exception. */
+function ops_weight_hundredths($w)
+{
+    $w = trim((string)$w);
+    if ($w === '') return 0;
+    if (!preg_match('/^\d{1,7}(\.\d{1,2})?$/', $w)) throw new InvalidArgumentException('Weight must be a number in kg with up to 2 decimals.');
+    $p = explode('.', $w);
+    return (int)$p[0] * 100 + (isset($p[1]) ? (int)str_pad($p[1], 2, '0') : 0);
+}
+
+/**
+ * Price one bill line. With a weight: weight × rate (per kg). Without: boxes × rate (per box).
+ * @return array basis ('kg'|'box'), weight_h (hundredths kg), boxes, amount (paise)
+ */
+function ops_bill_line($ratePaise, $boxes, $weight)
+{
+    $ratePaise = (int)$ratePaise;
+    if ($ratePaise <= 0) throw new InvalidArgumentException('Rate must be more than zero.');
+    $wh = ops_weight_hundredths($weight);
+    $b = trim((string)$boxes);
+    $boxCount = ($b !== '' && ctype_digit($b)) ? (int)$b : 0;
+    if ($wh > 0) {
+        return array('basis' => 'kg', 'weight_h' => $wh, 'boxes' => $boxCount, 'amount' => ops_div_round($ratePaise * $wh, 100));
+    }
+    return array('basis' => 'box', 'weight_h' => 0, 'boxes' => $boxCount, 'amount' => ops_bill_line_amount($ratePaise, $b));
 }
 
 /** round(a / b) half up for non-negative integers */

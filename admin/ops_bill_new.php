@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $rates[(int)$id] = array(
                 'rate' => ops_paise_from_input(isset($l['r']) ? (string)$l['r'] : ''),
                 'boxes' => isset($l['b']) ? trim((string)$l['b']) : '',
+                'weight' => isset($l['w']) ? trim((string)$l['w']) : '',
             );
         }
         $billId = ops_bill_create(
@@ -58,7 +59,7 @@ $ops_title = 'New Consignor Bill';
 require 'opsdesk/layout_start.php';
 ?>
 <div class="page-head">
-  <div><h1>New Consignor Bill</h1><p>Choose a consignor and a period. Every <b>delivered</b> docket that is not billed yet appears below: enter the <b>rate per box</b> (amount = boxes × rate) and generate the bill.</p></div>
+  <div><h1>New Consignor Bill</h1><p>Choose a consignor and a period. Every <b>delivered</b> docket that is not billed yet appears below: enter the rate and generate the bill. <b>With a weight: weight × rate per kg. Without a weight: boxes × rate per box.</b></p></div>
   <div class="actions"><a class="btn" href="ops_bills.php"><i class="fa fa-arrow-left"></i>All bills</a></div>
 </div>
 
@@ -107,14 +108,16 @@ require 'opsdesk/layout_start.php';
       <div class="card-h">
         <h3>Dockets</h3>
         <div class="r bill-apply">
-          <span class="muted small">Rate per box for ticked dockets ₹</span>
-          <input class="input auto num" id="allRate" inputmode="decimal" placeholder="0" style="width:100px">
-          <button type="button" class="btn sm" onclick="applyRate(false)">Apply to all</button>
+          <span class="muted small">Rate ₹ per box</span>
+          <input class="input auto num" id="allRateBox" inputmode="decimal" placeholder="0" style="width:90px">
+          <span class="muted small">per kg</span>
+          <input class="input auto num" id="allRateKg" inputmode="decimal" placeholder="0" style="width:90px">
+          <button type="button" class="btn sm" onclick="applyRate(false)">Apply to ticked</button>
           <button type="button" class="btn sm" onclick="applyRate(true)">Fill empty only</button>
         </div>
       </div>
       <div class="scroll-x"><table class="t bill-lines">
-        <thead><tr><th style="width:34px"><input type="checkbox" id="tickAll" checked onchange="tickAll(this.checked)"></th><th>#</th><th>Docket no</th><th>Delivered</th><th>Consignee</th><th class="center" style="width:80px">Boxes</th><th class="right" style="width:120px">Rate / box (₹)</th><th class="right" style="width:110px">Amount</th><th class="hide-m">Destination</th><th class="hide-m">Invoice no</th></tr></thead>
+        <thead><tr><th style="width:34px"><input type="checkbox" id="tickAll" checked onchange="tickAll(this.checked)"></th><th>#</th><th>Docket no</th><th>Delivered</th><th>Consignee</th><th class="center" style="width:74px">Boxes</th><th class="center" style="width:90px">Weight (kg)</th><th class="right" style="width:150px">Rate (₹)</th><th class="right" style="width:110px">Amount</th><th class="hide-m">Destination</th><th class="hide-m">Invoice no</th></tr></thead>
         <tbody>
         <?php foreach ($dockets as $i => $d): ?>
           <tr data-id="<?= (int)$d['docket_id'] ?>">
@@ -124,7 +127,8 @@ require 'opsdesk/layout_start.php';
             <td class="num"><?= $d['delivered_on'] ? date('j M', strtotime($d['delivered_on'])) : '—' ?></td>
             <td><?= h($d['client_name']) ?></td>
             <td class="center"><input class="input num boxes" inputmode="numeric" value="<?= (int)$d['box'] > 0 ? (int)$d['box'] : '' ?>" placeholder="?" oninput="recalc()" style="width:64px;text-align:center" title="Boxes from the docket. Change only if it is wrong."></td>
-            <td class="right"><input class="input num rate" inputmode="decimal" placeholder="0.00" oninput="recalc()" style="width:110px;text-align:right"></td>
+            <td class="center"><input class="input num weight" inputmode="decimal" value="<?= (float)$d['weight'] > 0 ? h(rtrim(rtrim(number_format((float)$d['weight'], 2, '.', ''), '0'), '.')) : '' ?>" placeholder="—" oninput="recalc()" style="width:80px;text-align:center" title="Weight from the docket. If there is a weight, the rate is per kg."></td>
+            <td class="right" style="white-space:nowrap"><input class="input num rate" inputmode="decimal" placeholder="0.00" oninput="recalc()" style="width:90px;text-align:right"> <span class="basis small muted">/box</span></td>
             <td class="right num amt-cell">—</td>
             <td class="hide-m muted small"><?= h(mb_strimwidth((string)$d['delivery_location'], 0, 40, '…')) ?></td>
             <td class="hide-m muted small"><?= h($d['invoice_no'] && $d['invoice_no'] !== 'N/A' ? $d['invoice_no'] : '—') ?></td>
@@ -160,6 +164,7 @@ require 'opsdesk/layout_start.php';
           <tr><td>Round off</td><td class="right num" id="tRound">₹0</td></tr>
           <tr class="grand"><td><b>Total</b></td><td class="right num"><b id="tTotal">₹0</b></td></tr>
         </table>
+        <div class="note warn mt" id="heavyNote" style="display:none"><i class="fa fa-weight-hanging"></i><div id="heavyTxt"></div></div>
         <div class="note warn mt" id="missing" style="display:none"><i class="fa fa-circle-exclamation"></i><div id="missingTxt"></div></div>
         <button class="btn primary mt" id="genBtn" style="width:100%" disabled><i class="fa fa-file-invoice"></i>Generate bill</button>
       </div>
@@ -181,12 +186,17 @@ function inr(p) {
 }
 function rows() { return Array.prototype.slice.call(document.querySelectorAll('.bill-lines tbody tr')); }
 function tickAll(on) { rows().forEach(function (r) { r.querySelector('.tick').checked = on; }); recalc(); }
+function wh(v) { v = (v || '').trim(); if (v === '') return 0; if (!/^\d{1,7}(\.\d{1,2})?$/.test(v)) return -1; var p = v.split('.'); return parseInt(p[0], 10) * 100 + (p[1] ? parseInt((p[1] + '0').slice(0, 2), 10) : 0); }
+function isKg(r) { return wh(r.querySelector('.weight').value) > 0; }
 function applyRate(emptyOnly) {
-  var v = document.getElementById('allRate').value;
-  if (paise(v) === null || paise(v) <= 0) { OPS.toast('Enter a rate first', true); return; }
+  var vb = document.getElementById('allRateBox').value.trim(), vk = document.getElementById('allRateKg').value.trim();
+  var okB = vb !== '' && paise(vb) > 0, okK = vk !== '' && paise(vk) > 0;
+  if (!okB && !okK) { OPS.toast('Enter a rate per box and/or per kg first', true); return; }
+  if ((vb !== '' && !okB) || (vk !== '' && !okK)) { OPS.toast('That rate is not a valid amount', true); return; }
   rows().forEach(function (r) {
-    var inp = r.querySelector('.rate');
-    if (r.querySelector('.tick').checked && (!emptyOnly || inp.value.trim() === '')) inp.value = v;
+    if (!r.querySelector('.tick').checked) return;
+    var inp = r.querySelector('.rate'), kg = isKg(r), v = kg ? (okK ? vk : null) : (okB ? vb : null);
+    if (v !== null && (!emptyOnly || inp.value.trim() === '')) inp.value = v;
   });
   recalc();
 }
@@ -196,29 +206,39 @@ function suggestTax() {
   recalc();
 }
 function recalc() {
-  var sub = 0, n = 0, missing = 0, bad = 0, noBox = 0, boxesTot = 0;
+  var sub = 0, n = 0, missing = 0, bad = 0, noBox = 0, badW = 0, boxesTot = 0, kgTot = 0, nKg = 0, heavy = [];
   rows().forEach(function (r) {
     var on = r.querySelector('.tick').checked, inp = r.querySelector('.rate'), p = paise(inp.value);
     var bi = r.querySelector('.boxes'), bv = bi.value.trim(), b = /^\d+$/.test(bv) ? parseInt(bv, 10) : 0;
+    var wi = r.querySelector('.weight'), w = wh(wi.value), kg = w > 0;
+    r.querySelector('.basis').textContent = kg ? '/kg' : '/box';
+    r.querySelector('.basis').style.color = kg ? 'var(--leave)' : '';
     r.classList.toggle('off', !on);
     inp.classList.toggle('bad', on && inp.value.trim() !== '' && (p === null || p <= 0));
-    bi.classList.toggle('bad', on && b < 1);
-    var cell = r.querySelector('.amt-cell');
-    cell.textContent = (p && p > 0 && b >= 1) ? inr(p * b) : '—';
+    wi.classList.toggle('bad', on && w < 0);
+    var tooHeavy = kg && (w > 100000 || (b >= 1 && w > b * 10000));   // > 1000 kg, or > 100 kg per box
+    r.classList.toggle('heavy', on && tooHeavy);
+    if (on && tooHeavy) heavy.push(r.children[2].innerText.trim());
+    bi.classList.toggle('bad', on && !kg && w >= 0 && b < 1);
+    var amt = null;
+    if (p && p > 0 && w >= 0) amt = kg ? divRound(p * w, 100) : (b >= 1 ? p * b : null);
+    r.querySelector('.amt-cell').textContent = amt !== null ? inr(amt) : '—';
     if (!on) return;
     n++;
-    if (b < 1) { noBox++; return; }
+    if (w < 0) { badW++; return; }
+    if (!kg && b < 1) { noBox++; return; }
     boxesTot += b;
+    if (kg) { kgTot += w; nKg++; }
     if (inp.value.trim() === '') missing++;
     else if (p === null || p <= 0) bad++;
-    else sub += p * b;
+    else sub += amt;
   });
   var rate = parseInt(document.getElementById('gstRate').value, 10), type = rate ? document.getElementById('taxType').value : 'none';
   var cg = 0, sg = 0, ig = 0;
   if (type === 'cgst_sgst') { cg = divRound(sub * rate, 200); sg = cg; }
   if (type === 'igst') ig = divRound(sub * rate, 100);
   var before = sub + cg + sg + ig, total = divRound(before, 100) * 100;
-  document.getElementById('tCount').textContent = n + (boxesTot ? ' · ' + boxesTot + ' boxes' : '');
+  document.getElementById('tCount').textContent = n + (boxesTot ? ' · ' + boxesTot + ' boxes' : '') + (kgTot ? ' · ' + (kgTot / 100).toLocaleString('en-IN') + ' kg' : '');
   document.getElementById('tSub').textContent = inr(sub);
   document.getElementById('tCgst').textContent = inr(cg); document.getElementById('tSgst').textContent = inr(sg); document.getElementById('tIgst').textContent = inr(ig);
   document.getElementById('rCgst').style.display = type === 'cgst_sgst' ? '' : 'none';
@@ -232,15 +252,19 @@ function recalc() {
   var msg = [];
   if (missing) msg.push(missing + ' ticked docket' + (missing > 1 ? 's have' : ' has') + ' no rate');
   if (bad) msg.push(bad + ' rate' + (bad > 1 ? 's are' : ' is') + ' not a valid amount');
-  if (noBox) msg.push(noBox + ' ticked docket' + (noBox > 1 ? 's have' : ' has') + ' no box count');
+  if (noBox) msg.push(noBox + ' ticked docket' + (noBox > 1 ? 's have' : ' has') + ' no weight and no box count');
+  if (badW) msg.push(badW + ' weight' + (badW > 1 ? 's are' : ' is') + ' not a valid number');
   document.getElementById('missing').style.display = msg.length ? '' : 'none';
   document.getElementById('missingTxt').textContent = msg.join(' · ') + (msg.length ? '. Fill it in or untick the docket.' : '');
-  document.getElementById('genBtn').disabled = !n || missing > 0 || bad > 0 || noBox > 0;
+  var hv = document.getElementById('heavyNote');
+  hv.style.display = heavy.length ? '' : 'none';
+  document.getElementById('heavyTxt').textContent = heavy.length ? 'Weight looks too high on ' + heavy.length + ' docket' + (heavy.length > 1 ? 's' : '') + ' (' + heavy.slice(0, 5).join(', ') + (heavy.length > 5 ? ' …' : '') + '): more than 1000 kg, or more than 100 kg per box. Please check; it may be in grams.' : '';
+  document.getElementById('genBtn').disabled = !n || missing > 0 || bad > 0 || noBox > 0 || badW > 0;
 }
 function beforeSubmit() {
   var lines = {};
   rows().forEach(function (r) {
-    if (r.querySelector('.tick').checked) lines[r.dataset.id] = {r: r.querySelector('.rate').value.trim(), b: r.querySelector('.boxes').value.trim()};
+    if (r.querySelector('.tick').checked) lines[r.dataset.id] = {r: r.querySelector('.rate').value.trim(), b: r.querySelector('.boxes').value.trim(), w: r.querySelector('.weight').value.trim()};
   });
   document.getElementById('lines').value = JSON.stringify(lines);
   var t = document.getElementById('tTotal').textContent, n = document.getElementById('tCount').textContent;

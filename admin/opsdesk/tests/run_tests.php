@@ -190,6 +190,17 @@ eq('line: boxes as text', 9000, ops_bill_line_amount(4500, '2'));
 throws('line: 0 boxes rejected', function () { ops_bill_line_amount(4000, 0); });
 throws('line: fractional boxes rejected', function () { ops_bill_line_amount(4000, '1.5'); });
 throws('line: zero rate rejected', function () { ops_bill_line_amount(0, 2); });
+$l = ops_bill_line(1500, '3', '12.5');                            // weight wins: 12.5 kg x 15 = 187.50
+eq('kg: basis', 'kg', $l['basis']);
+eq('kg: amount weight x rate', 18750, $l['amount']);
+$l = ops_bill_line(1500, '3', '');                                // no weight: 3 boxes x 15
+eq('box: basis', 'box', $l['basis']);
+eq('box: amount boxes x rate', 4500, $l['amount']);
+eq('box: weight 0 means boxes', 'box', ops_bill_line(1500, '2', '0')['basis']);
+eq('kg: rounding 0.33 kg x 10.01', 330, ops_bill_line(1001, '1', '0.33')['amount']);   // 3.3033 -> 3.30
+eq('kg: weight hundredths', 45765, ops_weight_hundredths('457.65'));
+throws('kg: bad weight', function () { ops_bill_line(1000, '1', '12.345'); });
+throws('box: no weight and no boxes', function () { ops_bill_line(1000, '', ''); });
 eq('fy: november', '2026-27', ops_fin_year('2026-11-19'));
 eq('fy: february', '2026-27', ops_fin_year('2027-02-01'));
 eq('fy: 1 april starts new', '2027-28', ops_fin_year('2027-04-01'));

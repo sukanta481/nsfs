@@ -39,11 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $b = ops_bill_get($billId);
 $items = $b ? ops_bill_items($billId) : array();
-// Bills made before 2026-11-19 used a rate per docket (amount = rate). Newer bills: amount = boxes × rate.
-$perBox = true;
-foreach ($items as $it) {
-    if (ops_paise_from_db($it['amount']) !== ops_paise_from_db($it['rate']) * max(1, (int)$it['boxes'])) { $perBox = false; break; }
-}
+// Each line prints its own pricing unit: /kg, /box, or /docket (bills made before per-box/per-kg pricing).
 $pays = $b ? ops_bill_payments($billId) : array();
 $paid = $b ? ops_bill_paid($billId) : array('received' => 0, 'tds' => 0, 'settled' => 0);
 $total = $b ? ops_paise_from_db($b['total']) : 0;
@@ -95,6 +91,7 @@ $gstTxt = rtrim(rtrim(number_format($gst / 2, 2), '0'), '.');
   .lines td{padding:3px 6px;border-bottom:1px solid #edf1f4;vertical-align:top;font-size:11px;line-height:1.35}
   .lines thead{display:table-header-group}
   .lines tr{page-break-inside:avoid}
+  .unit{color:var(--muted);font-size:9.5px;margin-left:2px}
   .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.c{text-align:center}
   .sumwrap{display:grid;grid-template-columns:1fr 280px;gap:14px;margin-top:12px;page-break-inside:avoid}
   .sum td{padding:6px 10px;border-bottom:1px dashed var(--line)}
@@ -161,14 +158,15 @@ $gstTxt = rtrim(rtrim(number_format($gst / 2, 2), '0'), '.');
         <tr><td>Bill no</td><td><b><?= h($b['bill_no']) ?></b></td></tr>
         <tr><td>Bill date</td><td><?= date('d M Y', strtotime($b['bill_date'])) ?></td></tr>
         <tr><td>Period</td><td><?= date('d M Y', strtotime($b['period_from'])) ?> – <?= date('d M Y', strtotime($b['period_to'])) ?></td></tr>
-        <tr><td>Dockets</td><td><?= (int)$b['docket_count'] ?> delivered · <?= array_sum(array_map(function ($it) { return (int)$it['boxes']; }, $items)) ?> boxes</td></tr>
+        <?php $kgTot = array_sum(array_map(function ($it) { return $it['rate_basis'] === 'kg' ? (float)$it['weight'] : 0; }, $items)); ?>
+        <tr><td>Dockets</td><td><?= (int)$b['docket_count'] ?> delivered · <?= array_sum(array_map(function ($it) { return (int)$it['boxes']; }, $items)) ?> boxes<?= $kgTot > 0 ? ' · ' . rtrim(rtrim(number_format($kgTot, 2), '0'), '.') . ' kg' : '' ?></td></tr>
         <tr><td>Service</td><td>Courier / freight</td></tr>
       </table>
     </div>
   </div>
 
   <table class="lines">
-    <thead><tr><th style="width:28px">#</th><th>Docket no</th><th>Delivered</th><th>Consignee</th><th>Destination</th><th>Invoice no</th><th class="c">Boxes</th><th class="r"><?= $perBox ? 'Rate/box' : 'Rate/docket' ?></th><th class="r">Amount (₹)</th></tr></thead>
+    <thead><tr><th style="width:28px">#</th><th>Docket no</th><th>Delivered</th><th>Consignee</th><th>Destination</th><th>Invoice no</th><th class="c">Boxes</th><th class="r">Weight (kg)</th><th class="r">Rate (₹)</th><th class="r">Amount (₹)</th></tr></thead>
     <tbody>
     <?php foreach ($items as $n => $it): ?>
       <tr><td><?= $n + 1 ?></td><td><b><?= h($it['doc_no']) ?></b></td>
@@ -176,7 +174,8 @@ $gstTxt = rtrim(rtrim(number_format($gst / 2, 2), '0'), '.');
         <td><?= h($it['consignee_name']) ?></td><td><?= h(mb_strimwidth((string)$it['destination'], 0, 38, '…')) ?></td>
         <td><?= h($it['consignor_invoice_no'] && $it['consignor_invoice_no'] !== 'N/A' ? $it['consignor_invoice_no'] : '—') ?></td>
         <td class="c"><?= (int)$it['boxes'] ?: '—' ?></td>
-        <td class="r"><?= number_format((float)$it['rate'], 2) ?></td>
+        <td class="r"><?= (float)$it['weight'] > 0 ? rtrim(rtrim(number_format((float)$it['weight'], 2), '0'), '.') : '—' ?></td>
+        <td class="r"><?= number_format((float)$it['rate'], 2) ?><span class="unit"><?= array('kg' => '/kg', 'box' => '/box', 'docket' => '/docket')[$it['rate_basis']] ?></span></td>
         <td class="r"><?= number_format((float)$it['amount'], 2) ?></td></tr>
     <?php endforeach; ?>
     </tbody>
