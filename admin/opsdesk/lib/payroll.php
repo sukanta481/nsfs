@@ -214,7 +214,7 @@ function ops_payroll_live_row(array $s, $month, $days, array $grid, array $extra
         'staff_id' => $sid, 'name' => $s['staff_name'], 'uid' => $s['staff_unique_id'], 'role' => $s['staff_role'],
         'office' => $s['office_name'], 'office_id' => $s['office_id'], 'counts' => $counts, 'salary' => $salary,
         'hand_balance' => ops_hand_balance($sid, $monthEnd), 'missing_salary' => $salary === null,
-        'slip_id' => null, 'finalized' => false, 'finalized_by' => null, 'finalized_at' => null,
+        'slip_id' => null, 'finalized' => false, 'finalized_by' => null, 'finalized_at' => null, 'paid' => null,
     );
     if ($salary !== null) {
         $calc = ops_payroll_calc($salary, $counts['payable'], $days, ops_advance_outstanding($sid, $monthEnd), $counts['extra_duty'], $row['hand_balance']);
@@ -236,6 +236,7 @@ function ops_payroll_sheet($month)
     $days = ops_days_in_month($month);
     $run = ops_one('SELECT * FROM tbl_ops_payroll_runs WHERE pay_month = ?', array($month));
     $saved = array();
+    $paidMap = ops_salary_paid_map($month);
     $slips = ops_rows(
         'SELECT sl.*, s.staff_name, s.staff_unique_id, s.staff_role, COALESCE(o.office_name, s.branch_office) AS office_name
          FROM tbl_ops_salary_slips sl JOIN tbl_staff s ON s.staff_id = sl.staff_id
@@ -258,6 +259,7 @@ function ops_payroll_sheet($month)
             'advance_carry' => null, 'hand_balance' => $r['hand_balance_at_close'] === null ? null : ops_paise_from_db($r['hand_balance_at_close']),
             'slip_id' => (int)$r['slip_id'], 'missing_salary' => false,
             'finalized' => true, 'finalized_by' => $r['created_by_name'], 'finalized_at' => $r['created_at'],
+            'paid' => isset($paidMap[(int)$r['slip_id']]) ? $paidMap[(int)$r['slip_id']] : null,
         );
     }
     $monthFinal = $run && $run['status'] === 'finalized';
@@ -304,26 +306,7 @@ function ops_payroll_save_slip($runId, array $r, $month, $days)
               ops_paise_to_db($r['advance_deduction']), ops_paise_to_db($r['hand_settlement']), ops_paise_to_db($r['net']), ops_paise_to_db($r['hand_balance']),
               ops_user_id(), ops_user_name())
     );
-    if ($r['advance_deduction'] > 0) {
-        ops_write(
-            "INSERT INTO tbl_ops_staff_advances (staff_id, entry_date, entry_type, amount, slip_id, note, created_by, created_by_name)
-             VALUES (?, ?, 'recovery', ?, ?, ?, ?, ?)",
-            array($r['staff_id'], date('Y-m-t', strtotime($month)), ops_paise_to_db($r['advance_deduction']), $slipId,
-                  'Recovered from ' . date('F Y', strtotime($month)) . ' salary', ops_user_id(), ops_user_name())
-        );
-    }
-    if (!empty($r['hand_settlement'])) {
-        // Settle the hand balance through salary so the same cash is never settled twice.
-        // + : staff held company cash -> deducted (balance goes down); - : company owed them -> paid (balance goes up)
-        $hs = (int)$r['hand_settlement'];
-        ops_write(
-            "INSERT INTO tbl_ops_hand_ledger (staff_id, entry_date, entry_type, amount, direction, note, slip_id, created_by, created_by_name)
-             VALUES (?, ?, 'salary_settlement', ?, ?, ?, ?, ?, ?)",
-            array($r['staff_id'], date('Y-m-t', strtotime($month)), ops_paise_to_db(abs($hs)), $hs > 0 ? -1 : 1,
-                  ($hs > 0 ? 'Cash in hand deducted from ' : 'Owed amount paid with ') . date('F Y', strtotime($month)) . ' salary',
-                  $slipId, ops_user_id(), ops_user_name())
-        );
-    }
+    // Advance recovery and hand-balance settlement are written when the slip is marked PAID (ops_salary_mark_paid).
     return $slipId;
 }
 
@@ -337,6 +320,10 @@ function ops_payroll_finalize_staff($month, $staffId)
         if ((int)$x['staff_id'] === (int)$staffId) { $s = $x; break; }
     }
     if (!$s) throw new InvalidArgumentException('Staff member not found in your branch.');
+    $unpaid = ops_unpaid_slips_before($staffId, $month);
+    if ($unpaid) {
+        throw new InvalidArgumentException($s['staff_name'] . "'s salary for " . date('F Y', strtotime($unpaid[0]['pay_month'])) . ' is not marked Paid yet. Mark it Paid first, then finalize ' . date('F Y', strtotime($month)) . '.');
+    }
     ops_begin();
     try {
         $runId = ops_payroll_run_id($month);
@@ -363,6 +350,12 @@ function ops_payroll_finalize($month)
     if (function_exists('getOfficeFilter') && getOfficeFilter('s') !== '') {
         throw new InvalidArgumentException('Closing the whole month covers all branches, so only a user with access to all offices can do it. You can still finalize staff one by one.');
     }
+    $blocked = ops_unpaid_slips_before(null, $month);
+    if ($blocked) {
+        $names = array_unique(array_map(function ($b) { return $b['staff_name']; }, $blocked));
+        throw new InvalidArgumentException('Earlier salaries are not marked Paid yet for: ' . implode(', ', array_slice($names, 0, 6))
+            . (count($names) > 6 ? ' and ' . (count($names) - 6) . ' more' : '') . '. Mark them Paid first, then close ' . date('F Y', strtotime($month)) . '.');
+    }
     ops_begin();
     try {
         $runId = ops_payroll_run_id($month);
@@ -381,6 +374,131 @@ function ops_payroll_finalize($month)
         );
         ops_commit();
         return array('saved' => $saved, 'skipped' => $skipped, 'earlier' => $sheet['done']);
+    } catch (Exception $e) {
+        ops_rollback();
+        throw $e;
+    }
+}
+
+/* ---------------- Paid / Settle step ---------------- */
+
+/** slip_id => active payment row (pay_date, mode, reference, ...) for slips of a month */
+function ops_salary_paid_map($month)
+{
+    $out = array();
+    foreach (ops_rows('SELECT * FROM tbl_ops_salary_payments WHERE pay_month = ? AND active_slip_id IS NOT NULL', array($month)) as $r) {
+        $out[(int)$r['slip_id']] = $r;
+    }
+    return $out;
+}
+
+/** Finalized slips of months before $month that are not paid. $staffId null = everyone. */
+function ops_unpaid_slips_before($staffId, $month)
+{
+    $sql = 'SELECT s.slip_id, s.staff_id, s.pay_month, st.staff_name FROM tbl_ops_salary_slips s
+            JOIN tbl_staff st ON st.staff_id = s.staff_id
+            LEFT JOIN tbl_ops_salary_payments p ON p.active_slip_id = s.slip_id
+            WHERE s.pay_month < ? AND p.payment_id IS NULL';
+    $args = array($month);
+    if ($staffId !== null) { $sql .= ' AND s.staff_id = ?'; $args[] = (int)$staffId; }
+    return ops_rows($sql . ' ORDER BY s.pay_month, st.staff_name', $args);
+}
+
+/**
+ * Mark a finalized slip as PAID (full net pay). Only now the advance recovery and the
+ * hand-balance settlement are written, dated the slip's month end so later months see them.
+ */
+function ops_salary_mark_paid($slipId, $date, $mode, $reference, $note)
+{
+    if (!isset(OPS_PAY_MODES[$mode])) throw new InvalidArgumentException('Choose how the salary was paid.');
+    ops_begin();
+    try {
+        $sl = ops_one('SELECT s.*, st.staff_name FROM tbl_ops_salary_slips s JOIN tbl_staff st ON st.staff_id = s.staff_id
+                       WHERE s.slip_id = ?' . ops_office_scope('st') . ' FOR UPDATE', array($slipId));
+        if (!$sl) throw new InvalidArgumentException('Salary slip not found in your branch.');
+        if (ops_value('SELECT COUNT(*) FROM tbl_ops_salary_payments WHERE active_slip_id = ?', array($slipId))) {
+            throw new InvalidArgumentException($sl['staff_name'] . "'s salary is already marked Paid.");
+        }
+        $monthEnd = date('Y-m-t', strtotime($sl['pay_month']));
+        if (!$date || $date > date('Y-m-d')) throw new InvalidArgumentException('Payment date cannot be in the future.');
+        if ($date < $monthEnd) throw new InvalidArgumentException('Payment date cannot be before the month ends (' . date('j M Y', strtotime($monthEnd)) . ').');
+        $label = date('F Y', strtotime($sl['pay_month']));
+        $paidOn = ' (paid ' . date('j M Y', strtotime($date)) . ')';
+        $payId = ops_write(
+            "INSERT INTO tbl_ops_salary_payments (slip_id, active_slip_id, staff_id, pay_month, entry_type, pay_date, amount, mode, reference, note, created_by, created_by_name)
+             VALUES (?, ?, ?, ?, 'payment', ?, ?, ?, ?, ?, ?, ?)",
+            array($slipId, $slipId, $sl['staff_id'], $sl['pay_month'], $date, $sl['net_payable'], $mode,
+                  $reference !== '' ? $reference : null, $note !== '' ? $note : null, ops_user_id(), ops_user_name())
+        );
+        if ((float)$sl['advance_deduction'] > 0) {
+            ops_write(
+                "INSERT INTO tbl_ops_staff_advances (staff_id, entry_date, entry_type, amount, slip_id, note, created_by, created_by_name)
+                 VALUES (?, ?, 'recovery', ?, ?, ?, ?, ?)",
+                array($sl['staff_id'], $monthEnd, $sl['advance_deduction'], $slipId, 'Recovered from ' . $label . ' salary' . $paidOn, ops_user_id(), ops_user_name())
+            );
+        }
+        $hs = ops_paise_from_db($sl['hand_settlement']);
+        if ($hs !== 0) {
+            ops_write(
+                "INSERT INTO tbl_ops_hand_ledger (staff_id, entry_date, entry_type, amount, direction, note, slip_id, created_by, created_by_name)
+                 VALUES (?, ?, 'salary_settlement', ?, ?, ?, ?, ?, ?)",
+                array($sl['staff_id'], $monthEnd, ops_paise_to_db(abs($hs)), $hs > 0 ? -1 : 1,
+                      ($hs > 0 ? 'Cash in hand deducted from ' : 'Owed amount paid with ') . $label . ' salary' . $paidOn,
+                      $slipId, ops_user_id(), ops_user_name())
+            );
+        }
+        ops_commit();
+        return array('payment_id' => $payId, 'staff_name' => $sl['staff_name'], 'net' => ops_paise_from_db($sl['net_payable']), 'month' => $label);
+    } catch (Exception $e) {
+        ops_rollback();
+        if (strpos($e->getMessage(), 'uq_active_slip') !== false) throw new InvalidArgumentException('This salary was just marked Paid by someone else.');
+        throw $e;
+    }
+}
+
+/** Undo PAID: reversal rows for the payment, the advance recovery and the hand settlement. */
+function ops_salary_undo_paid($slipId, $reason)
+{
+    $reason = trim((string)$reason);
+    if ($reason === '') throw new InvalidArgumentException('Please give a reason.');
+    ops_begin();
+    try {
+        $sl = ops_one('SELECT s.*, st.staff_name FROM tbl_ops_salary_slips s JOIN tbl_staff st ON st.staff_id = s.staff_id
+                       WHERE s.slip_id = ?' . ops_office_scope('st') . ' FOR UPDATE', array($slipId));
+        if (!$sl) throw new InvalidArgumentException('Salary slip not found in your branch.');
+        $pay = ops_one('SELECT * FROM tbl_ops_salary_payments WHERE active_slip_id = ?', array($slipId));
+        if (!$pay) throw new InvalidArgumentException('This salary is not marked Paid.');
+        if (ops_value('SELECT COUNT(*) FROM tbl_ops_salary_slips WHERE staff_id = ? AND pay_month > ?', array($sl['staff_id'], $sl['pay_month']))) {
+            throw new InvalidArgumentException('A later month is already finalized for ' . $sl['staff_name'] . ', so this payment cannot be undone.');
+        }
+        $why = mb_substr($reason, 0, 200);
+        ops_write('UPDATE tbl_ops_salary_payments SET active_slip_id = NULL WHERE payment_id = ?', array($pay['payment_id']));
+        ops_write(
+            "INSERT INTO tbl_ops_salary_payments (slip_id, active_slip_id, staff_id, pay_month, entry_type, pay_date, amount, mode, reference, note, reversal_of_id, created_by, created_by_name)
+             VALUES (?, NULL, ?, ?, 'reversal', ?, ?, ?, ?, ?, ?, ?, ?)",
+            array($slipId, $sl['staff_id'], $sl['pay_month'], date('Y-m-d'), $pay['amount'], $pay['mode'], $pay['reference'],
+                  'Undo paid: ' . $why, $pay['payment_id'], ops_user_id(), ops_user_name())
+        );
+        // reverse the advance recovery for this slip (if it still stands)
+        foreach (ops_rows("SELECT a.* FROM tbl_ops_staff_advances a WHERE a.slip_id = ? AND a.entry_type = 'recovery'
+                           AND NOT EXISTS (SELECT 1 FROM tbl_ops_staff_advances x WHERE x.reversal_of_id = a.id)", array($slipId)) as $a) {
+            ops_write(
+                "INSERT INTO tbl_ops_staff_advances (staff_id, entry_date, entry_type, amount, note, reversal_of_id, created_by, created_by_name)
+                 VALUES (?, ?, 'reversal', ?, ?, ?, ?, ?)",
+                array($a['staff_id'], $a['entry_date'], $a['amount'], 'Salary payment undone: ' . $why, $a['id'], ops_user_id(), ops_user_name())
+            );
+        }
+        // reverse the hand-balance settlement for this slip (if it still stands)
+        foreach (ops_rows("SELECT h.* FROM tbl_ops_hand_ledger h WHERE h.slip_id = ? AND h.entry_type = 'salary_settlement'
+                           AND NOT EXISTS (SELECT 1 FROM tbl_ops_hand_ledger x WHERE x.reversal_of_id = h.id)", array($slipId)) as $h) {
+            ops_write(
+                "INSERT INTO tbl_ops_hand_ledger (staff_id, entry_date, entry_type, amount, direction, note, reversal_of_id, created_by, created_by_name)
+                 VALUES (?, ?, 'reversal', ?, ?, ?, ?, ?, ?)",
+                array($h['staff_id'], $h['entry_date'], $h['amount'], -(int)$h['direction'], 'Salary payment undone: ' . $why, $h['id'], ops_user_id(), ops_user_name())
+            );
+        }
+        ops_commit();
+        return $sl['staff_name'];
     } catch (Exception $e) {
         ops_rollback();
         throw $e;

@@ -69,7 +69,10 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
   .title h2{margin:0;font-size:15px;letter-spacing:1.2px;font-weight:700}
   .title span{font-size:11.5px;opacity:.9}
   .st{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:1px}
-  .st.final{background:#d5f5e3;color:var(--green)} .st.draft{background:#fdebd0;color:#a04000}
+  .st.final{background:#d5f5e3;color:var(--green)} .st.draft{background:#fdebd0;color:#a04000} .st.unpaid{background:#fadbd8;color:#922b21}
+  .paid-stamp{position:absolute;top:239mm;right:78mm;transform:rotate(-12deg);border:3px solid #1e8449;color:#1e8449;border-radius:8px;padding:6px 14px;text-align:center;font-weight:800;opacity:.85;pointer-events:none}
+  .paid-stamp b{display:block;font-size:30px;letter-spacing:4px;line-height:1.1}
+  .paid-stamp span{font-size:10.5px;font-weight:700;letter-spacing:.5px}
   table{width:100%;border-collapse:collapse}
   .emp{margin-top:12px;border:1px solid var(--line)}
   .emp td{padding:7px 10px;border:1px solid var(--line);width:25%;vertical-align:top}
@@ -145,6 +148,9 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
 ?>
 <div class="page">
   <?php if (!$final): ?><div class="wm">DRAFT</div><?php endif; ?>
+  <?php if ($final && !empty($r['paid'])): $pd = $r['paid']; ?>
+    <div class="paid-stamp"><b>PAID</b><span><?= date('d M Y', strtotime($pd['pay_date'])) ?><?= $pd['mode'] ? ' · ' . strtoupper(h(OPS_PAY_MODES[$pd['mode']])) : '' ?></span></div>
+  <?php endif; ?>
   <div class="head">
     <img src="<?= h($company['logo']) ?>" alt="<?= h($company['name']) ?>">
     <div class="co">
@@ -157,7 +163,7 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
   </div>
 
   <div class="title">
-    <h2>SALARY SLIP · <?= strtoupper(h($monthName)) ?><span class="st <?= $final ? 'final' : 'draft' ?>"><?= $final ? 'FINAL' : 'DRAFT · MAY CHANGE' ?></span></h2>
+    <h2>SALARY SLIP · <?= strtoupper(h($monthName)) ?><span class="st <?= $final ? (!empty($r['paid']) ? 'final' : 'unpaid') : 'draft' ?>"><?= $final ? (!empty($r['paid']) ? 'PAID' : 'FINAL · UNPAID') : 'DRAFT · MAY CHANGE' ?></span></h2>
     <span>Slip No: <b><?= h($slipNo) ?></b></span>
   </div>
 
@@ -209,7 +215,10 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
   </div>
 
   <div class="pay">
-    <div>Payment mode: </div><div>Paid on: </div><div>Ref / Cheque no: </div>
+    <?php $pd = ($final && !empty($r['paid'])) ? $r['paid'] : null; ?>
+    <div>Payment mode: <b style="color:var(--text)"><?= $pd && $pd['mode'] ? h(OPS_PAY_MODES[$pd['mode']]) : '' ?></b></div>
+    <div>Paid on: <b style="color:var(--text)"><?= $pd ? date('d M Y', strtotime($pd['pay_date'])) : '' ?></b></div>
+    <div>Ref / Cheque no: <b style="color:var(--text)"><?= $pd && $pd['reference'] ? h($pd['reference']) : '' ?></b></div>
   </div>
 
   <div class="sign">
@@ -220,9 +229,10 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
 
   <div class="foot">
     <span><?= !empty($i['office_address']) ? h(trim(($i['office_name'] ? $i['office_name'] . ' branch: ' : '') . $i['office_address'] . (!empty($i['office_phone']) ? ' · ' . $i['office_phone'] : ''))) : '&nbsp;' ?></span>
-    <span>Computer-generated slip · <?= $final ? 'finalized by ' . h($r['finalized_by']) . ' on ' . date('d M Y', strtotime($r['finalized_at'])) : 'printed ' . date('d M Y, g:i a') ?></span>
+    <span>Computer-generated slip · <?= $final ? 'finalized by ' . h($r['finalized_by']) . ' on ' . date('d M Y', strtotime($r['finalized_at'])) : 'printed ' . date('d M Y, g:i a') ?><?php if ($final && !empty($r['paid'])): $pd = $r['paid']; ?> · paid <?= date('d M Y', strtotime($pd['pay_date'])) ?><?= $pd['mode'] ? ' by ' . h(OPS_PAY_MODES[$pd['mode']]) : '' ?><?= $pd['reference'] ? ' (' . h($pd['reference']) . ')' : '' ?><?php endif; ?></span>
   </div>
 </div>
 <?php endforeach; ?>
+<?php if (!empty($_GET['print']) && $slips): ?><script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 300); });</script><?php endif; ?>
 </body>
 </html>
