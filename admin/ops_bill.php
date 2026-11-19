@@ -109,6 +109,7 @@ $gstTxt = rtrim(rtrim(number_format($gst / 2, 2), '0'), '.');
   .panel button.ghost{background:#fff;color:var(--red);border-color:#e6b0aa}
   .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
   .pill.final{background:#d5f5e3;color:var(--green)}.pill.draft{background:#fdebd0;color:#a04000}.pill.blue{background:#d6eaf8;color:#1f618d}.pill.grey{background:#eaecee;color:#566573}
+  .panel:target{outline:3px solid #27ae60;outline-offset:2px}
   .kpis{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:6px}.kpis div{font-size:12px;color:var(--muted)}.kpis b{display:block;font-size:17px;color:var(--text)}
   @media screen and (max-width:820px){.page,.panel{width:auto;min-height:0;margin:10px;padding:14px}.parties,.sumwrap{grid-template-columns:1fr}}
   @page{size:A4;margin:10mm 0}
@@ -206,7 +207,7 @@ $gstTxt = rtrim(rtrim(number_format($gst / 2, 2), '0'), '.');
 </div>
 
 <!-- Screen only: payments and actions -->
-<div class="panel">
+<div class="panel" id="payment">
   <h3>Payments</h3>
   <div class="kpis">
     <div>Bill total<b><?= ops_inr($total) ?></b></div>
@@ -257,5 +258,6 @@ $gstTxt = rtrim(rtrim(number_format($gst / 2, 2), '0'), '.');
   <?php endif; ?>
 </div>
 <?php endif; ?>
+<script>if (location.hash === '#payment') { var a = document.querySelector('#payment input[name=amount]'); if (a) a.focus(); }</script>
 </body>
 </html>

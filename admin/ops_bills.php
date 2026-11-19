@@ -20,6 +20,7 @@ foreach ($bills as $b) {
 }
 $filtered = $flt['company_id'] || $flt['status'] || $flt['from'] || $flt['to'] || $flt['q'] !== '';
 $canManage = hasPermission('ops_billing_manage');
+$canPay = hasPermission('ops_billing_payment');
 
 if (isset($_GET['export'])) {
     header('Content-Type: text/csv; charset=utf-8');
@@ -69,7 +70,7 @@ require 'opsdesk/layout_start.php';
     <?php if ($filtered): ?><a class="btn ghost" href="ops_bills.php"><i class="fa fa-xmark"></i>Clear</a><?php endif; ?>
   </form>
   <div class="scroll-x"><table class="t">
-    <thead><tr><th>Bill no</th><th>Date</th><th>Consignor</th><th class="hide-m">Period</th><th class="center">Dockets</th><th class="right">Total</th><th class="right">Received</th><th class="right">Due</th><th>Status</th></tr></thead>
+    <thead><tr><th>Bill no</th><th>Date</th><th>Consignor</th><th class="hide-m">Period</th><th class="center">Dockets</th><th class="right">Total</th><th class="right">Received</th><th class="right">Due</th><th>Status</th><th class="right no-print"></th></tr></thead>
     <tbody>
     <?php foreach ($bills as $b): ?>
       <tr class="click<?= $b['status'] === 'cancelled' ? ' rev' : '' ?>" onclick="location.href='ops_bill.php?id=<?= (int)$b['bill_id'] ?>'">
@@ -82,9 +83,12 @@ require 'opsdesk/layout_start.php';
         <td class="right num in"><?= $b['settled_paise'] ? ops_inr($b['settled_paise']) : '—' ?></td>
         <td class="right num <?= $b['due_paise'] > 0 ? 'out' : 'muted' ?>"><b><?= $b['due_paise'] > 0 ? ops_inr($b['due_paise']) : '—' ?></b></td>
         <td><span class="pill <?= $b['status_class'] ?>"><?= h($b['status_label']) ?></span></td>
+        <td class="right no-print" onclick="event.stopPropagation()">
+          <?php if ($canPay && $b['status'] === 'issued' && $b['due_paise'] > 0): ?><a class="btn sm success" href="ops_bill.php?id=<?= (int)$b['bill_id'] ?>#payment"><i class="fa fa-indian-rupee-sign"></i>Record payment</a>
+          <?php else: ?><a class="btn sm" href="ops_bill.php?id=<?= (int)$b['bill_id'] ?>"><i class="fa fa-eye"></i>View</a><?php endif; ?></td>
       </tr>
     <?php endforeach; ?>
-    <?php if (!$bills): ?><tr><td colspan="9" class="empty"><?= $filtered ? 'No bills match these filters.' : 'No bills yet.' ?><?= $canManage && !$filtered ? ' <a href="ops_bill_new.php">Make the first bill →</a>' : '' ?></td></tr><?php endif; ?>
+    <?php if (!$bills): ?><tr><td colspan="10" class="empty"><?= $filtered ? 'No bills match these filters.' : 'No bills yet.' ?><?= $canManage && !$filtered ? ' <a href="ops_bill_new.php">Make the first bill →</a>' : '' ?></td></tr><?php endif; ?>
     </tbody>
   </table></div>
 </div>
