@@ -72,7 +72,7 @@ require 'opsdesk/layout_start.php';
       <?php if ($noSalary): ?><div class="note warn"><i class="fa fa-circle-exclamation"></i><div><b><?= $noSalary ?> staff have no salary set.</b> They are skipped in payroll. <a href="ops_salaries.php?show=missing">Set salaries →</a></div></div><?php endif; ?>
       <?php if (!$lastFinal): ?><div class="note info"><i class="fa fa-indian-rupee-sign"></i><div><b><?= date('F Y', strtotime($lastMonth)) ?> payroll is not finalized yet.</b> <a href="ops_payroll.php?month=<?= substr($lastMonth, 0, 7) ?>">Review payroll →</a></div></div>
       <?php else: ?><div class="note ok"><i class="fa fa-circle-check"></i><div><?= date('F Y', strtotime($lastMonth)) ?> payroll is finalized.</div></div><?php endif; ?>
-      <?php if ($owedN): ?><div class="note warn"><i class="fa fa-wallet"></i><div><b><?= $owedN ?> staff</b> spent from their own pocket (<?= ops_inr($owed) ?>). Settle by giving cash. <a href="ops_hand.php">Open hand balance →</a></div></div><?php endif; ?>
+      <?php if ($owedN): ?><div class="note warn"><i class="fa fa-wallet"></i><div><b><?= $owedN ?> staff</b> spent from their own pocket (<?= ops_inr($owed) ?>). It is added to their salary at month end. <a href="ops_hand.php">Open hand balance →</a></div></div><?php endif; ?>
     </div>
   </div>
 </div>

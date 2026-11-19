@@ -60,8 +60,8 @@ require 'opsdesk/layout_start.php';
     <div class="ico" style="background:<?= $holding ? 'var(--present-bg)' : 'var(--absent-bg)' ?>;color:<?= $holding ? 'var(--present)' : 'var(--absent)' ?>"><i class="fa fa-wallet"></i></div>
     <div><div class="muted small" style="font-weight:600"><?= h(strtoupper($cur['staff_name'])) ?> · CURRENT HAND BALANCE</div>
       <div class="big num <?= $bal > 0 ? 'in' : ($bal < 0 ? 'out' : '') ?>"><?= ops_inr(abs($bal)) ?></div>
-      <div><?php if ($bal > 0): ?><b><?= h($first) ?> is holding company cash</b> — still to give hisab.
-           <?php elseif ($bal < 0): ?><b>Company owes <?= h($first) ?></b> — spent from own pocket. Settle by giving cash.
+      <div><?php if ($bal > 0): ?><b><?= h($first) ?> is holding company cash</b> — still to give hisab. Anything left at month end is deducted from salary.
+           <?php elseif ($bal < 0): ?><b>Company owes <?= h($first) ?></b> — spent from own pocket. It is added to salary at month end (or give cash now).
            <?php else: ?>All settled.<?php endif; ?></div></div>
   </div>
   <?php if ($canManage): ?>
@@ -90,6 +90,7 @@ require 'opsdesk/layout_start.php';
         <tr class="<?= $rev ? 'rev' : '' ?>">
           <td><?php if ($e['entry_type'] === 'given'): ?><span class="pill final"><i class="fa fa-arrow-down"></i>Given</span>
               <?php elseif ($e['entry_type'] === 'expense'): ?><span class="pill grey"><?= h($e['category'] ?: 'Expense') ?></span>
+              <?php elseif ($e['entry_type'] === 'salary_settlement'): ?><span class="pill blue"><i class="fa fa-indian-rupee-sign"></i>Settled via salary</span>
               <?php else: ?><span class="pill grey"><i class="fa fa-rotate-left"></i>Reversal</span><?php endif; ?></td>
           <td><span class="desc"><?= h($e['note'] ?: ($e['entry_type'] === 'given' ? 'Cash given' : '—')) ?></span>
               <?= $e['entry_type'] === 'reversal' ? '<div class="small muted">undoes entry #' . (int)$e['reversal_of_id'] . '</div>' : '' ?>
@@ -97,7 +98,7 @@ require 'opsdesk/layout_start.php';
           <td class="right num amt in"><?= $v > 0 ? ops_inr($v) : '' ?></td>
           <td class="right num amt out"><?= $v < 0 ? ops_inr(-$v) : '' ?></td>
           <td class="right num"><b><?= ops_inr($run) ?></b></td>
-          <td class="right no-print"><?php if ($canManage && $e['entry_type'] !== 'reversal' && !$rev): ?>
+          <td class="right no-print"><?php if ($canManage && $e['entry_type'] !== 'reversal' && $e['entry_type'] !== 'salary_settlement' && !$rev): ?>
             <button class="btn sm ghost danger" title="Reverse" onclick='OPS.reverse("hand", <?= (int)$e['id'] ?>, <?= h(json_encode('#' . $e['id'] . ' · ' . ($e['entry_type'] === 'given' ? 'Cash given' : ($e['category'] ?: 'Expense')) . ' · ' . ops_inr(ops_paise_from_db($e['amount'])) . ' on ' . date('j M', strtotime($e['entry_date'])))) ?>)'><i class="fa fa-rotate-left"></i></button>
           <?php endif; ?></td>
         </tr>

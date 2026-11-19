@@ -92,6 +92,14 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
   .ed2 td.r{width:16%}
   .ed2 .split{border-left:1px solid var(--line)}
   .ed2 tr.tot td{border-top:1px solid var(--line);border-bottom:0;font-weight:800;background:var(--soft)}
+  .brk{border:1px solid var(--line)}
+  .brk td{padding:8px 12px;border-bottom:1px dashed var(--line);vertical-align:top}
+  .brk td.op{width:34px;text-align:center;font-weight:800;font-size:15px;color:var(--muted);background:var(--soft)}
+  .brk tr.plus td.r,.brk tr.plus td.op{color:#1e8449}
+  .brk tr.minus td.r,.brk tr.minus td.op{color:var(--red)}
+  .brk tr.sum td{border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-weight:800;background:var(--soft)}
+  .brk tr.sum td.op{color:var(--navy)}
+  .brk tr.final td{font-size:14.5px;color:var(--navy);border-bottom:0}
   .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
   .sub{display:block;color:var(--muted);font-size:10.5px;font-weight:500;margin-top:1px}
   .net{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;border:2px solid var(--navy);border-radius:6px;padding:12px 16px}
@@ -131,6 +139,9 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
     $carry = $final ? ops_advance_outstanding($r['staff_id'], $monthEnd) : (int)$r['advance_carry'];
     $slipNo = $final ? 'NSFS/SAL/' . substr($month, 0, 7) . '/' . str_pad($r['slip_id'], 4, '0', STR_PAD_LEFT) : 'DRAFT';
     $perDay = intdiv($r['salary'] * 2 + $days, 2 * $days); // display only
+    $absentDed = isset($r['absent_deduction']) ? (int)$r['absent_deduction'] : (int)$r['salary'] - (int)$r['earned'];
+    $hs = isset($r['hand_settlement']) ? (int)$r['hand_settlement'] : 0;   // + deducted, − added
+    $handCarry = ($r['hand_balance'] !== null && $hs > 0) ? (int)$r['hand_balance'] - $hs : 0;
 ?>
 <div class="page">
   <?php if (!$final): ?><div class="wm">DRAFT</div><?php endif; ?>
@@ -168,18 +179,21 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
     <div><b><?= $c['payable'] ?></b><small>Payable days</small></div>
   </div>
 
-  <div class="sec">Earnings &amp; deductions</div>
-  <table class="ed2">
-    <tr><th>Earnings</th><th class="r">Amount</th><th class="split">Deductions</th><th class="r">Amount</th></tr>
-    <tr><td>Fixed monthly salary<span class="sub">for reference · per day <?= ops_inr($perDay) ?></span></td><td class="r" style="color:var(--muted)"><?= ops_inr($r['salary']) ?></td>
-        <td class="split">Salary advance recovered<?php if ($carry > 0): ?><span class="sub">still due <?= ops_inr($carry) ?>, carried to next month</span><?php endif; ?></td><td class="r"><?= ops_inr($r['advance_deduction']) ?></td></tr>
-    <tr><td>Salary earned<span class="sub"><?= ops_inr($r['salary']) ?> × <?= $c['payable'] ?> ÷ <?= $days ?> days</span></td><td class="r"><?= ops_inr($r['earned']) ?></td>
-        <td class="split"></td><td></td></tr>
+  <div class="sec">Salary calculation</div>
+  <table class="brk">
+    <tr><td class="op"></td><td>Fixed monthly salary<span class="sub">per day <?= ops_inr($perDay) ?> (<?= ops_inr($r['salary']) ?> ÷ <?= $days ?> days)</span></td><td class="r"><?= ops_inr($r['salary']) ?></td></tr>
     <?php if (!empty($c['extra_duty'])): ?>
-    <tr><td>Extra duty (EXD)<span class="sub"><?= (int)$c['extra_duty'] ?> day<?= $c['extra_duty'] > 1 ? 's' : '' ?> × per-day salary</span></td><td class="r"><?= ops_inr($r['extra_pay']) ?></td>
-        <td class="split"></td><td></td></tr>
+    <tr class="plus"><td class="op">+</td><td>Extra duty (EXD)<span class="sub"><?= (int)$c['extra_duty'] ?> day<?= $c['extra_duty'] > 1 ? 's' : '' ?> × per-day salary</span></td><td class="r">+ <?= ops_inr($r['extra_pay']) ?></td></tr>
     <?php endif; ?>
-    <tr class="tot"><td>Gross earnings</td><td class="r"><?= ops_inr($r['gross']) ?></td><td class="split">Total deductions</td><td class="r"><?= ops_inr($r['advance_deduction']) ?></td></tr>
+    <tr class="minus"><td class="op">−</td><td>Absent<span class="sub"><?= (int)$c['absent_total'] ?> day<?= $c['absent_total'] == 1 ? '' : 's' ?> not paid<?= (!$final && $c['unmarked']) ? ', incl. ' . (int)$c['unmarked'] . ' not marked' : '' ?></span></td><td class="r"><?= $absentDed ? '− ' . ops_inr($absentDed) : ops_inr(0) ?></td></tr>
+    <tr class="sum"><td class="op">=</td><td>Total salary</td><td class="r"><?= ops_inr($r['gross']) ?></td></tr>
+    <tr class="minus"><td class="op">−</td><td>Salary advance recovered<?php if ($carry > 0): ?><span class="sub">still due <?= ops_inr($carry) ?>, carried to next month</span><?php endif; ?></td><td class="r"><?= $r['advance_deduction'] ? '− ' . ops_inr($r['advance_deduction']) : ops_inr(0) ?></td></tr>
+    <?php if ($hs >= 0): ?>
+    <tr class="minus"><td class="op">−</td><td>Cash in hand<span class="sub"><?= $hs > 0 ? 'company cash held by the employee (road expense), settled from salary' : 'no company cash with the employee' ?><?= $handCarry > 0 ? ' · ' . ops_inr($handCarry) . ' still in hand, carried forward' : '' ?></span></td><td class="r"><?= $hs ? '− ' . ops_inr($hs) : ops_inr(0) ?></td></tr>
+    <?php else: ?>
+    <tr class="plus"><td class="op">+</td><td>Road expense owed to employee<span class="sub">spent from own pocket, paid with salary</span></td><td class="r">+ <?= ops_inr(-$hs) ?></td></tr>
+    <?php endif; ?>
+    <tr class="sum final"><td class="op">=</td><td>Amount payable</td><td class="r"><?= ops_inr($r['net']) ?></td></tr>
   </table>
 
   <div class="net">
@@ -188,12 +202,10 @@ $fmtDate = function ($d) { return ($d && $d !== '0000-00-00') ? date('d M Y', st
   </div>
 
   <div class="notes">
-    <?php if (!$final && $c['unmarked']): ?><div>* Includes <b><?= $c['unmarked'] ?> day(s) with no attendance marked</b>, counted as absent.</div><?php endif; ?>
-    <?php if ($r['hand_balance'] !== null && $r['hand_balance'] != 0): ?>
-      <div>Road-expense hand balance on <?= date('j M Y', strtotime($monthEnd)) ?>: <b><?= ops_inr(abs($r['hand_balance'])) ?></b>
-        <?= $r['hand_balance'] > 0 ? '(cash held by employee, hisab pending)' : '(owed to employee)' ?> — for information only, not part of salary.</div>
+    <?php if ($final && !$hs && $r['hand_balance'] !== null && $r['hand_balance'] != 0): ?>
+      <div>Hand balance on <?= date('j M Y', strtotime($monthEnd)) ?>: <b><?= ops_inr(abs($r['hand_balance'])) ?></b> <?= $r['hand_balance'] > 0 ? '(cash held by employee)' : '(owed to employee)' ?> — not settled through this slip.</div>
     <?php endif; ?>
-    <div>Payable days = present + paid leave + week off. Absent and unmarked days are not paid. Each extra duty (EXD) adds one day's salary.</div>
+    <div>Payable days = present + paid leave + week off (<?= (int)$c['payable'] ?> of <?= $days ?>). Absent and unmarked days are not paid. Each extra duty (EXD) adds one day's salary.</div>
   </div>
 
   <div class="pay">

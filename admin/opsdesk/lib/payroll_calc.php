@@ -6,7 +6,10 @@
  *   extra   = pay for extra-duty (EXD) days at the same per-day rate:
  *             round(salary × (payable + exd) / days) − earned            -- total still rounded once
  *   gross   = earned + extra
- *   payable = gross − advance (advance recovered up to gross; rest carries forward)
+ *   then advance is recovered (up to gross; rest carries forward),
+ *   then the hand balance is settled: cash held by the staff member is deducted (only down to ₹0,
+ *   rest stays in the hand balance); money the company owes them (negative balance) is added.
+ *   net     = gross − advance_deduction − hand_settlement
  */
 
 const OPS_STATUSES = array('present', 'paid_leave', 'week_off', 'absent');
@@ -72,9 +75,11 @@ function ops_earned_paise($salaryPaise, $payableDays, $daysInMonth)
 
 /**
  * Full slip numbers.
- * @return array earned, extra_pay, gross, advance_deduction, net, advance_carry, per_day (display only, may have fraction)
+ * @param int $handBalancePaise hand balance at month end: + staff holds company cash, − company owes staff
+ * @return array earned, extra_pay, gross, absent_deduction, advance_deduction, hand_settlement, net,
+ *               advance_carry, hand_carry, per_day (display only, may have fraction)
  */
-function ops_payroll_calc($salaryPaise, $payableDays, $daysInMonth, $advanceOutstandingPaise, $extraDutyDays = 0)
+function ops_payroll_calc($salaryPaise, $payableDays, $daysInMonth, $advanceOutstandingPaise, $extraDutyDays = 0, $handBalancePaise = 0)
 {
     $extraDutyDays = (int)$extraDutyDays;
     if ($extraDutyDays < 0 || $extraDutyDays > $daysInMonth) {
@@ -84,13 +89,18 @@ function ops_payroll_calc($salaryPaise, $payableDays, $daysInMonth, $advanceOuts
     $gross = ops_pay_for_days($salaryPaise, $payableDays + $extraDutyDays, $daysInMonth);
     $adv = max(0, (int)$advanceOutstandingPaise);
     $ded = min($adv, $gross);
+    $hand = (int)$handBalancePaise;
+    $handSettle = $hand > 0 ? min($hand, $gross - $ded) : $hand; // negative = added to pay
     return array(
         'earned' => $earned,
         'extra_pay' => $gross - $earned,
         'gross' => $gross,
+        'absent_deduction' => (int)$salaryPaise - $earned, // display: fixed salary − earned (absent + unmarked days)
         'advance_deduction' => $ded,
-        'net' => $gross - $ded,
+        'hand_settlement' => $handSettle,
+        'net' => $gross - $ded - $handSettle,
         'advance_carry' => $adv - $ded,
+        'hand_carry' => $hand - $handSettle,
         'per_day' => $salaryPaise / $daysInMonth,
     );
 }

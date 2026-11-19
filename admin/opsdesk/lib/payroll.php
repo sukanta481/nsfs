@@ -217,9 +217,11 @@ function ops_payroll_live_row(array $s, $month, $days, array $grid, array $extra
         'slip_id' => null, 'finalized' => false, 'finalized_by' => null, 'finalized_at' => null,
     );
     if ($salary !== null) {
-        $calc = ops_payroll_calc($salary, $counts['payable'], $days, ops_advance_outstanding($sid, $monthEnd), $counts['extra_duty']);
+        $calc = ops_payroll_calc($salary, $counts['payable'], $days, ops_advance_outstanding($sid, $monthEnd), $counts['extra_duty'], $row['hand_balance']);
         $row += array('earned' => $calc['earned'], 'extra_pay' => $calc['extra_pay'], 'gross' => $calc['gross'],
-                      'advance_deduction' => $calc['advance_deduction'], 'net' => $calc['net'], 'advance_carry' => $calc['advance_carry']);
+                      'absent_deduction' => $calc['absent_deduction'], 'advance_deduction' => $calc['advance_deduction'],
+                      'hand_settlement' => $calc['hand_settlement'], 'hand_carry' => $calc['hand_carry'],
+                      'net' => $calc['net'], 'advance_carry' => $calc['advance_carry']);
     }
     return $row;
 }
@@ -250,6 +252,8 @@ function ops_payroll_sheet($month)
             'salary' => ops_paise_from_db($r['monthly_salary']), 'earned' => ops_paise_from_db($r['earned_amount']),
             'extra_pay' => ops_paise_from_db($r['extra_duty_amount']),
             'gross' => ops_paise_from_db($r['earned_amount']) + ops_paise_from_db($r['extra_duty_amount']),
+            'absent_deduction' => ops_paise_from_db($r['monthly_salary']) - ops_paise_from_db($r['earned_amount']),
+            'hand_settlement' => ops_paise_from_db($r['hand_settlement']), 'hand_carry' => null,
             'advance_deduction' => ops_paise_from_db($r['advance_deduction']), 'net' => ops_paise_from_db($r['net_payable']),
             'advance_carry' => null, 'hand_balance' => $r['hand_balance_at_close'] === null ? null : ops_paise_from_db($r['hand_balance_at_close']),
             'slip_id' => (int)$r['slip_id'], 'missing_salary' => false,
@@ -291,13 +295,13 @@ function ops_payroll_save_slip($runId, array $r, $month, $days)
     $c = $r['counts'];
     $slipId = ops_write(
         'INSERT INTO tbl_ops_salary_slips (run_id, staff_id, office_id, pay_month, days_in_month, present_days, paid_leave_days, week_off_days,
-             absent_days, payable_days, extra_duty_days, monthly_salary, earned_amount, extra_duty_amount, advance_deduction, net_payable,
-             hand_balance_at_close, created_by, created_by_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+             absent_days, payable_days, extra_duty_days, monthly_salary, earned_amount, extra_duty_amount, advance_deduction,
+             hand_settlement, net_payable, hand_balance_at_close, created_by, created_by_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         array($runId, $r['staff_id'], $r['office_id'], $month, $days, $c['present'], $c['paid_leave'], $c['week_off'],
               $c['absent_total'], $c['payable'], $c['extra_duty'], ops_paise_to_db($r['salary']), ops_paise_to_db($r['earned']),
               ops_paise_to_db($r['extra_pay']),
-              ops_paise_to_db($r['advance_deduction']), ops_paise_to_db($r['net']), ops_paise_to_db($r['hand_balance']),
+              ops_paise_to_db($r['advance_deduction']), ops_paise_to_db($r['hand_settlement']), ops_paise_to_db($r['net']), ops_paise_to_db($r['hand_balance']),
               ops_user_id(), ops_user_name())
     );
     if ($r['advance_deduction'] > 0) {
@@ -306,6 +310,18 @@ function ops_payroll_save_slip($runId, array $r, $month, $days)
              VALUES (?, ?, 'recovery', ?, ?, ?, ?, ?)",
             array($r['staff_id'], date('Y-m-t', strtotime($month)), ops_paise_to_db($r['advance_deduction']), $slipId,
                   'Recovered from ' . date('F Y', strtotime($month)) . ' salary', ops_user_id(), ops_user_name())
+        );
+    }
+    if (!empty($r['hand_settlement'])) {
+        // Settle the hand balance through salary so the same cash is never settled twice.
+        // + : staff held company cash -> deducted (balance goes down); - : company owed them -> paid (balance goes up)
+        $hs = (int)$r['hand_settlement'];
+        ops_write(
+            "INSERT INTO tbl_ops_hand_ledger (staff_id, entry_date, entry_type, amount, direction, note, slip_id, created_by, created_by_name)
+             VALUES (?, ?, 'salary_settlement', ?, ?, ?, ?, ?, ?)",
+            array($r['staff_id'], date('Y-m-t', strtotime($month)), ops_paise_to_db(abs($hs)), $hs > 0 ? -1 : 1,
+                  ($hs > 0 ? 'Cash in hand deducted from ' : 'Owed amount paid with ') . date('F Y', strtotime($month)) . ' salary',
+                  $slipId, ops_user_id(), ops_user_name())
         );
     }
     return $slipId;

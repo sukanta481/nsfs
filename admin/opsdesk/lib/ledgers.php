@@ -104,6 +104,7 @@ function ops_hand_reverse($id, $reason)
     $o = ops_one('SELECT * FROM tbl_ops_hand_ledger WHERE id = ?', array($id));
     if (!$o) throw new InvalidArgumentException('Entry not found.');
     if ($o['entry_type'] === 'reversal') throw new InvalidArgumentException('A reversal cannot be reversed. Add a new entry instead.');
+    if ($o['entry_type'] === 'salary_settlement') throw new InvalidArgumentException('This was settled through a finalized salary slip and cannot be reversed here.');
     if (ops_value('SELECT COUNT(*) FROM tbl_ops_hand_ledger WHERE reversal_of_id = ?', array($id))) {
         throw new InvalidArgumentException('This entry is already reversed.');
     }

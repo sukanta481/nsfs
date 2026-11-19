@@ -135,6 +135,29 @@ $c = ops_count_attendance(array(1 => 'present', 2 => 'present'), 30, 1);
 eq('count carries exd', 1, $c['extra_duty']);
 
 echo "
+Hand balance settled through salary
+";
+$x = ops_payroll_calc(1600000, 28, 30, 200000, 0, 50000);   // 14933.33 - adv 2000 - cash 500
+eq('hand: absent deduction = salary - earned', 106667, $x['absent_deduction']);
+eq('hand: cash held deducted', 50000, $x['hand_settlement']);
+eq('hand: net', 1243333, $x['net']);
+eq('hand: nothing carried', 0, $x['hand_carry']);
+$x = ops_payroll_calc(1100000, 31, 31, 0, 0, -12000);        // company owes 120 -> added
+eq('hand: owed amount added (negative settle)', -12000, $x['hand_settlement']);
+eq('hand: net includes owed', 1112000, $x['net']);
+$x = ops_payroll_calc(1600000, 10, 30, 300000, 0, 700000);   // earned 5333.33, adv 3000 -> 2333.33 left, cash 7000
+eq('hand: settle limited to what is left', 233333, $x['hand_settlement']);
+eq('hand: net never below 0', 0, $x['net']);
+eq('hand: rest carried in hand balance', 466667, $x['hand_carry']);
+$x = ops_payroll_calc(1600000, 30, 30, 0, 2, 0);             // no hand balance: unchanged
+eq('hand: zero balance no settle', 0, $x['hand_settlement']);
+eq('hand: zero balance net = gross', $x['gross'], $x['net']);
+$x = ops_payroll_calc(1600000, 30, 30, 0);
+eq('hand: full attendance absent deduction 0', 0, $x['absent_deduction']);
+$y = ops_payroll_calc(1600000, 26, 30, 0, 2);
+eq('breakdown adds up: fixed + extra - absent = gross', $y['gross'], 1600000 + $y['extra_pay'] - $y['absent_deduction']);
+
+echo "
 Amount in words
 ";
 eq('words zero', 'Rupees Zero Only', ops_amount_words(0));
