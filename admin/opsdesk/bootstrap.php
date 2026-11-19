@@ -220,3 +220,4 @@ function ops_staff_types()
 
 require_once __DIR__ . '/lib/ledgers.php';
 require_once __DIR__ . '/lib/payroll.php';
+require_once __DIR__ . '/lib/billing.php';

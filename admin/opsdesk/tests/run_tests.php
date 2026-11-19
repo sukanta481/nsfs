@@ -9,6 +9,7 @@ if (PHP_SAPI !== 'cli') {
 }
 require __DIR__ . '/../lib/money.php';
 require __DIR__ . '/../lib/payroll_calc.php';
+require __DIR__ . '/../lib/billing_calc.php';
 
 $fails = 0;
 $count = 0;
@@ -156,6 +157,44 @@ $x = ops_payroll_calc(1600000, 30, 30, 0);
 eq('hand: full attendance absent deduction 0', 0, $x['absent_deduction']);
 $y = ops_payroll_calc(1600000, 26, 30, 0, 2);
 eq('breakdown adds up: fixed + extra - absent = gross', $y['gross'], 1600000 + $y['extra_pay'] - $y['absent_deduction']);
+
+echo "
+Consignor billing
+";
+$t = ops_bill_totals(array(50000, 50000, 75000), 0, 'none');      // 500 + 500 + 750
+eq('bill: subtotal', 175000, $t['subtotal']);
+eq('bill: no gst total = subtotal', 175000, $t['total']);
+eq('bill: no gst round off 0', 0, $t['round_off']);
+$t = ops_bill_totals(array(100000), 18, 'cgst_sgst');               // 1000 + 9% + 9%
+eq('bill: cgst 9%', 9000, $t['cgst']);
+eq('bill: sgst 9%', 9000, $t['sgst']);
+eq('bill: igst 0 for same state', 0, $t['igst']);
+eq('bill: total 1180', 118000, $t['total']);
+$t = ops_bill_totals(array(100000), 18, 'igst');
+eq('bill: igst 18%', 18000, $t['igst']);
+eq('bill: igst total', 118000, $t['total']);
+$t = ops_bill_totals(array(33333), 5, 'cgst_sgst');                 // 333.33 + 8.33 + 8.33 = 349.99 -> 350
+eq('bill: cgst 2.5% rounded', 833, $t['cgst']);
+eq('bill: round off +0.01', 1, $t['round_off']);
+eq('bill: total rounded to rupee', 35000, $t['total']);
+$t = ops_bill_totals(array(12345), 12, 'igst');                     // 123.45 + 14.81 = 138.26 -> 138
+eq('bill: round off negative', -26, $t['round_off']);
+eq('bill: total 138', 13800, $t['total']);
+$t = ops_bill_totals(array(100000), 0, 'igst');
+eq('bill: 0% forces no tax', 'none', $t['tax_type']);
+throws('bill: bad gst rate', function () { ops_bill_totals(array(1000), 7, 'igst'); });
+throws('bill: negative line', function () { ops_bill_totals(array(-1), 0, 'none'); });
+eq('fy: november', '2026-27', ops_fin_year('2026-11-19'));
+eq('fy: february', '2026-27', ops_fin_year('2027-02-01'));
+eq('fy: 1 april starts new', '2027-28', ops_fin_year('2027-04-01'));
+eq('fy: 31 march', '2026-27', ops_fin_year('2027-03-31'));
+eq('bill number', 'NSFS/2026-27/0007', ops_bill_number('2026-27', 7));
+eq('tax suggest WB', 'cgst_sgst', ops_suggest_tax_type('19ABCDE1234F1Z5'));
+eq('tax suggest other state', 'igst', ops_suggest_tax_type('27ABCDE1234F1Z5'));
+eq('tax suggest no gstin', 'cgst_sgst', ops_suggest_tax_type(''));
+eq('gstin valid', true, ops_valid_gstin('19BJPFG8832C1ZT'));
+eq('gstin empty ok', true, ops_valid_gstin(''));
+eq('gstin invalid', false, ops_valid_gstin('19BJPFG8832'));
 
 echo "
 Amount in words

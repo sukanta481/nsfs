@@ -1,4 +1,4 @@
--- OpsDesk rollback: removes ONLY what opsdesk_001..004 added.
+-- OpsDesk rollback: removes ONLY what opsdesk_001..006 added.
 -- For local/test use. On live this destroys OpsDesk data (attendance, ledgers, payroll), so take a backup first.
 
 ALTER TABLE tbl_car DROP FOREIGN KEY IF EXISTS fk_ops_car_default_vendor;
@@ -6,6 +6,9 @@ ALTER TABLE tbl_car DROP FOREIGN KEY IF EXISTS fk_ops_car_default_vendor;
 -- (004 columns live on OpsDesk tables, so dropping the tables below removes them too.)
 
 DROP TABLE IF EXISTS
+    tbl_ops_bill_payments,
+    tbl_ops_bill_items,
+    tbl_ops_bills,
     tbl_ops_activity_log,
     tbl_ops_hand_ledger,
     tbl_ops_rental_ledger,
@@ -27,6 +30,7 @@ ALTER TABLE tbl_car
     DROP COLUMN IF EXISTS fuel_type;
 
 ALTER TABLE tbl_staff DROP COLUMN IF EXISTS week_off_day;
+ALTER TABLE tbl_company DROP COLUMN IF EXISTS gstin;
 
 DELETE rp FROM tbl_role_permissions rp
 JOIN tbl_permissions p ON p.permission_id = rp.permission_id

@@ -118,7 +118,7 @@ if (file_exists('check_auth.php')) {
       <?php endif; ?>
 
       <!-- OpsDesk: staff & operations -->
-      <?php if (hasPermission('ops_attendance_view') || hasPermission('ops_payroll_view') || hasPermission('ops_hand_ledger_view')): ?>
+      <?php if (hasPermission('ops_attendance_view') || hasPermission('ops_payroll_view') || hasPermission('ops_hand_ledger_view') || hasPermission('ops_billing_view')): ?>
       <li class="menu-item has-submenu">
         <a href="javascript:void(0)" class="menu-link">
           <i class="fa fa-people-group"></i>
@@ -142,6 +142,9 @@ if (file_exists('check_auth.php')) {
           <?php endif; ?>
           <?php if (hasPermission('ops_hand_ledger_view')): ?>
           <li><a href="ops_hand.php"><i class="fa fa-wallet"></i> Hand Balance</a></li>
+          <?php endif; ?>
+          <?php if (hasPermission('ops_billing_view')): ?>
+          <li><a href="ops_bills.php"><i class="fa fa-file-invoice"></i> Consignor Bills</a></li>
           <?php endif; ?>
         </ul>
       </li>
