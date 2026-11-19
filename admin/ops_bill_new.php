@@ -28,11 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $rates = array();
         foreach ($lines as $id => $l) {
             if (!is_array($l)) throw new InvalidArgumentException('Please reload the page and try again.');
-            $rates[(int)$id] = array(
-                'rate' => ops_paise_from_input(isset($l['r']) ? (string)$l['r'] : ''),
-                'boxes' => isset($l['b']) ? trim((string)$l['b']) : '',
-                'weight' => isset($l['w']) ? trim((string)$l['w']) : '',
-            );
+            $rates[(int)$id] = array('rate' => ops_paise_from_input(isset($l['r']) ? (string)$l['r'] : ''));
         }
         $billId = ops_bill_create(
             $companyId, $from, $to, ops_date_param('bill_date', ''), $rates,
@@ -120,14 +116,15 @@ require 'opsdesk/layout_start.php';
         <thead><tr><th style="width:34px"><input type="checkbox" id="tickAll" checked onchange="tickAll(this.checked)"></th><th>#</th><th>Docket no</th><th>Delivered</th><th>Consignee</th><th class="center" style="width:74px">Boxes</th><th class="center" style="width:90px">Weight (kg)</th><th class="right" style="width:150px">Rate (₹)</th><th class="right" style="width:110px">Amount</th><th class="hide-m">Destination</th><th class="hide-m">Invoice no</th></tr></thead>
         <tbody>
         <?php foreach ($dockets as $i => $d): ?>
-          <tr data-id="<?= (int)$d['docket_id'] ?>">
+          <?php $dw = (float)$d['weight'] > 0 ? rtrim(rtrim(number_format((float)$d['weight'], 2, '.', ''), '0'), '.') : ''; ?>
+          <tr data-id="<?= (int)$d['docket_id'] ?>" data-b="<?= (int)$d['box'] > 0 ? (int)$d['box'] : '' ?>" data-w="<?= h($dw) ?>">
             <td><input type="checkbox" class="tick" checked onchange="recalc()"></td>
             <td class="muted"><?= $i + 1 ?></td>
             <td><b><?= h($d['doc_no']) ?></b></td>
             <td class="num"><?= $d['delivered_on'] ? date('j M', strtotime($d['delivered_on'])) : '—' ?></td>
             <td><?= h($d['client_name']) ?></td>
-            <td class="center"><input class="input num boxes" inputmode="numeric" value="<?= (int)$d['box'] > 0 ? (int)$d['box'] : '' ?>" placeholder="?" oninput="recalc()" style="width:64px;text-align:center" title="Boxes from the docket. Change only if it is wrong."></td>
-            <td class="center"><input class="input num weight" inputmode="decimal" value="<?= (float)$d['weight'] > 0 ? h(rtrim(rtrim(number_format((float)$d['weight'], 2, '.', ''), '0'), '.')) : '' ?>" placeholder="—" oninput="recalc()" style="width:80px;text-align:center" title="Weight from the docket. If there is a weight, the rate is per kg."></td>
+            <td class="center num"><?= (int)$d['box'] > 0 ? (int)$d['box'] : '<span class="muted">—</span>' ?></td>
+            <td class="center num w-cell"><?= $dw !== '' ? h($dw) : '' ?></td>
             <td class="right" style="white-space:nowrap"><input class="input num rate" inputmode="decimal" placeholder="0.00" oninput="recalc()" style="width:90px;text-align:right"> <span class="basis small muted">/box</span></td>
             <td class="right num amt-cell">—</td>
             <td class="hide-m muted small"><?= h(mb_strimwidth((string)$d['delivery_location'], 0, 40, '…')) ?></td>
@@ -187,7 +184,7 @@ function inr(p) {
 function rows() { return Array.prototype.slice.call(document.querySelectorAll('.bill-lines tbody tr')); }
 function tickAll(on) { rows().forEach(function (r) { r.querySelector('.tick').checked = on; }); recalc(); }
 function wh(v) { v = (v || '').trim(); if (v === '') return 0; if (!/^\d{1,7}(\.\d{1,2})?$/.test(v)) return -1; var p = v.split('.'); return parseInt(p[0], 10) * 100 + (p[1] ? parseInt((p[1] + '0').slice(0, 2), 10) : 0); }
-function isKg(r) { return wh(r.querySelector('.weight').value) > 0; }
+function isKg(r) { return wh(r.dataset.w) > 0; }
 function applyRate(emptyOnly) {
   var vb = document.getElementById('allRateBox').value.trim(), vk = document.getElementById('allRateKg').value.trim();
   var okB = vb !== '' && paise(vb) > 0, okK = vk !== '' && paise(vk) > 0;
@@ -209,17 +206,16 @@ function recalc() {
   var sub = 0, n = 0, missing = 0, bad = 0, noBox = 0, badW = 0, boxesTot = 0, kgTot = 0, nKg = 0, heavy = [];
   rows().forEach(function (r) {
     var on = r.querySelector('.tick').checked, inp = r.querySelector('.rate'), p = paise(inp.value);
-    var bi = r.querySelector('.boxes'), bv = bi.value.trim(), b = /^\d+$/.test(bv) ? parseInt(bv, 10) : 0;
-    var wi = r.querySelector('.weight'), w = wh(wi.value), kg = w > 0;
+    var b = /^\d+$/.test(r.dataset.b || '') ? parseInt(r.dataset.b, 10) : 0;
+    var w = wh(r.dataset.w), kg = w > 0;
     r.querySelector('.basis').textContent = kg ? '/kg' : '/box';
     r.querySelector('.basis').style.color = kg ? 'var(--leave)' : '';
     r.classList.toggle('off', !on);
     inp.classList.toggle('bad', on && inp.value.trim() !== '' && (p === null || p <= 0));
-    wi.classList.toggle('bad', on && w < 0);
     var tooHeavy = kg && (w > 100000 || (b >= 1 && w > b * 10000));   // > 1000 kg, or > 100 kg per box
     r.classList.toggle('heavy', on && tooHeavy);
     if (on && tooHeavy) heavy.push(r.children[2].innerText.trim());
-    bi.classList.toggle('bad', on && !kg && w >= 0 && b < 1);
+    r.classList.toggle('nodata', on && !kg && b < 1);
     var amt = null;
     if (p && p > 0 && w >= 0) amt = kg ? divRound(p * w, 100) : (b >= 1 ? p * b : null);
     r.querySelector('.amt-cell').textContent = amt !== null ? inr(amt) : '—';
@@ -252,19 +248,19 @@ function recalc() {
   var msg = [];
   if (missing) msg.push(missing + ' ticked docket' + (missing > 1 ? 's have' : ' has') + ' no rate');
   if (bad) msg.push(bad + ' rate' + (bad > 1 ? 's are' : ' is') + ' not a valid amount');
-  if (noBox) msg.push(noBox + ' ticked docket' + (noBox > 1 ? 's have' : ' has') + ' no weight and no box count');
+  if (noBox) msg.push(noBox + ' ticked docket' + (noBox > 1 ? 's have' : ' has') + ' no weight and no boxes in the docket (fix the docket, or untick it)');
   if (badW) msg.push(badW + ' weight' + (badW > 1 ? 's are' : ' is') + ' not a valid number');
   document.getElementById('missing').style.display = msg.length ? '' : 'none';
-  document.getElementById('missingTxt').textContent = msg.join(' · ') + (msg.length ? '. Fill it in or untick the docket.' : '');
+  document.getElementById('missingTxt').textContent = msg.join(' · ') + (msg.length ? '.' : '');
   var hv = document.getElementById('heavyNote');
   hv.style.display = heavy.length ? '' : 'none';
-  document.getElementById('heavyTxt').textContent = heavy.length ? 'Weight looks too high on ' + heavy.length + ' docket' + (heavy.length > 1 ? 's' : '') + ' (' + heavy.slice(0, 5).join(', ') + (heavy.length > 5 ? ' …' : '') + '): more than 1000 kg, or more than 100 kg per box. Please check; it may be in grams.' : '';
+  document.getElementById('heavyTxt').textContent = heavy.length ? 'Weight looks too high on ' + heavy.length + ' docket' + (heavy.length > 1 ? 's' : '') + ' (' + heavy.slice(0, 5).join(', ') + (heavy.length > 5 ? ' …' : '') + '): more than 1000 kg, or more than 100 kg per box. Please check the docket; it may be in grams.' : '';
   document.getElementById('genBtn').disabled = !n || missing > 0 || bad > 0 || noBox > 0 || badW > 0;
 }
 function beforeSubmit() {
   var lines = {};
   rows().forEach(function (r) {
-    if (r.querySelector('.tick').checked) lines[r.dataset.id] = {r: r.querySelector('.rate').value.trim(), b: r.querySelector('.boxes').value.trim(), w: r.querySelector('.weight').value.trim()};
+    if (r.querySelector('.tick').checked) lines[r.dataset.id] = {r: r.querySelector('.rate').value.trim()};
   });
   document.getElementById('lines').value = JSON.stringify(lines);
   var t = document.getElementById('tTotal').textContent, n = document.getElementById('tCount').textContent;

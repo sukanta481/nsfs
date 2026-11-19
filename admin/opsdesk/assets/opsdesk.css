@@ -220,3 +220,5 @@
 
 .ops .bill-lines tr.heavy td{background:#fff6d6}
 .ops .bill-lines tr.heavy .weight{border-color:#e0a800}
+.ops .bill-lines tr.nodata td{background:#fdecea}
+.ops .bill-lines .w-cell{color:var(--leave);font-weight:600}

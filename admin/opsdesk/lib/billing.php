@@ -52,8 +52,8 @@ function ops_bill_already_billed_count($companyId, $from, $to)
 
 /**
  * Create a bill.
- * @param array $lines docket_id => ['rate' => paise, 'boxes' => text, 'weight' => text kg] (only the ticked dockets).
- *                     With a weight the rate is per kg, otherwise per box.
+ * @param array $lines docket_id => ['rate' => paise] (only the ticked dockets).
+ *                     Boxes and weight are read from the docket: with a weight the rate is per kg, otherwise per box.
  * @return int bill_id
  */
 function ops_bill_create($companyId, $from, $to, $billDate, array $lines, $gstRate, $taxType, $gstin, $note)
@@ -63,17 +63,11 @@ function ops_bill_create($companyId, $from, $to, $billDate, array $lines, $gstRa
     if (!$from || !$to || $from > $to) throw new InvalidArgumentException('Choose a valid date range.');
     if (!$billDate || $billDate > date('Y-m-d')) throw new InvalidArgumentException('Bill date cannot be in the future.');
     if (!$lines) throw new InvalidArgumentException('Tick at least one docket.');
-    $amounts = array();
-    $priced = array();
     foreach ($lines as $id => $l) {
         if (!isset($l['rate']) || $l['rate'] === null || $l['rate'] <= 0) throw new InvalidArgumentException('Enter a rate for every ticked docket (or untick it).');
-        $priced[$id] = ops_bill_line($l['rate'], isset($l['boxes']) ? $l['boxes'] : '', isset($l['weight']) ? $l['weight'] : '');
-        $amounts[$id] = $priced[$id]['amount'];
     }
     $gstin = strtoupper(trim((string)$gstin));
     if (!ops_valid_gstin($gstin)) throw new InvalidArgumentException('GSTIN looks wrong. It should be 15 characters, like 19ABCDE1234F1Z5.');
-    $totals = ops_bill_totals(array_values($amounts), $gstRate, $taxType);
-
     ops_begin();
     try {
         // Re-read the dockets inside the transaction: still delivered, in range, this consignor, not billed.
@@ -81,6 +75,20 @@ function ops_bill_create($companyId, $from, $to, $billDate, array $lines, $gstRa
         if (count($dockets) !== count($lines)) {
             throw new InvalidArgumentException('Some dockets are no longer available (already billed by someone else, or changed). Reload and try again.');
         }
+        // Price each line from the docket's own boxes / weight
+        $amounts = array();
+        $priced = array();
+        foreach ($dockets as $d) {
+            $id = (int)$d['docket_id'];
+            $w = (float)$d['weight'] > 0 ? number_format((float)$d['weight'], 2, '.', '') : '';
+            $bx = (int)$d['box'] > 0 ? (string)(int)$d['box'] : '';
+            if ($w === '' && $bx === '') {
+                throw new InvalidArgumentException('Docket ' . $d['doc_no'] . ' has no weight and no boxes. Fix the docket first, or untick it.');
+            }
+            $priced[$id] = ops_bill_line($lines[$id]['rate'], $bx, $w);
+            $amounts[$id] = $priced[$id]['amount'];
+        }
+        $totals = ops_bill_totals(array_values($amounts), $gstRate, $taxType);
         $fy = ops_fin_year($billDate);
         $seq = (int)ops_value('SELECT COALESCE(MAX(seq), 0) FROM tbl_ops_bills WHERE fy = ? FOR UPDATE', array($fy)) + 1;
         $billId = ops_write(
