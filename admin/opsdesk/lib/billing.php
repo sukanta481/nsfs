@@ -284,3 +284,17 @@ function ops_bill_outstanding()
     usort($out, function ($a, $b) { return $b['due'] - $a['due']; });
     return $out;
 }
+
+/** For the empty state: latest unbilled delivery date of a consignor, and how many have a future delivery date. */
+function ops_bill_unbilled_hint($companyId)
+{
+    $r = ops_one(
+        'SELECT MAX(CASE WHEN ' . OPS_DELIVERED_AT . ' <= NOW() THEN DATE(' . OPS_DELIVERED_AT . ') END) AS latest,
+                MIN(CASE WHEN ' . OPS_DELIVERED_AT . ' <= NOW() THEN DATE(' . OPS_DELIVERED_AT . ') END) AS earliest,
+                SUM(' . OPS_DELIVERED_AT . ' > NOW()) AS future
+         FROM docket_details d LEFT JOIN tbl_ops_bill_items i ON i.active_docket_id = d.docket_id
+         WHERE d.company_id = ? AND d.status = \'Delivered\' AND i.item_id IS NULL' . ops_office_scope('d'),
+        array($companyId)
+    );
+    return array('latest' => $r['latest'], 'earliest' => $r['earliest'], 'future' => (int)$r['future']);
+}

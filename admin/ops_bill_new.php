@@ -79,8 +79,18 @@ require 'opsdesk/layout_start.php';
   <b><?= count($dockets) ?></b> docket<?= count($dockets) === 1 ? '' : 's' ?> not billed yet<?= $alreadyBilled ? ', <b>' . $alreadyBilled . '</b> already on a bill (not shown)' : '' ?>.
 </div></div>
 
-<?php if (!$dockets): ?>
-  <div class="card mt"><div class="empty">No unbilled delivered dockets for this consignor in this period.</div></div>
+<?php $hint = ops_bill_unbilled_hint($companyId); ?>
+<?php if ($hint['future']): ?>
+  <div class="note warn mt"><i class="fa fa-triangle-exclamation"></i><div><b><?= $hint['future'] ?> delivered docket<?= $hint['future'] > 1 ? 's have' : ' has' ?> a delivery date in the future</b> for this consignor (probably typed wrong). They will not appear in any bill until the delivery date is corrected in the docket.</div></div>
+<?php endif; ?>
+
+<?php if (!$dockets): $lm = $hint['latest'] ? date('Y-m-01', strtotime($hint['latest'])) : null; ?>
+  <div class="card mt"><div class="empty">No unbilled delivered dockets for this consignor in this period.
+    <?php if ($hint['latest']): ?>
+      <div class="mt">The latest unbilled delivery for <?= h($co['company_title']) ?> is on <b><?= date('j M Y', strtotime($hint['latest'])) ?></b>.
+        <a href="ops_bill_new.php?company_id=<?= $companyId ?>&from=<?= $lm ?>&to=<?= $hint['latest'] ?>">Show <?= date('F Y', strtotime($lm)) ?> →</a></div>
+    <?php else: ?><div class="mt">This consignor has no unbilled delivered dockets at all.</div><?php endif; ?>
+  </div></div>
 <?php else: ?>
 <form method="post" id="billForm" class="mt" onsubmit="return beforeSubmit()">
   <?= ops_csrf_field() ?>
