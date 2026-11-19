@@ -189,7 +189,7 @@ function ops_finalized_staff($date)
     $m = substr($date, 0, 7) . '-01';
     if (!isset($cache[$m])) {
         $cache[$m] = array();
-        foreach (ops_rows('SELECT staff_id, slip_id FROM tbl_ops_salary_slips WHERE pay_month = ?', array($m)) as $r) {
+        foreach (ops_rows("SELECT staff_id, slip_id FROM tbl_ops_salary_slips WHERE pay_month = ? AND status = 'final'", array($m)) as $r) {
             $cache[$m][(int)$r['staff_id']] = (int)$r['slip_id'];
         }
     }
@@ -241,7 +241,7 @@ function ops_payroll_sheet($month)
         'SELECT sl.*, s.staff_name, s.staff_unique_id, s.staff_role, COALESCE(o.office_name, s.branch_office) AS office_name
          FROM tbl_ops_salary_slips sl JOIN tbl_staff s ON s.staff_id = sl.staff_id
          LEFT JOIN tbl_offices o ON o.office_id = sl.office_id
-         WHERE sl.pay_month = ? ' . ops_office_scope('s'), array($month)
+         WHERE sl.pay_month = ? AND sl.status = \'final\' ' . ops_office_scope('s'), array($month)
     );
     foreach ($slips as $r) {
         $saved[(int)$r['staff_id']] = array(
@@ -296,11 +296,11 @@ function ops_payroll_save_slip($runId, array $r, $month, $days)
 {
     $c = $r['counts'];
     $slipId = ops_write(
-        'INSERT INTO tbl_ops_salary_slips (run_id, staff_id, office_id, pay_month, days_in_month, present_days, paid_leave_days, week_off_days,
+        'INSERT INTO tbl_ops_salary_slips (run_id, active_run_id, staff_id, office_id, pay_month, days_in_month, present_days, paid_leave_days, week_off_days,
              absent_days, payable_days, extra_duty_days, monthly_salary, earned_amount, extra_duty_amount, advance_deduction,
              hand_settlement, net_payable, hand_balance_at_close, created_by, created_by_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        array($runId, $r['staff_id'], $r['office_id'], $month, $days, $c['present'], $c['paid_leave'], $c['week_off'],
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        array($runId, $runId, $r['staff_id'], $r['office_id'], $month, $days, $c['present'], $c['paid_leave'], $c['week_off'],
               $c['absent_total'], $c['payable'], $c['extra_duty'], ops_paise_to_db($r['salary']), ops_paise_to_db($r['earned']),
               ops_paise_to_db($r['extra_pay']),
               ops_paise_to_db($r['advance_deduction']), ops_paise_to_db($r['hand_settlement']), ops_paise_to_db($r['net']), ops_paise_to_db($r['hand_balance']),
@@ -327,7 +327,7 @@ function ops_payroll_finalize_staff($month, $staffId)
     ops_begin();
     try {
         $runId = ops_payroll_run_id($month);
-        if (ops_value('SELECT COUNT(*) FROM tbl_ops_salary_slips WHERE pay_month = ? AND staff_id = ?', array($month, $staffId))) {
+        if (ops_value("SELECT COUNT(*) FROM tbl_ops_salary_slips WHERE pay_month = ? AND staff_id = ? AND status = 'final'", array($month, $staffId))) {
             throw new InvalidArgumentException($s['staff_name'] . ' is already finalized for ' . date('F Y', strtotime($month)) . '.');
         }
         $days = ops_days_in_month($month);
@@ -398,7 +398,7 @@ function ops_unpaid_slips_before($staffId, $month)
     $sql = 'SELECT s.slip_id, s.staff_id, s.pay_month, st.staff_name FROM tbl_ops_salary_slips s
             JOIN tbl_staff st ON st.staff_id = s.staff_id
             LEFT JOIN tbl_ops_salary_payments p ON p.active_slip_id = s.slip_id
-            WHERE s.pay_month < ? AND p.payment_id IS NULL';
+            WHERE s.pay_month < ? AND s.status = \'final\' AND p.payment_id IS NULL';
     $args = array($month);
     if ($staffId !== null) { $sql .= ' AND s.staff_id = ?'; $args[] = (int)$staffId; }
     return ops_rows($sql . ' ORDER BY s.pay_month, st.staff_name', $args);
@@ -416,6 +416,7 @@ function ops_salary_mark_paid($slipId, $date, $mode, $reference, $note)
         $sl = ops_one('SELECT s.*, st.staff_name FROM tbl_ops_salary_slips s JOIN tbl_staff st ON st.staff_id = s.staff_id
                        WHERE s.slip_id = ?' . ops_office_scope('st') . ' FOR UPDATE', array($slipId));
         if (!$sl) throw new InvalidArgumentException('Salary slip not found in your branch.');
+        if ($sl['status'] !== 'final') throw new InvalidArgumentException('This slip was reopened (cancelled). Finalize the month again for this staff member.');
         if (ops_value('SELECT COUNT(*) FROM tbl_ops_salary_payments WHERE active_slip_id = ?', array($slipId))) {
             throw new InvalidArgumentException($sl['staff_name'] . "'s salary is already marked Paid.");
         }
@@ -468,7 +469,7 @@ function ops_salary_undo_paid($slipId, $reason)
         if (!$sl) throw new InvalidArgumentException('Salary slip not found in your branch.');
         $pay = ops_one('SELECT * FROM tbl_ops_salary_payments WHERE active_slip_id = ?', array($slipId));
         if (!$pay) throw new InvalidArgumentException('This salary is not marked Paid.');
-        if (ops_value('SELECT COUNT(*) FROM tbl_ops_salary_slips WHERE staff_id = ? AND pay_month > ?', array($sl['staff_id'], $sl['pay_month']))) {
+        if (ops_value("SELECT COUNT(*) FROM tbl_ops_salary_slips WHERE staff_id = ? AND pay_month > ? AND status = 'final'", array($sl['staff_id'], $sl['pay_month']))) {
             throw new InvalidArgumentException('A later month is already finalized for ' . $sl['staff_name'] . ', so this payment cannot be undone.');
         }
         $why = mb_substr($reason, 0, 200);
@@ -499,6 +500,45 @@ function ops_salary_undo_paid($slipId, $reason)
         }
         ops_commit();
         return $sl['staff_name'];
+    } catch (Exception $e) {
+        ops_rollback();
+        throw $e;
+    }
+}
+
+/**
+ * Reopen a finalized, UNPAID slip (Admin / Super Admin). The slip is marked CANCELLED with the
+ * reason (kept, never deleted), the staff member's attendance for that month unlocks, and the
+ * month is no longer "closed" so this staff member can be finalized again.
+ */
+function ops_salary_reopen($slipId, $reason)
+{
+    $reason = trim((string)$reason);
+    if ($reason === '') throw new InvalidArgumentException('Please give a reason for reopening.');
+    ops_begin();
+    try {
+        $sl = ops_one('SELECT s.*, st.staff_name FROM tbl_ops_salary_slips s JOIN tbl_staff st ON st.staff_id = s.staff_id
+                       WHERE s.slip_id = ?' . ops_office_scope('st') . ' FOR UPDATE', array($slipId));
+        if (!$sl) throw new InvalidArgumentException('Salary slip not found in your branch.');
+        if ($sl['status'] !== 'final') throw new InvalidArgumentException('This slip is already reopened.');
+        $label = date('F Y', strtotime($sl['pay_month']));
+        if (ops_value('SELECT COUNT(*) FROM tbl_ops_salary_payments WHERE active_slip_id = ?', array($slipId))) {
+            throw new InvalidArgumentException($sl['staff_name'] . "'s " . $label . ' salary is marked Paid. Undo the payment first, then reopen.');
+        }
+        $later = ops_one("SELECT pay_month FROM tbl_ops_salary_slips WHERE staff_id = ? AND pay_month > ? AND status = 'final' ORDER BY pay_month LIMIT 1",
+                         array($sl['staff_id'], $sl['pay_month']));
+        if ($later) {
+            throw new InvalidArgumentException(date('F Y', strtotime($later['pay_month'])) . ' is already finalized for ' . $sl['staff_name'] . '. Reopen that month first.');
+        }
+        ops_write(
+            "UPDATE tbl_ops_salary_slips SET status = 'cancelled', active_run_id = NULL, cancel_reason = ?, cancelled_by = ?, cancelled_by_name = ?, cancelled_at = NOW()
+             WHERE slip_id = ?",
+            array(mb_substr($reason, 0, 255), ops_user_id(), ops_user_name(), $slipId)
+        );
+        // a closed month is open again (the other staff keep their own finalized slips, so they stay locked)
+        ops_write("UPDATE tbl_ops_payroll_runs SET status = 'draft' WHERE run_id = ? AND status = 'finalized'", array($sl['run_id']));
+        ops_commit();
+        return array('staff_name' => $sl['staff_name'], 'month' => $label);
     } catch (Exception $e) {
         ops_rollback();
         throw $e;

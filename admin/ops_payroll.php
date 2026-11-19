@@ -13,7 +13,7 @@ $back = 'ops_payroll.php?month=' . substr($month, 0, 7) . ($officeId ? '&office_
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     ops_check_csrf();
-    ops_require('ops_payroll_finalize');
+    ops_require($_POST['action'] === 'reopen' ? 'ops_payroll_reopen' : 'ops_payroll_finalize');
     try {
         if ($_POST['action'] === 'finalize_staff') {
             $sid = (int)$_POST['staff_id'];
@@ -25,6 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $r = ops_salary_mark_paid((int)$_POST['slip_id'], ops_date_param('pay_date', ''), isset($_POST['mode']) ? $_POST['mode'] : '',
                 trim(mb_substr(isset($_POST['reference']) ? $_POST['reference'] : '', 0, 100)), trim(mb_substr(isset($_POST['note']) ? $_POST['note'] : '', 0, 255)));
             ops_flash($r['staff_name'] . ': ' . $r['month'] . ' salary ' . ops_inr($r['net']) . ' marked Paid. Advance and hand balance are now settled.');
+        } elseif ($_POST['action'] === 'reopen') {
+            $r = ops_salary_reopen((int)$_POST['slip_id'], isset($_POST['reason']) ? $_POST['reason'] : '');
+            ops_flash($r['staff_name'] . ': ' . $r['month'] . ' slip reopened (old slip kept as CANCELLED). Correct the attendance, then finalize again.');
         } elseif ($_POST['action'] === 'undo_paid') {
             $name = ops_salary_undo_paid((int)$_POST['slip_id'], isset($_POST['reason']) ? $_POST['reason'] : '');
             ops_flash($name . ': payment undone. Advance and hand balance entries were reversed; the slip is Unpaid again.');
@@ -63,6 +66,7 @@ $canFinalizeOne = !$final && $ended && hasPermission('ops_payroll_finalize');
 $allOffices = !(function_exists('getOfficeFilter') && getOfficeFilter('s') !== '');
 $canCloseMonth = $canFinalizeOne && $allOffices;
 $canPay = hasPermission('ops_payroll_finalize');
+$canReopen = hasPermission('ops_payroll_reopen');
 
 if (isset($_GET['export'])) {
     header('Content-Type: text/csv; charset=utf-8');
@@ -167,6 +171,7 @@ require 'opsdesk/layout_start.php';
             <?php elseif ($r['finalized']): ?>
               <span class="pill draft" title="Finalized by <?= h($r['finalized_by']) ?> on <?= date('j M Y', strtotime($r['finalized_at'])) ?>"><i class="fa fa-lock"></i>Unpaid</span>
               <?php if ($canPay): ?><button class="btn sm success" style="margin-left:6px" onclick='payOne(<?= h(json_encode(array('slip' => (int)$r['slip_id'], 'name' => $r['name'], 'net' => ops_inr($r['net']), 'adv' => $r['advance_deduction'] ? ops_inr($r['advance_deduction']) : '', 'hs' => (int)$r['hand_settlement'], 'hsTxt' => ops_inr(abs((int)$r['hand_settlement']))))) ?>)'><i class="fa fa-indian-rupee-sign"></i>Mark paid</button><?php endif; ?>
+              <?php if ($canReopen): ?><a class="small muted" href="javascript:void(0)" style="margin-left:6px" title="Unlock this slip to correct attendance" onclick="reopenSlip(<?= (int)$r['slip_id'] ?>, <?= h(json_encode($r['name'])) ?>)">Reopen</a><?php endif; ?>
             <?php elseif ($canFinalizeOne): ?><button class="btn sm" onclick='finalizeOne(<?= h(json_encode(array(
                 'id' => $r['staff_id'], 'name' => $r['name'], 'p' => $c['present'], 'l' => $c['paid_leave'], 'w' => $c['week_off'],
                 'a' => $c['absent_total'], 'u' => $c['unmarked'], 'pay' => $c['payable'], 'salary' => ops_inr($r['salary']),
@@ -233,7 +238,7 @@ function confirmFinalize() {
 <?php endif; ?>
 </script>
 <?php endif; ?>
-<?php if ($canPay): ?>
+<?php if ($canPay || $canReopen): ?>
 <form method="post" id="paidForm"><?= ops_csrf_field() ?><input type="hidden" name="action" id="paidAction" value="mark_paid"><input type="hidden" name="slip_id" id="paidSlip">
   <input type="hidden" name="pay_date" id="paidDate"><input type="hidden" name="mode" id="paidMode"><input type="hidden" name="reference" id="paidRef"><input type="hidden" name="note" id="paidNote"><input type="hidden" name="reason" id="paidReason"><input type="hidden" name="office_id" value="<?= $officeId ?>"></form>
 <script>
@@ -263,6 +268,14 @@ function sendPaid(slip, btn) {
   document.getElementById('paidMode').value = mode;
   document.getElementById('paidRef').value = document.getElementById('pRef').value;
   document.getElementById('paidNote').value = document.getElementById('pNote').value;
+  document.getElementById('paidForm').submit();
+}
+function reopenSlip(slip, name) {
+  var r = prompt('Reopen ' + name + '\u2019s ' + <?= json_encode($monthLabel) ?> + ' slip?\nThe slip will be kept as CANCELLED, the attendance for the month unlocks, and you finalize again after correcting it.\n\nReason:');
+  if (!r) return;
+  document.getElementById('paidAction').value = 'reopen';
+  document.getElementById('paidSlip').value = slip;
+  document.getElementById('paidReason').value = r;
   document.getElementById('paidForm').submit();
 }
 function undoPaid(slip, name) {
